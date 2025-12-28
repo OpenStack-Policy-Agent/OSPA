@@ -18,13 +18,13 @@ OSPA is a lightweight OpenStack policy/compliance agent:
 - **Audit-only (default, safe)**:
 
 ```bash
-go run ./cmd/agent --cloud mycloud --policy ./examples/rules.yaml --out findings.jsonl
+export OS_CLIENT_CONFIG_FILE=path/to/clouds.yaml go run ./cmd/agent --cloud mycloud --policy ./examples/rules.yaml --out findings.jsonl
 ```
 
 - **Enforce (actually apply remediations)**:
 
 ```bash
-go run ./cmd/agent --cloud mycloud --policy ./examples/rules.yaml --out findings.jsonl --apply
+export OS_CLIENT_CONFIG_FILE=path/to/clouds.yaml go run ./cmd/agent --cloud mycloud --policy ./examples/rules.yaml --out findings.jsonl --apply
 ```
 
 ### Notes
@@ -45,7 +45,7 @@ go test ./...
 - **OpenStack e2e smoke tests** (connect via `clouds.yaml` using `OS_CLOUD`):
 
 ```bash
-OS_CLOUD=mycloud go test -tags=e2e ./...
+export OS_CLIENT_CONFIG_FILE=path/to/clouds.yaml OS_CLOUD=mycloud go test -tags=e2e ./e2e/...
 ```
 
 

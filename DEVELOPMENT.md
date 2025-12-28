@@ -16,7 +16,7 @@ This doc is for contributors working on OSPA locally.
 ### Prerequisites
 
 - Go installed (matches `go.mod`)
-- Access to an OpenStack cloud and a valid `clouds.yaml`
+- Access to an OpenStack cloud and a valid `clouds.yaml`, save it to export OS_CLIENT_CONFIG_FILE=path/to/clouds.yaml
 - `OS_CLOUD` set to a cloud name present in `clouds.yaml`
 
 ### Running the agent locally
