@@ -1,0 +1,112 @@
+# --- Go build artifacts ---
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+*.a
+*.o
+
+# Go workspaces / tooling
+go.work
+go.work.sum
+
+# Build outputs
+bin/
+dist/
+build/
+
+# --- Test outputs / coverage ---
+coverage/
+*.coverprofile
+*.cover.out
+pkg.cover.out
+
+# --- Logs ---
+*.log
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# --- Python (scripts) ---
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# --- Local configs / secrets (do not commit) ---
+clouds.yaml
+secure.yaml
+openrc
+*.openrc
+.env
+.env.*
+
+# --- Temp ---
+tmp/
+temp/
+
+# --- Go build artifacts ---
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+*.a
+*.o
+
+# Go workspaces / tooling
+go.work
+go.work.sum
+
+# Build outputs
+bin/
+dist/
+build/
+
+# --- Test outputs / coverage ---
+coverage/
+*.coverprofile
+*.cover.out
+pkg.cover.out
+
+# --- Logs ---
+*.log
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# --- Python ---
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# --- Local configs / secrets (do not commit) ---
+clouds.yaml
+secure.yaml
+openrc
+*.openrc
+.env
+.env.*
+
+# --- Temp ---
+tmp/
+temp/
+
+
+
