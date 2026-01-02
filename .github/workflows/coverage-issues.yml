@@ -1,0 +1,36 @@
+name: coverage issues sync
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "If true, prints what would be created without creating issues"
+        required: false
+        default: "true"
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Sync coverage issues
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          DRY="${{ github.event.inputs.dry_run || 'false' }}"
+          if [[ "${DRY}" == "true" ]]; then
+            python3 ./scripts/sync_coverage_issues.py --repo "${{ github.repository }}" --dry-run
+          else
+            python3 ./scripts/sync_coverage_issues.py --repo "${{ github.repository }}"
+          fi
+
+
