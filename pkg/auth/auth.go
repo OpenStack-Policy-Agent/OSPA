@@ -56,3 +56,14 @@ func (s *Session) GetNetworkClient() (*gophercloud.ServiceClient, error) {
 	}
 	return client, nil
 }
+
+// GetBlockStorageClient returns a client for Cinder (Block Storage)
+func (s *Session) GetBlockStorageClient() (*gophercloud.ServiceClient, error) {
+	client, err := clientconfig.NewServiceClient("volumev3", &clientconfig.ClientOpts{
+		Cloud: s.CloudName,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create block storage client: %w", err)
+	}
+	return client, nil
+}

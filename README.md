@@ -18,13 +18,13 @@ OSPA is a lightweight OpenStack policy/compliance agent:
 - **Audit-only (default, safe)**:
 
 ```bash
-export OS_CLIENT_CONFIG_FILE=path/to/clouds.yaml go run ./cmd/agent --cloud mycloud --policy ./examples/rules.yaml --out findings.jsonl
+export OS_CLIENT_CONFIG_FILE=path/to/clouds.yaml go run ./cmd/agent --cloud mycloud --policy ./examples/policies.yaml --out findings.jsonl
 ```
 
 - **Enforce (actually apply remediations)**:
 
 ```bash
-export OS_CLIENT_CONFIG_FILE=path/to/clouds.yaml go run ./cmd/agent --cloud mycloud --policy ./examples/rules.yaml --out findings.jsonl --apply
+export OS_CLIENT_CONFIG_FILE=path/to/clouds.yaml go run ./cmd/agent --cloud mycloud --policy ./examples/policies.yaml --out findings.jsonl --apply
 ```
 
 ### Notes
@@ -32,9 +32,19 @@ export OS_CLIENT_CONFIG_FILE=path/to/clouds.yaml go run ./cmd/agent --cloud mycl
 - Use `--all-tenants` only if you have admin credentials and want to scan the whole cloud.
 - `mode: enforce` in the policy enables remediation logic, but **nothing is changed unless `--apply` is set**.
 
+### Extending OSPA
+
+To add support for new OpenStack services or resource types:
+
+- **List Available Services**: Use `go run ./cmd/scaffold --list` to see all supported OpenStack services and resources
+- **Scaffold Tool**: Use `go run ./cmd/scaffold --service <name> --resources <list>` to generate boilerplate code (validates against known OpenStack services)
+- **Developer Guide**: See [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) for complete development workflow
+- **Architecture**: See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for detailed architecture explanation
+- **Scaffold Docs**: See [`docs/scaffold-README.md`](docs/scaffold-README.md) for scaffold tool usage
+
 ### Tests
 
-- Developer docs: see `DEVELOPMENT.md`.
+- Developer docs: see [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
 
 - **Unit tests**:
 

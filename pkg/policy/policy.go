@@ -3,101 +3,105 @@ package policy
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"gopkg.in/yaml.v2"
 )
 
-// Policy is the top-level YAML schema.
+// Policy represents the top-level policy configuration
 type Policy struct {
-	Version  string        `yaml:"version"`
+	Version  string         `yaml:"version"`
 	Defaults Defaults       `yaml:"defaults"`
-	Rules    []Rule        `yaml:"rules"`
+	Policies []ServicePolicy `yaml:"policies"`
 }
 
+// Defaults contains default configuration values
 type Defaults struct {
 	Workers int    `yaml:"workers"`
 	Days    int    `yaml:"days"`
 	Output  string `yaml:"output"`
 }
 
-// Rule is an MVP rule schema. It is intentionally narrow and will evolve.
+// ServicePolicy groups rules by OpenStack service
+type ServicePolicy struct {
+	Service string  `yaml:"service"`
+	Rules   []Rule  `yaml:"rules"`
+}
+
+// Rule represents a single audit rule
 type Rule struct {
-	ID             string `yaml:"id"`
-	Description    string `yaml:"description"`
-	Resource       string `yaml:"resource"`
-	Mode           string `yaml:"mode"`
-	Recommendation string `yaml:"recommendation"` // legacy field (kept for backwards-compat)
-	Remediation    string `yaml:"remediation"`    // preferred field
-
-	Filters struct {
-		Status string `yaml:"status"`
-	} `yaml:"filters"`
-
-	Conditions struct {
-		UpdatedOlderThanDays int `yaml:"updatedOlderThanDays"`
-	} `yaml:"conditions"`
+	Name          string          `yaml:"name"`
+	Description   string          `yaml:"description"`
+	Service       string          `yaml:"service"`
+	Resource      string          `yaml:"resource"`
+	Check         CheckConditions `yaml:"check"`
+	Action        string          `yaml:"action"`
+	ActionTagName string          `yaml:"action_tag_name,omitempty"`
+	TagName       string          `yaml:"tag_name,omitempty"`
 }
 
-func Load(path string) (*Policy, error) {
-	b, err := os.ReadFile(path)
+// CheckConditions supports flexible condition matching
+type CheckConditions struct {
+	// Security group rule checks
+	Direction      string `yaml:"direction,omitempty"`
+	Ethertype      string `yaml:"ethertype,omitempty"`
+	Protocol       string `yaml:"protocol,omitempty"`
+	Port           int    `yaml:"port,omitempty"`
+	RemoteIPPrefix string `yaml:"remote_ip_prefix,omitempty"`
+
+	// Status-based checks
+	Status string `yaml:"status,omitempty"`
+
+	// Age-based checks (e.g., "30d", "7d", "90d")
+	AgeGT string `yaml:"age_gt,omitempty"`
+
+	// Usage checks
+	Unused bool `yaml:"unused,omitempty"`
+
+	// Exemptions
+	ExemptNames    []string      `yaml:"exempt_names,omitempty"`
+	ExemptMetadata *MetadataMatch `yaml:"exempt_metadata,omitempty"`
+
+	// Image name checks
+	ImageName []string `yaml:"image_name,omitempty"`
+}
+
+// MetadataMatch represents metadata key-value matching for exemptions
+type MetadataMatch struct {
+	Key   string `yaml:"key"`
+	Value string `yaml:"value"`
+}
+
+// ParseAgeGT parses an age_gt string (e.g., "30d", "7d") into a time.Duration
+func (c *CheckConditions) ParseAgeGT() (time.Duration, error) {
+	if c.AgeGT == "" {
+		return 0, nil
+	}
+
+	var duration time.Duration
+	var unit string
+	var value int
+
+	_, err := fmt.Sscanf(c.AgeGT, "%d%s", &value, &unit)
 	if err != nil {
-		return nil, fmt.Errorf("read policy file: %w", err)
+		return 0, fmt.Errorf("invalid age_gt format %q: %w", c.AgeGT, err)
 	}
 
-	var p Policy
-	if err := yaml.Unmarshal(b, &p); err != nil {
-		return nil, fmt.Errorf("parse policy yaml: %w", err)
+	switch unit {
+	case "d", "day", "days":
+		duration = time.Duration(value) * 24 * time.Hour
+	case "h", "hour", "hours":
+		duration = time.Duration(value) * time.Hour
+	case "m", "min", "minute", "minutes":
+		duration = time.Duration(value) * time.Minute
+	default:
+		return 0, fmt.Errorf("unsupported age_gt unit %q (supported: d, h, m)", unit)
 	}
 
-	if err := p.Validate(); err != nil {
-		return nil, err
-	}
-
-	return &p, nil
+	return duration, nil
 }
 
-func (p *Policy) Validate() error {
-	if p.Version == "" {
-		return fmt.Errorf("policy.version is required")
-	}
-	if len(p.Rules) == 0 {
-		return fmt.Errorf("policy.rules must contain at least one rule")
-	}
-
-	seen := map[string]struct{}{}
-	for i, r := range p.Rules {
-		if r.ID == "" {
-			return fmt.Errorf("policy.rules[%d].id is required", i)
-		}
-		if _, ok := seen[r.ID]; ok {
-			return fmt.Errorf("duplicate rule id %q", r.ID)
-		}
-		seen[r.ID] = struct{}{}
-
-		if r.Resource != "compute.server" {
-			return fmt.Errorf("rule %q: unsupported resource %q (supported: compute.server)", r.ID, r.Resource)
-		}
-		if r.Mode == "" {
-			return fmt.Errorf("rule %q: mode is required (audit/enforce)", r.ID)
-		}
-		if r.Mode != "audit" && r.Mode != "enforce" {
-			return fmt.Errorf("rule %q: unsupported mode %q (audit/enforce)", r.ID, r.Mode)
-		}
-		if r.Filters.Status == "" {
-			return fmt.Errorf("rule %q: filters.status is required", r.ID)
-		}
-		if r.Conditions.UpdatedOlderThanDays < 0 {
-			return fmt.Errorf("rule %q: conditions.updatedOlderThanDays must be >= 0", r.ID)
-		}
-		if r.Mode == "enforce" && r.EffectiveRemediation() == "" {
-			return fmt.Errorf("rule %q: remediation is required when mode=enforce", r.ID)
-		}
-	}
-
-	return nil
-}
-
-// EffectiveWorkers returns the configured workers or a safe default.
+// EffectiveWorkers returns the configured workers or a safe default
 func (p *Policy) EffectiveWorkers(fallback int) int {
 	if p.Defaults.Workers > 0 {
 		return p.Defaults.Workers
@@ -108,13 +112,17 @@ func (p *Policy) EffectiveWorkers(fallback int) int {
 	return 16
 }
 
-// EffectiveRemediation returns the remediation action for the rule.
-// Backwards-compatible: if remediation isn't set, it falls back to recommendation.
-func (r *Rule) EffectiveRemediation() string {
-	if r.Remediation != "" {
-		return r.Remediation
+// GetAllRules returns all rules from all service policies, flattened
+func (p *Policy) GetAllRules() []Rule {
+	var allRules []Rule
+	for _, sp := range p.Policies {
+		for _, rule := range sp.Rules {
+			// Ensure service is set from parent if not in rule
+			if rule.Service == "" {
+				rule.Service = sp.Service
+			}
+			allRules = append(allRules, rule)
+		}
 	}
-	return r.Recommendation
+	return allRules
 }
-
-

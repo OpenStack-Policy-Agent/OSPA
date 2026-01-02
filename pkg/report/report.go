@@ -6,7 +6,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/OpenStack-Policy-Agent/OSPA/pkg/engine"
+	"github.com/OpenStack-Policy-Agent/OSPA/pkg/audit"
 )
 
 // JSONLWriter writes one JSON object per line.
@@ -24,6 +24,8 @@ type Finding struct {
 	RuleID            string `json:"rule_id"`
 	ResourceID        string `json:"resource_id"`
 	ResourceName      string `json:"resource_name"`
+	ResourceType      string `json:"resource_type,omitempty"`
+	Service           string `json:"service,omitempty"`
 	ProjectID         string `json:"project_id,omitempty"`
 	Status            string `json:"status,omitempty"`
 	UpdatedAt         string `json:"updated_at,omitempty"`
@@ -31,6 +33,7 @@ type Finding struct {
 	Mode              string `json:"mode,omitempty"`
 	Observation       string `json:"observation,omitempty"`
 	RecommendedAction string `json:"recommended_action,omitempty"`
+	Action            string `json:"action,omitempty"`
 	Error             string `json:"error,omitempty"`
 
 	RemediationAttempted bool   `json:"remediation_attempted,omitempty"`
@@ -38,7 +41,7 @@ type Finding struct {
 	RemediationError     string `json:"remediation_error,omitempty"`
 }
 
-func (w *JSONLWriter) WriteResult(r engine.Result) error {
+func (w *JSONLWriter) WriteResult(r *audit.Result) error {
 	f := Finding{
 		RuleID:            r.RuleID,
 		ResourceID:        r.ResourceID,
@@ -46,12 +49,17 @@ func (w *JSONLWriter) WriteResult(r engine.Result) error {
 		ProjectID:         r.ProjectID,
 		Status:            r.Status,
 		Compliant:         r.Compliant,
-		Mode:              r.Mode,
 		Observation:       r.Observation,
-		RecommendedAction: r.RecommendedAction,
 		RemediationAttempted: r.RemediationAttempted,
 		Remediated:           r.Remediated,
 	}
+
+	if r.Rule != nil {
+		f.Action = r.Rule.Action
+		f.ResourceType = r.Rule.Resource
+		f.Service = r.Rule.Service
+	}
+
 	if !r.UpdatedAt.IsZero() {
 		f.UpdatedAt = r.UpdatedAt.UTC().Format(time.RFC3339)
 	}
@@ -68,5 +76,3 @@ func PrintSummary(out io.Writer, scanned, violations, errors int) {
 	fmt.Fprintln(out, "---- Summary ----")
 	fmt.Fprintf(out, "Scanned: %d\nViolations: %d\nErrors: %d\n", scanned, violations, errors)
 }
-
-
