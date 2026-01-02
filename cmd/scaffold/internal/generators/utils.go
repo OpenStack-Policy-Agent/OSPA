@@ -8,8 +8,11 @@ import (
 
 // fileExists checks if a file exists
 func fileExists(filePath string) bool {
-	_, err := os.Stat(filePath)
-	return err == nil
+	info, err := os.Stat(filePath)
+	if err != nil {
+		return false
+	}
+	return !info.IsDir()
 }
 
 // writeFile writes a file using a template

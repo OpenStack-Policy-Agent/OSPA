@@ -46,7 +46,7 @@ This guide explains how to write policies for {{.DisplayName}} resources in OSPA
 
 All policies for {{.DisplayName}} follow this structure:
 
-\`\`\`yaml
+{{printf "%c%c%c" 96 96 96}}yaml
 version: v1
 defaults:
   workers: 50
@@ -60,7 +60,7 @@ policies:
       check:
         # Check conditions (see below)
       action: log|delete|tag
-\`\`\`
+{{printf "%c%c%c" 96 96 96}}
 
 ## Check Conditions
 
@@ -72,13 +72,13 @@ The following check conditions are available for most resources:
 
 Check resources by their status:
 
-\`\`\`yaml
+{{printf "%c%c%c" 96 96 96}}yaml
 check:
   status: active|inactive|available|unavailable|DOWN|UP
-\`\`\`
+{{printf "%c%c%c" 96 96 96}}
 
 **Example:**
-\`\`\`yaml
+{{printf "%c%c%c" 96 96 96}}yaml
 - name: find-inactive-resources
   description: Find inactive {{.ServiceName}} resources
   service: {{.ServiceName}}
@@ -86,16 +86,16 @@ check:
   check:
     status: inactive
   action: log
-\`\`\`
+{{printf "%c%c%c" 96 96 96}}
 
 #### Age Check
 
 Find resources older than a specified age:
 
-\`\`\`yaml
+{{printf "%c%c%c" 96 96 96}}yaml
 check:
   age_gt: 30d  # Options: 7d, 30d, 90d, 1h, 24h, etc.
-\`\`\`
+{{printf "%c%c%c" 96 96 96}}
 
 **Supported units:**
 - ` + "`d`" + ` or ` + "`day`" + ` or ` + "`days`" + ` - Days
@@ -103,7 +103,7 @@ check:
 - ` + "`m`" + ` or ` + "`min`" + ` or ` + "`minute`" + ` or ` + "`minutes`" + ` - Minutes
 
 **Example:**
-\`\`\`yaml
+{{printf "%c%c%c" 96 96 96}}yaml
 - name: find-old-resources
   description: Find resources older than 30 days
   service: {{.ServiceName}}
@@ -111,19 +111,19 @@ check:
   check:
     age_gt: 30d
   action: log
-\`\`\`
+{{printf "%c%c%c" 96 96 96}}
 
 #### Unused Check
 
 Find resources that are not being used:
 
-\`\`\`yaml
+{{printf "%c%c%c" 96 96 96}}yaml
 check:
   unused: true
-\`\`\`
+{{printf "%c%c%c" 96 96 96}}
 
 **Example:**
-\`\`\`yaml
+{{printf "%c%c%c" 96 96 96}}yaml
 - name: find-unused-resources
   description: Find unused {{.ServiceName}} resources
   service: {{.ServiceName}}
@@ -131,22 +131,22 @@ check:
   check:
     unused: true
   action: log
-\`\`\`
+{{printf "%c%c%c" 96 96 96}}
 
 #### Exemptions
 
 Exclude specific resources from checks:
 
-\`\`\`yaml
+{{printf "%c%c%c" 96 96 96}}yaml
 check:
   status: active
   exempt_names:
     - default
     - system-resource
-\`\`\`
+{{printf "%c%c%c" 96 96 96}}
 
 **Example:**
-\`\`\`yaml
+{{printf "%c%c%c" 96 96 96}}yaml
 - name: find-active-except-default
   description: Find active resources except default ones
   service: {{.ServiceName}}
@@ -156,7 +156,7 @@ check:
     exempt_names:
       - default
   action: log
-\`\`\`
+{{printf "%c%c%c" 96 96 96}}
 
 ## Actions
 
@@ -164,12 +164,12 @@ check:
 
 Log violations without taking any action:
 
-\`\`\`yaml
+{{printf "%c%c%c" 96 96 96}}yaml
 action: log
-\`\`\`
+{{printf "%c%c%c" 96 96 96}}
 
 **Example:**
-\`\`\`yaml
+{{printf "%c%c%c" 96 96 96}}yaml
 - name: audit-resources
   description: Audit {{.ServiceName}} resources
   service: {{.ServiceName}}
@@ -177,18 +177,18 @@ action: log
   check:
     status: inactive
   action: log
-\`\`\`
+{{printf "%c%c%c" 96 96 96}}
 
 ### Delete Action
 
 Delete non-compliant resources (use with caution):
 
-\`\`\`yaml
+{{printf "%c%c%c" 96 96 96}}yaml
 action: delete
-\`\`\`
+{{printf "%c%c%c" 96 96 96}}
 
 **Example:**
-\`\`\`yaml
+{{printf "%c%c%c" 96 96 96}}yaml
 - name: cleanup-old-resources
   description: Delete resources older than 90 days
   service: {{.ServiceName}}
@@ -196,7 +196,7 @@ action: delete
   check:
     age_gt: 90d
   action: delete
-\`\`\`
+{{printf "%c%c%c" 96 96 96}}
 
 **Note:** The ` + "`--apply`" + ` flag must be set when running the agent for delete actions to take effect.
 
@@ -204,14 +204,14 @@ action: delete
 
 Tag non-compliant resources with metadata:
 
-\`\`\`yaml
+{{printf "%c%c%c" 96 96 96}}yaml
 action: tag
 tag_name: audit-tag-name
 action_tag_name: "Display Name for Tag"
-\`\`\`
+{{printf "%c%c%c" 96 96 96}}
 
 **Example:**
-\`\`\`yaml
+{{printf "%c%c%c" 96 96 96}}yaml
 - name: tag-old-resources
   description: Tag resources older than 30 days
   service: {{.ServiceName}}
@@ -221,7 +221,7 @@ action_tag_name: "Display Name for Tag"
   action: tag
   tag_name: audit-old-resource
   action_tag_name: "Old Resource"
-\`\`\`
+{{printf "%c%c%c" 96 96 96}}
 
 ## Resource-Specific Examples
 
@@ -230,7 +230,7 @@ action_tag_name: "Display Name for Tag"
 
 #### Example 1: Find Inactive {{. | Title}} Resources
 
-\`\`\`yaml
+{{printf "%c%c%c" 96 96 96}}yaml
 - name: find-inactive-{{.}}
   description: Find inactive {{.}} resources
   service: {{$.ServiceName}}
@@ -238,11 +238,11 @@ action_tag_name: "Display Name for Tag"
   check:
     status: inactive
   action: log
-\`\`\`
+{{printf "%c%c%c" 96 96 96}}
 
 #### Example 2: Find Old {{. | Title}} Resources
 
-\`\`\`yaml
+{{printf "%c%c%c" 96 96 96}}yaml
 - name: find-old-{{.}}
   description: Find {{.}} resources older than 30 days
   service: {{$.ServiceName}}
@@ -250,11 +250,11 @@ action_tag_name: "Display Name for Tag"
   check:
     age_gt: 30d
   action: log
-\`\`\`
+{{printf "%c%c%c" 96 96 96}}
 
 #### Example 3: Cleanup Unused {{. | Title}} Resources
 
-\`\`\`yaml
+{{printf "%c%c%c" 96 96 96}}yaml
 - name: cleanup-unused-{{.}}
   description: Delete unused {{.}} resources
   service: {{$.ServiceName}}
@@ -264,11 +264,11 @@ action_tag_name: "Display Name for Tag"
     exempt_names:
       - default
   action: delete
-\`\`\`
+{{printf "%c%c%c" 96 96 96}}
 
 #### Example 4: Tag Old {{. | Title}} Resources
 
-\`\`\`yaml
+{{printf "%c%c%c" 96 96 96}}yaml
 - name: tag-old-{{.}}
   description: Tag {{.}} resources older than 7 days
   service: {{$.ServiceName}}
@@ -278,7 +278,7 @@ action_tag_name: "Display Name for Tag"
   action: tag
   tag_name: audit-old-{{.}}
   action_tag_name: "Old {{. | Title}}"
-\`\`\`
+{{printf "%c%c%c" 96 96 96}}
 
 {{end}}
 
@@ -286,7 +286,7 @@ action_tag_name: "Display Name for Tag"
 
 Here's a complete policy file example for {{.DisplayName}}:
 
-\`\`\`yaml
+{{printf "%c%c%c" 96 96 96}}yaml
 version: v1
 defaults:
   workers: 50
@@ -309,7 +309,7 @@ policies:
         exempt_names:
           - default
       action: log{{end}}
-\`\`\`
+{{printf "%c%c%c" 96 96 96}}
 
 ## OpenStack Documentation References
 
@@ -321,19 +321,19 @@ For more information about {{.DisplayName}} resources and their properties:
 ## Testing Your Policy
 
 1. **Validate the policy:**
-   \`\`\`bash
+   {{printf "%c%c%c" 96 96 96}}bash
    go run ./cmd/agent --cloud "$OS_CLOUD" --policy your-policy.yaml --out /dev/null
-   \`\`\`
+   {{printf "%c%c%c" 96 96 96}}
 
 2. **Run in audit mode (safe):**
-   \`\`\`bash
+   {{printf "%c%c%c" 96 96 96}}bash
    go run ./cmd/agent --cloud "$OS_CLOUD" --policy your-policy.yaml --out findings.jsonl
-   \`\`\`
+   {{printf "%c%c%c" 96 96 96}}
 
 3. **Apply remediations (use with caution):**
-   \`\`\`bash
+   {{printf "%c%c%c" 96 96 96}}bash
    go run ./cmd/agent --cloud "$OS_CLOUD" --policy your-policy.yaml --out findings.jsonl --apply
-   \`\`\`
+   {{printf "%c%c%c" 96 96 96}}
 
 ## Notes
 

@@ -165,11 +165,14 @@ After generating files:
 The scaffold tool is organized into a modular structure:
 
 - **`cmd/scaffold/main.go`** - CLI entry point with validation
-- **`cmd/scaffold/validation.go`** - OpenStack service/resource registry and validation
-- **`cmd/scaffold/generators/`** - Generation functions organized by step:
+- **`cmd/scaffold/internal/registry/`** - OpenStack service/resource registry and validation
+  - `registry.go`
+- **`cmd/scaffold/internal/generators/`** - Generation functions organized by step:
   - `orchestrator.go` - Main orchestration function
   - `service.go` - Service file generation
+  - `service_updater.go` - Add new resources to existing service files
   - `discovery.go` - Discovery file generation
+  - `discovery_updater.go` - Add new discoverers to existing discovery files
   - `auditor.go` - Auditor files generation
   - `auth.go` - Auth method generation
   - `validation.go` - Validation file generation

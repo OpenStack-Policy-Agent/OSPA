@@ -47,15 +47,8 @@ func UpdateDiscoveryFile(baseDir, serviceName, displayName string, newResources 
 	// Generate discoverer code for new resources
 	discovererCode := generateDiscovererCode(serviceName, displayName, resourcesToAdd)
 
-	// Append to end of file (before closing brace if it's the last thing)
-	// Find the last closing brace of the package
-	lastBrace := strings.LastIndex(contentStr, "}")
-	if lastBrace == -1 {
-		return fmt.Errorf("could not find end of file")
-	}
-
-	// Insert before the last closing brace
-	newContent := contentStr[:lastBrace] + "\n" + discovererCode + "\n" + contentStr[lastBrace:]
+	// Append to end of file (safe; avoids injecting inside an existing function's closing brace)
+	newContent := contentStr + "\n\n" + discovererCode + "\n"
 
 	return os.WriteFile(filePath, []byte(newContent), 0644)
 }
@@ -114,13 +107,13 @@ func (d *%s%sDiscoverer) Discover(ctx context.Context, client *gophercloud.Servi
 			displayName, titleRes,
 			displayName, titleRes, resource,
 			displayName, titleRes,
-			titleRes, titleRes,
-			serviceName,
-			titleRes, titleRes,
-			titleRes, titleRes,
-			serviceName,
-			titleRes, titleRes,
-			serviceName)
+			titleRes,           // %ss.ListOpts{}
+			titleRes,           // %ss.List(...)
+			titleRes, titleRes, // %ss.Extract%ss(...)
+			serviceName,        // SimpleJobCreator service
+			titleRes, titleRes, // r.(%ss.%s).ID
+			titleRes, titleRes, // r.(%ss.%s).TenantID
+			serviceName)        // DiscoverPaged service
 	}
 
 	return code

@@ -42,18 +42,10 @@ func GenerateE2ETest(baseDir, serviceName, displayName string, resources []strin
 			return nil
 		}
 		
-		// Append new test functions before the closing of the file
+		// Append new test functions at the end of the file (safe; avoids injecting inside an existing function)
 		testCode := generateE2ETestCode(serviceName, displayName, newResources)
-		
-		// Find the last closing brace (end of package)
-		lastBrace := strings.LastIndex(contentStr, "}")
-		if lastBrace == -1 {
-			return fmt.Errorf("could not find end of file")
-		}
-		
-		// Insert before the last closing brace
-		newContent := contentStr[:lastBrace] + "\n" + testCode + "\n" + contentStr[lastBrace:]
-		
+
+		newContent := contentStr + "\n\n" + testCode + "\n"
 		return os.WriteFile(e2eFile, []byte(newContent), 0644)
 	}
 
@@ -164,7 +156,7 @@ policies:
 			displayName, titleRes,
 			serviceName, resource, resource, serviceName, resource,
 			serviceName, resource, resource, serviceName, resource,
-			resource, resource, resource)
+			resource, resource, resource, resource)
 	}
 	
 	return code

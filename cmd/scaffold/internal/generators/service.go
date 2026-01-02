@@ -56,13 +56,11 @@ import (
 // {{.DisplayName}}Service implements the Service interface for {{.DisplayName}}
 //
 // Supported resources:{{range .Resources}}
-//   - {{.}}: {{.DisplayName}} {{.}} resources{{end}}
+//   - {{.}}: {{$.DisplayName}} {{.}} resources{{end}}
 //
 // To add support for a new resource type:
 //   1. Create a discoverer in pkg/discovery/services/{{.ServiceName}}.go
 //   2. Create an auditor in pkg/audit/{{.ServiceName}}/
-//   3. Add cases in GetResourceAuditor() and GetResourceDiscoverer() below
-//   4. Register the resource in init() using RegisterResource()
 //   3. Add cases in GetResourceAuditor() and GetResourceDiscoverer() below
 //   4. Register the resource in init() using RegisterResource()
 type {{.DisplayName}}Service struct{}
@@ -85,9 +83,11 @@ func (s *{{.DisplayName}}Service) GetClient(session *auth.Session) (*gophercloud
 
 // GetResourceAuditor returns an auditor for the given resource type
 func (s *{{.DisplayName}}Service) GetResourceAuditor(resourceType string) (audit.Auditor, error) {
-	switch resourceType {{{range .Resources}}
+	switch resourceType {
+	{{- range .Resources}}
 	case "{{.}}":
-		return &{{$.ServiceName}}.{{. | Title}}Auditor{}, nil{{end}}
+		return &{{$.ServiceName}}.{{. | Title}}Auditor{}, nil
+	{{- end}}
 	default:
 		return nil, fmt.Errorf("unsupported resource type %q for service %q", resourceType, s.Name())
 	}
@@ -95,9 +95,11 @@ func (s *{{.DisplayName}}Service) GetResourceAuditor(resourceType string) (audit
 
 // GetResourceDiscoverer returns a discoverer for the given resource type
 func (s *{{.DisplayName}}Service) GetResourceDiscoverer(resourceType string) (discovery.Discoverer, error) {
-	switch resourceType {{{range .Resources}}
+	switch resourceType {
+	{{- range .Resources}}
 	case "{{.}}":
-		return &discovery.{{$.DisplayName}}{{. | Title}}Discoverer{}, nil{{end}}
+		return &discovery.{{$.DisplayName}}{{. | Title}}Discoverer{}, nil
+	{{- end}}
 	default:
 		return nil, fmt.Errorf("unsupported resource type %q for service %q", resourceType, s.Name())
 	}

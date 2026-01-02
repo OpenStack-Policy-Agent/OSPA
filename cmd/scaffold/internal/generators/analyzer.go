@@ -109,16 +109,23 @@ func extractResourcesFromServiceFile(filePath string) ([]string, error) {
 	ast.Inspect(f, func(n ast.Node) bool {
 		switch x := n.(type) {
 		case *ast.CallExpr:
-			// Check if this is a RegisterResource call
-			if sel, ok := x.Fun.(*ast.SelectorExpr); ok {
-				if sel.Sel.Name == "RegisterResource" {
-					// Extract resource name from arguments
-					if len(x.Args) >= 2 {
-						if lit, ok := x.Args[1].(*ast.BasicLit); ok {
-							resource := strings.Trim(lit.Value, `"`)
-							resources = append(resources, resource)
-						}
-					}
+			// Check if this is a RegisterResource call (either RegisterResource(...) or pkg.RegisterResource(...))
+			isRegisterResource := false
+			switch fn := x.Fun.(type) {
+			case *ast.Ident:
+				isRegisterResource = fn.Name == "RegisterResource"
+			case *ast.SelectorExpr:
+				isRegisterResource = fn.Sel != nil && fn.Sel.Name == "RegisterResource"
+			}
+			if !isRegisterResource {
+				break
+			}
+
+			// Extract resource name from arguments: RegisterResource("<service>", "<resource>")
+			if len(x.Args) >= 2 {
+				if lit, ok := x.Args[1].(*ast.BasicLit); ok && lit.Kind == token.STRING {
+					resource := strings.Trim(lit.Value, `"`)
+					resources = append(resources, resource)
 				}
 			}
 		}

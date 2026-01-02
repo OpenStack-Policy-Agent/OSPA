@@ -96,7 +96,8 @@ func addRegisterResourceCalls(content, serviceName string, resources []string) s
 		return content
 	}
 
-	insertPos := lastRegisterIndex + lineEnd
+	// Insert AFTER the newline; otherwise we inject code into the middle of the existing line.
+	insertPos := lastRegisterIndex + lineEnd + 1
 	newCalls := ""
 	for _, res := range resources {
 		newCalls += fmt.Sprintf("\tRegisterResource(%q, %q)\n", serviceName, res)

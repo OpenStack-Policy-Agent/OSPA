@@ -6,7 +6,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/OpenStack-Policy-Agent/OSPA/cmd/scaffold/generators"
+	"github.com/OpenStack-Policy-Agent/OSPA/cmd/scaffold/internal/generators"
+	"github.com/OpenStack-Policy-Agent/OSPA/cmd/scaffold/internal/registry"
 )
 
 var (
@@ -43,14 +44,14 @@ func main() {
 	serviceNameLower := strings.ToLower(*serviceName)
 
 	// Validate service exists in OpenStack
-	if err := ValidateService(serviceNameLower); err != nil {
+	if err := registry.ValidateService(serviceNameLower); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		fmt.Fprintf(os.Stderr, "\nUse --list to see all available services\n")
 		os.Exit(1)
 	}
 
 	// Get service info for defaults
-	serviceInfo, err := GetServiceInfo(serviceNameLower)
+	serviceInfo, err := registry.GetServiceInfo(serviceNameLower)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
@@ -75,7 +76,7 @@ func main() {
 
 	if len(resourceList) == 0 {
 		fmt.Fprintf(os.Stderr, "Error: at least one resource type is required (--resources)\n")
-		availableResources, _ := ListResources(serviceNameLower)
+		availableResources, _ := registry.ListResources(serviceNameLower)
 		if len(availableResources) > 0 {
 			fmt.Fprintf(os.Stderr, "Available resources for %s: %v\n", serviceNameLower, availableResources)
 		}
@@ -83,7 +84,7 @@ func main() {
 	}
 
 	// Validate resources exist for this service
-	if err := ValidateResources(serviceNameLower, resourceList); err != nil {
+	if err := registry.ValidateResources(serviceNameLower, resourceList); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
@@ -124,7 +125,7 @@ func main() {
 
 // listServices prints all available OpenStack services and their resources
 func listServices() {
-	services := ListServices()
+	services := registry.ListServices()
 	if len(services) == 0 {
 		fmt.Println("No services available")
 		return
@@ -134,7 +135,7 @@ func listServices() {
 	fmt.Println("==============================")
 	
 	for _, svcName := range services {
-		info, err := GetServiceInfo(svcName)
+		info, err := registry.GetServiceInfo(svcName)
 		if err != nil {
 			continue
 		}
@@ -143,7 +144,7 @@ func listServices() {
 		fmt.Printf("  Service Type: %s\n", info.ServiceType)
 		fmt.Printf("  Resources: ")
 		
-		resList, err := ListResources(svcName)
+		resList, err := registry.ListResources(svcName)
 		if err != nil {
 			fmt.Println("(error listing resources)")
 			continue

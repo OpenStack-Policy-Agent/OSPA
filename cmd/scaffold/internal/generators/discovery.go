@@ -2,6 +2,7 @@ package generators
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"text/template"
