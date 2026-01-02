@@ -21,15 +21,9 @@ func main() {
 	policyPath := flag.String("policy", "", "Path to policies.yaml")
 	outPath := flag.String("out", "", "Write JSONL findings to this file (default: policy defaults.output if set)")
 	workers := flag.Int("workers", runtime.NumCPU()*8, "Number of concurrent workers")
-	apply := flag.Bool("apply", false, "Apply remediations for enforce-mode rules (default: false, dry-run)")
-	fix := flag.Bool("fix", false, "Alias for --apply")
+	fix := flag.Bool("fix", false, "Apply remediations for enforce-mode rules (default: false, dry-run)")
 	allTenants := flag.Bool("all-tenants", false, "Scan all tenants/projects (requires admin). Default: false")
 	flag.Parse()
-
-	// --fix is an alias for --apply
-	if *fix {
-		*apply = true
-	}
 
 	if *cloudName == "" {
 		*cloudName = os.Getenv("OS_CLOUD")
@@ -78,7 +72,7 @@ func main() {
 	}
 
 	// Create orchestrator
-	orch := orchestrator.NewOrchestrator(p, session, workersCount, *apply, *allTenants)
+	orch := orchestrator.NewOrchestrator(p, session, workersCount, *fix, *allTenants)
 	defer orch.Stop()
 
 	fmt.Println("Starting policy audit...")

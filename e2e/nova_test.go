@@ -9,6 +9,12 @@ import (
 
 // TestNova_InstanceAudit tests nova instance auditing
 func TestNova_InstanceAudit(t *testing.T) {
+	// TODO(OSPA): This is an e2e test. It requires a real OpenStack cloud configuration:
+	// - OS_CLIENT_CONFIG_FILE pointing to clouds.yaml
+	// - OS_CLOUD set to a valid cloud entry
+	// TODO(OSPA): Once nova/instance discovery + auditing are implemented, tighten assertions:
+	// - expect non-zero discovered resources (where applicable)
+	// - expect zero errors unless intentionally testing error paths
 	engine := NewTestEngine(t)
 
 	policyYAML := `version: v1
@@ -41,6 +47,12 @@ policies:
 
 // TestNova_KeypairAudit tests nova keypair auditing
 func TestNova_KeypairAudit(t *testing.T) {
+	// TODO(OSPA): This is an e2e test. It requires a real OpenStack cloud configuration:
+	// - OS_CLIENT_CONFIG_FILE pointing to clouds.yaml
+	// - OS_CLOUD set to a valid cloud entry
+	// TODO(OSPA): Once nova/keypair discovery + auditing are implemented, tighten assertions:
+	// - expect non-zero discovered resources (where applicable)
+	// - expect zero errors unless intentionally testing error paths
 	engine := NewTestEngine(t)
 
 	policyYAML := `version: v1

@@ -178,7 +178,7 @@ action: delete
   action: delete
 ```
 
-**Note:** The `--apply` flag must be set when running the agent for delete actions to take effect.
+**Note:** The `--fix` flag must be set when running the agent for delete actions to take effect.
 
 ### Tag Action
 
@@ -383,7 +383,7 @@ For more information about Cinder resources and their properties:
 
 3. **Apply remediations (use with caution):**
    ```bash
-   go run ./cmd/agent --cloud "$OS_CLOUD" --policy your-policy.yaml --out findings.jsonl --apply
+   go run ./cmd/agent --cloud "$OS_CLOUD" --policy your-policy.yaml --out findings.jsonl --fix
    ```
 
 ## Notes
@@ -407,7 +407,7 @@ For more information about Cinder resources and their properties:
 - Check OpenStack API endpoints are accessible
 
 **Actions not working:**
-- Ensure `--apply` flag is set for delete/tag actions
+- Ensure `--fix` flag is set for delete/tag actions
 - Verify you have permissions to modify resources
 - Check action-specific requirements (e.g., `tag_name` for tag action)
 

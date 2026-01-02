@@ -60,6 +60,12 @@ import (
 {{range .Resources}}
 // Test{{$.DisplayName}}_{{. | Pascal}}Audit tests {{$.ServiceName}} {{.}} auditing
 func Test{{$.DisplayName}}_{{. | Pascal}}Audit(t *testing.T) {
+	// TODO(OSPA): This is an e2e test. It requires a real OpenStack cloud configuration:
+	// - OS_CLIENT_CONFIG_FILE pointing to clouds.yaml
+	// - OS_CLOUD set to a valid cloud entry
+	// TODO(OSPA): Once {{$.ServiceName}}/{{.}} discovery + auditing are implemented, tighten assertions:
+	// - expect non-zero discovered resources (where applicable)
+	// - expect zero errors unless intentionally testing error paths
 	engine := NewTestEngine(t)
 
 	policyYAML := ` + "`" + `version: v1
@@ -123,6 +129,10 @@ func generateE2ETestCode(serviceName, displayName string, resources []string) st
 		titleRes := ToPascal(resource)
 		code += fmt.Sprintf(`// Test%s_%sAudit tests %s %s auditing
 func Test%s_%sAudit(t *testing.T) {
+	// TODO(OSPA): This is an e2e test. It requires a real OpenStack cloud configuration:
+	// - OS_CLIENT_CONFIG_FILE pointing to clouds.yaml
+	// - OS_CLOUD set to a valid cloud entry
+	// TODO(OSPA): Once %s/%s discovery + auditing are implemented, tighten assertions.
 	engine := NewTestEngine(t)
 
 	policyYAML := `+"`"+`version: v1
@@ -155,6 +165,7 @@ policies:
 `, 
 			displayName, titleRes, serviceName, resource,
 			displayName, titleRes,
+			serviceName, resource,
 			serviceName, resource, resource, serviceName, resource,
 			serviceName, resource,
 			titleRes, serviceName, resource,

@@ -726,7 +726,7 @@ go run ./cmd/agent \
   --cloud "$OS_CLOUD" \
   --policy ./examples/policies.yaml \
   --out findings.jsonl \
-  --apply
+  --fix
 ```
 
 ### All Tenants (Requires Admin)

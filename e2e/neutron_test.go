@@ -9,6 +9,12 @@ import (
 
 // TestNeutron_SecurityGroupRuleAudit tests neutron security_group_rule auditing
 func TestNeutron_SecurityGroupRuleAudit(t *testing.T) {
+	// TODO(OSPA): This is an e2e test. It requires a real OpenStack cloud configuration:
+	// - OS_CLIENT_CONFIG_FILE pointing to clouds.yaml
+	// - OS_CLOUD set to a valid cloud entry
+	// TODO(OSPA): Once neutron/security_group_rule discovery + auditing are implemented, tighten assertions:
+	// - expect non-zero discovered resources (where applicable)
+	// - expect zero errors unless intentionally testing error paths
 	engine := NewTestEngine(t)
 
 	policyYAML := `version: v1
@@ -41,6 +47,12 @@ policies:
 
 // TestNeutron_FloatingIpAudit tests neutron floating_ip auditing
 func TestNeutron_FloatingIpAudit(t *testing.T) {
+	// TODO(OSPA): This is an e2e test. It requires a real OpenStack cloud configuration:
+	// - OS_CLIENT_CONFIG_FILE pointing to clouds.yaml
+	// - OS_CLOUD set to a valid cloud entry
+	// TODO(OSPA): Once neutron/floating_ip discovery + auditing are implemented, tighten assertions:
+	// - expect non-zero discovered resources (where applicable)
+	// - expect zero errors unless intentionally testing error paths
 	engine := NewTestEngine(t)
 
 	policyYAML := `version: v1
@@ -73,6 +85,12 @@ policies:
 
 // TestNeutron_SecurityGroupAudit tests neutron security_group auditing
 func TestNeutron_SecurityGroupAudit(t *testing.T) {
+	// TODO(OSPA): This is an e2e test. It requires a real OpenStack cloud configuration:
+	// - OS_CLIENT_CONFIG_FILE pointing to clouds.yaml
+	// - OS_CLOUD set to a valid cloud entry
+	// TODO(OSPA): Once neutron/security_group discovery + auditing are implemented, tighten assertions:
+	// - expect non-zero discovered resources (where applicable)
+	// - expect zero errors unless intentionally testing error paths
 	engine := NewTestEngine(t)
 
 	policyYAML := `version: v1

@@ -9,6 +9,12 @@ import (
 
 // TestCinder_VolumeAudit tests cinder volume auditing
 func TestCinder_VolumeAudit(t *testing.T) {
+	// TODO(OSPA): This is an e2e test. It requires a real OpenStack cloud configuration:
+	// - OS_CLIENT_CONFIG_FILE pointing to clouds.yaml
+	// - OS_CLOUD set to a valid cloud entry
+	// TODO(OSPA): Once cinder/volume discovery + auditing are implemented, tighten assertions:
+	// - expect non-zero discovered resources (where applicable)
+	// - expect zero errors unless intentionally testing error paths
 	engine := NewTestEngine(t)
 
 	policyYAML := `version: v1
@@ -41,6 +47,12 @@ policies:
 
 // TestCinder_SnapshotAudit tests cinder snapshot auditing
 func TestCinder_SnapshotAudit(t *testing.T) {
+	// TODO(OSPA): This is an e2e test. It requires a real OpenStack cloud configuration:
+	// - OS_CLIENT_CONFIG_FILE pointing to clouds.yaml
+	// - OS_CLOUD set to a valid cloud entry
+	// TODO(OSPA): Once cinder/snapshot discovery + auditing are implemented, tighten assertions:
+	// - expect non-zero discovered resources (where applicable)
+	// - expect zero errors unless intentionally testing error paths
 	engine := NewTestEngine(t)
 
 	policyYAML := `version: v1
