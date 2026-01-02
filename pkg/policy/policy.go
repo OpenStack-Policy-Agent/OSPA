@@ -2,10 +2,7 @@ package policy
 
 import (
 	"fmt"
-	"os"
 	"time"
-
-	"gopkg.in/yaml.v2"
 )
 
 // Policy represents the top-level policy configuration

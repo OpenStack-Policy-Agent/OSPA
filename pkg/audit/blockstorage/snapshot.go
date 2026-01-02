@@ -28,7 +28,8 @@ func (a *SnapshotAuditor) Check(ctx context.Context, resource interface{}, rule 
 		RuleID:       rule.Name,
 		ResourceID:   snapshot.ID,
 		ResourceName: snapshot.Name,
-		ProjectID:    snapshot.OsExtendedSnapshotAttributes.ProjectID,
+		// gophercloud snapshots.Snapshot doesn't expose project/tenant ID in the v3 API struct.
+		ProjectID:    "",
 		Compliant:    true,
 		Rule:         rule,
 		Status:       snapshot.Status,

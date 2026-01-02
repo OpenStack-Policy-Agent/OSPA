@@ -4,13 +4,7 @@ import (
 	"fmt"
 	"strings"
 	
-	"github.com/OpenStack-Policy-Agent/OSPA/pkg/policy/validation"
-	"github.com/OpenStack-Policy-Agent/OSPA/pkg/services"
-	
-	// Import validation packages to register validators
-	_ "github.com/OpenStack-Policy-Agent/OSPA/pkg/policy/validation/blockstorage"
-	_ "github.com/OpenStack-Policy-Agent/OSPA/pkg/policy/validation/compute"
-	_ "github.com/OpenStack-Policy-Agent/OSPA/pkg/policy/validation/network"
+	"github.com/OpenStack-Policy-Agent/OSPA/pkg/catalog"
 )
 
 // Validate validates the policy structure and rules
@@ -27,7 +21,7 @@ func (p *Policy) Validate() error {
 	
 	// Dynamically discover supported services and resources from the registry
 	// This allows new services to be added without modifying the validator
-	supportedResources := services.GetSupportedResources()
+	supportedResources := catalog.GetSupportedResources()
 	supportedServices := make(map[string]bool)
 	for serviceName := range supportedResources {
 		supportedServices[serviceName] = true
@@ -121,8 +115,7 @@ func (p *Policy) Validate() error {
 // validateCheckConditions validates check conditions using service-specific validators
 func validateCheckConditions(serviceName string, check *CheckConditions, resource, ruleName string) error {
 	// Try to get service-specific validator
-	if validator, err := validation.Get(serviceName); err == nil {
-		// Use service-specific validator
+	if validator, ok := GetValidator(serviceName); ok {
 		return validator.ValidateResource(check, resource, ruleName)
 	}
 	

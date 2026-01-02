@@ -126,16 +126,12 @@ func (a *InstanceAuditor) Fix(ctx context.Context, client interface{}, resource 
 	}
 	metadata[tagName] = "true"
 
-	updateOpts := servers.UpdateOpts{
-		Metadata: metadata,
-	}
-
-	_, err := servers.Update(serviceClient, server.ID, updateOpts).Extract()
+	_, err := servers.UpdateMetadata(serviceClient, server.ID, servers.MetadataOpts(metadata)).Extract()
 	return err
 }
 
 // checkMetadataExemption checks if metadata matches exemption criteria
-func checkMetadataExemption(metadata map[string]interface{}, exempt *policy.MetadataMatch) (bool, error) {
+func checkMetadataExemption(metadata map[string]string, exempt *policy.MetadataMatch) (bool, error) {
 	if metadata == nil {
 		return false, nil
 	}
@@ -145,7 +141,6 @@ func checkMetadataExemption(metadata map[string]interface{}, exempt *policy.Meta
 		return false, nil
 	}
 
-	valueStr := fmt.Sprintf("%v", value)
-	return strings.EqualFold(valueStr, exempt.Value), nil
+	return strings.EqualFold(value, exempt.Value), nil
 }
 

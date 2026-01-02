@@ -10,7 +10,7 @@ import (
 type BlockStorageValidator struct{}
 
 func init() {
-	Register(&BlockStorageValidator{})
+	policy.RegisterValidator(&BlockStorageValidator{})
 }
 
 func (v *BlockStorageValidator) ServiceName() string {

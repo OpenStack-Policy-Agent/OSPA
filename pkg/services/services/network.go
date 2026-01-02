@@ -3,10 +3,12 @@ package services
 import (
 	"fmt"
 
+	rootservices "github.com/OpenStack-Policy-Agent/OSPA/pkg/services"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/audit"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/audit/network"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/auth"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/discovery"
+	discovery_services "github.com/OpenStack-Policy-Agent/OSPA/pkg/discovery/services"
 	"github.com/gophercloud/gophercloud"
 )
 
@@ -24,11 +26,11 @@ import (
 type NetworkService struct{}
 
 func init() {
-	MustRegister(&NetworkService{})
+	rootservices.MustRegister(&NetworkService{})
 	// Register supported resources for automatic validation
-	RegisterResource("neutron", "security_group_rule")
-	RegisterResource("neutron", "floating_ip")
-	RegisterResource("neutron", "security_group")
+	rootservices.RegisterResource("neutron", "security_group_rule")
+	rootservices.RegisterResource("neutron", "floating_ip")
+	rootservices.RegisterResource("neutron", "security_group")
 }
 
 // Name returns the service name
@@ -59,11 +61,11 @@ func (s *NetworkService) GetResourceAuditor(resourceType string) (audit.Auditor,
 func (s *NetworkService) GetResourceDiscoverer(resourceType string) (discovery.Discoverer, error) {
 	switch resourceType {
 	case "security_group_rule":
-		return &discovery.NetworkSecurityGroupRuleDiscoverer{}, nil
+		return &discovery_services.NetworkSecurityGroupRuleDiscoverer{}, nil
 	case "floating_ip":
-		return &discovery.NetworkFloatingIPDiscoverer{}, nil
+		return &discovery_services.NetworkFloatingIPDiscoverer{}, nil
 	case "security_group":
-		return &discovery.NetworkSecurityGroupDiscoverer{}, nil
+		return &discovery_services.NetworkSecurityGroupDiscoverer{}, nil
 	default:
 		return nil, fmt.Errorf("unsupported resource type %q for service %q", resourceType, s.Name())
 	}

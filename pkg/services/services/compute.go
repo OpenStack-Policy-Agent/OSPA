@@ -3,10 +3,12 @@ package services
 import (
 	"fmt"
 
+	rootservices "github.com/OpenStack-Policy-Agent/OSPA/pkg/services"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/audit"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/audit/compute"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/auth"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/discovery"
+	discovery_services "github.com/OpenStack-Policy-Agent/OSPA/pkg/discovery/services"
 	"github.com/gophercloud/gophercloud"
 )
 
@@ -23,10 +25,10 @@ import (
 type ComputeService struct{}
 
 func init() {
-	MustRegister(&ComputeService{})
+	rootservices.MustRegister(&ComputeService{})
 	// Register supported resources for automatic validation
-	RegisterResource("nova", "instance")
-	RegisterResource("nova", "keypair")
+	rootservices.RegisterResource("nova", "instance")
+	rootservices.RegisterResource("nova", "keypair")
 }
 
 // Name returns the service name
@@ -55,9 +57,9 @@ func (s *ComputeService) GetResourceAuditor(resourceType string) (audit.Auditor,
 func (s *ComputeService) GetResourceDiscoverer(resourceType string) (discovery.Discoverer, error) {
 	switch resourceType {
 	case "instance":
-		return &discovery.ComputeInstanceDiscoverer{}, nil
+		return &discovery_services.ComputeInstanceDiscoverer{}, nil
 	case "keypair":
-		return &discovery.ComputeKeypairDiscoverer{}, nil
+		return &discovery_services.ComputeKeypairDiscoverer{}, nil
 	default:
 		return nil, fmt.Errorf("unsupported resource type %q for service %q", resourceType, s.Name())
 	}

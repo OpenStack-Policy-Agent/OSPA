@@ -7,7 +7,6 @@ import (
 
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/audit"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/policy"
-	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/blockstorage/v3/volumes"
 )
 
@@ -28,7 +27,8 @@ func (a *VolumeAuditor) Check(ctx context.Context, resource interface{}, rule *p
 		RuleID:       rule.Name,
 		ResourceID:   volume.ID,
 		ResourceName: volume.Name,
-		ProjectID:    volume.OsVolTenantAttr.TenantID,
+		// gophercloud volumes.Volume doesn't expose project/tenant ID in the v3 API struct.
+		ProjectID:    "",
 		Compliant:    true,
 		Rule:         rule,
 		Status:       volume.Status,

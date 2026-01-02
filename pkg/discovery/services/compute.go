@@ -1,8 +1,9 @@
-package discovery
+package services
 
 import (
 	"context"
 
+	"github.com/OpenStack-Policy-Agent/OSPA/pkg/discovery"
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/keypairs"
@@ -16,7 +17,7 @@ func (d *ComputeInstanceDiscoverer) ResourceType() string {
 	return "instance"
 }
 
-func (d *ComputeInstanceDiscoverer) Discover(ctx context.Context, client *gophercloud.ServiceClient, allTenants bool) (<-chan Job, error) {
+func (d *ComputeInstanceDiscoverer) Discover(ctx context.Context, client *gophercloud.ServiceClient, allTenants bool) (<-chan discovery.Job, error) {
 	opts := servers.ListOpts{
 		AllTenants: allTenants,
 	}
@@ -34,7 +35,7 @@ func (d *ComputeInstanceDiscoverer) Discover(ctx context.Context, client *gopher
 		return resources, nil
 	}
 
-	createJob := SimpleJobCreator(
+	createJob := discovery.SimpleJobCreator(
 		"nova",
 		func(r interface{}) string {
 			return r.(servers.Server).ID
@@ -44,7 +45,7 @@ func (d *ComputeInstanceDiscoverer) Discover(ctx context.Context, client *gopher
 		},
 	)
 
-	return DiscoverPaged(ctx, client, "nova", d.ResourceType(), pager, extract, createJob)
+	return discovery.DiscoverPaged(ctx, client, "nova", d.ResourceType(), pager, extract, createJob)
 }
 
 // ComputeKeypairDiscoverer discovers Nova keypairs
@@ -54,7 +55,7 @@ func (d *ComputeKeypairDiscoverer) ResourceType() string {
 	return "keypair"
 }
 
-func (d *ComputeKeypairDiscoverer) Discover(ctx context.Context, client *gophercloud.ServiceClient, allTenants bool) (<-chan Job, error) {
+func (d *ComputeKeypairDiscoverer) Discover(ctx context.Context, client *gophercloud.ServiceClient, allTenants bool) (<-chan discovery.Job, error) {
 	opts := keypairs.ListOpts{}
 	// Note: keypairs.List doesn't support allTenants directly
 	// This would need to be handled differently if cross-tenant scanning is needed
@@ -72,7 +73,7 @@ func (d *ComputeKeypairDiscoverer) Discover(ctx context.Context, client *gopherc
 		return resources, nil
 	}
 
-	createJob := SimpleJobCreator(
+	createJob := discovery.SimpleJobCreator(
 		"nova",
 		func(r interface{}) string {
 			return r.(keypairs.KeyPair).Name
@@ -83,6 +84,6 @@ func (d *ComputeKeypairDiscoverer) Discover(ctx context.Context, client *gopherc
 		},
 	)
 
-	return DiscoverPaged(ctx, client, "nova", d.ResourceType(), pager, extract, createJob)
+	return discovery.DiscoverPaged(ctx, client, "nova", d.ResourceType(), pager, extract, createJob)
 }
 

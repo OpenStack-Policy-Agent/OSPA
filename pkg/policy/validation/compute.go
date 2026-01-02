@@ -10,7 +10,7 @@ import (
 type ComputeValidator struct{}
 
 func init() {
-	Register(&ComputeValidator{})
+	policy.RegisterValidator(&ComputeValidator{})
 }
 
 func (v *ComputeValidator) ServiceName() string {

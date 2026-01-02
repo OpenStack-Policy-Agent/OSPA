@@ -58,14 +58,14 @@ func (a *SecurityGroupRuleAuditor) Check(ctx context.Context, resource interface
 
 	// Check port
 	if check.Port != 0 {
-		if sgRule.PortRangeMin == nil || *sgRule.PortRangeMin != check.Port {
+		if sgRule.PortRangeMin != check.Port {
 			return result, nil // Not a match, but compliant
 		}
 	}
 
 	// Check remote IP prefix
 	if check.RemoteIPPrefix != "" {
-		if sgRule.RemoteIPPrefix == nil || *sgRule.RemoteIPPrefix != check.RemoteIPPrefix {
+		if sgRule.RemoteIPPrefix != check.RemoteIPPrefix {
 			return result, nil // Not a match, but compliant
 		}
 	}

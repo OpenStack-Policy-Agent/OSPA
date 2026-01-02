@@ -10,7 +10,7 @@ import (
 type NetworkValidator struct{}
 
 func init() {
-	Register(&NetworkValidator{})
+	policy.RegisterValidator(&NetworkValidator{})
 }
 
 func (v *NetworkValidator) ServiceName() string {

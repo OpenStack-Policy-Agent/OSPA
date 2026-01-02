@@ -1,8 +1,9 @@
-package discovery
+package services
 
 import (
 	"context"
 
+	"github.com/OpenStack-Policy-Agent/OSPA/pkg/discovery"
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/blockstorage/v3/volumes"
 	"github.com/gophercloud/gophercloud/openstack/blockstorage/v3/snapshots"
@@ -16,7 +17,7 @@ func (d *BlockStorageVolumeDiscoverer) ResourceType() string {
 	return "volume"
 }
 
-func (d *BlockStorageVolumeDiscoverer) Discover(ctx context.Context, client *gophercloud.ServiceClient, allTenants bool) (<-chan Job, error) {
+func (d *BlockStorageVolumeDiscoverer) Discover(ctx context.Context, client *gophercloud.ServiceClient, allTenants bool) (<-chan discovery.Job, error) {
 	opts := volumes.ListOpts{}
 	if allTenants {
 		opts.AllTenants = true
@@ -35,17 +36,20 @@ func (d *BlockStorageVolumeDiscoverer) Discover(ctx context.Context, client *gop
 		return resources, nil
 	}
 
-	createJob := SimpleJobCreator(
+	createJob := discovery.SimpleJobCreator(
 		"cinder",
 		func(r interface{}) string {
 			return r.(volumes.Volume).ID
 		},
 		func(r interface{}) string {
-			return r.(volumes.Volume).OsVolTenantAttr.TenantID
+			// gophercloud volumes.Volume doesn't expose project/tenant ID in the v3 API struct.
+			// Leave it empty for now.
+			_ = r
+			return ""
 		},
 	)
 
-	return DiscoverPaged(ctx, client, "cinder", d.ResourceType(), pager, extract, createJob)
+	return discovery.DiscoverPaged(ctx, client, "cinder", d.ResourceType(), pager, extract, createJob)
 }
 
 // BlockStorageSnapshotDiscoverer discovers Cinder snapshots
@@ -55,7 +59,7 @@ func (d *BlockStorageSnapshotDiscoverer) ResourceType() string {
 	return "snapshot"
 }
 
-func (d *BlockStorageSnapshotDiscoverer) Discover(ctx context.Context, client *gophercloud.ServiceClient, allTenants bool) (<-chan Job, error) {
+func (d *BlockStorageSnapshotDiscoverer) Discover(ctx context.Context, client *gophercloud.ServiceClient, allTenants bool) (<-chan discovery.Job, error) {
 	opts := snapshots.ListOpts{}
 	if allTenants {
 		opts.AllTenants = true
@@ -74,16 +78,19 @@ func (d *BlockStorageSnapshotDiscoverer) Discover(ctx context.Context, client *g
 		return resources, nil
 	}
 
-	createJob := SimpleJobCreator(
+	createJob := discovery.SimpleJobCreator(
 		"cinder",
 		func(r interface{}) string {
 			return r.(snapshots.Snapshot).ID
 		},
 		func(r interface{}) string {
-			return r.(snapshots.Snapshot).OsExtendedSnapshotAttributes.ProjectID
+			// gophercloud snapshots.Snapshot doesn't expose project/tenant ID in the v3 API struct.
+			// Leave it empty for now.
+			_ = r
+			return ""
 		},
 	)
 
-	return DiscoverPaged(ctx, client, "cinder", d.ResourceType(), pager, extract, createJob)
+	return discovery.DiscoverPaged(ctx, client, "cinder", d.ResourceType(), pager, extract, createJob)
 }
 

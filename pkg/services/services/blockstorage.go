@@ -3,10 +3,12 @@ package services
 import (
 	"fmt"
 
+	rootservices "github.com/OpenStack-Policy-Agent/OSPA/pkg/services"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/audit"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/audit/blockstorage"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/auth"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/discovery"
+	discovery_services "github.com/OpenStack-Policy-Agent/OSPA/pkg/discovery/services"
 	"github.com/gophercloud/gophercloud"
 )
 
@@ -23,10 +25,10 @@ import (
 type BlockStorageService struct{}
 
 func init() {
-	MustRegister(&BlockStorageService{})
+	rootservices.MustRegister(&BlockStorageService{})
 	// Register supported resources for automatic validation
-	RegisterResource("cinder", "volume")
-	RegisterResource("cinder", "snapshot")
+	rootservices.RegisterResource("cinder", "volume")
+	rootservices.RegisterResource("cinder", "snapshot")
 }
 
 // Name returns the service name
@@ -55,9 +57,9 @@ func (s *BlockStorageService) GetResourceAuditor(resourceType string) (audit.Aud
 func (s *BlockStorageService) GetResourceDiscoverer(resourceType string) (discovery.Discoverer, error) {
 	switch resourceType {
 	case "volume":
-		return &discovery.BlockStorageVolumeDiscoverer{}, nil
+		return &discovery_services.BlockStorageVolumeDiscoverer{}, nil
 	case "snapshot":
-		return &discovery.BlockStorageSnapshotDiscoverer{}, nil
+		return &discovery_services.BlockStorageSnapshotDiscoverer{}, nil
 	default:
 		return nil, fmt.Errorf("unsupported resource type %q for service %q", resourceType, s.Name())
 	}

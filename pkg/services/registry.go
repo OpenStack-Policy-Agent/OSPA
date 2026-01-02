@@ -3,6 +3,8 @@ package services
 import (
 	"fmt"
 	"sync"
+
+	"github.com/OpenStack-Policy-Agent/OSPA/pkg/catalog"
 )
 
 var (
@@ -56,7 +58,7 @@ func List() []string {
 // GetSupportedResources returns a map of service names to their supported resource types.
 // This uses the resource registry which is populated when services register their resources.
 func GetSupportedResources() map[string]map[string]bool {
-	return globalResourceRegistry.GetAllResources()
+	return catalog.GetSupportedResources()
 }
 
 // MustRegister registers a service and panics on error.

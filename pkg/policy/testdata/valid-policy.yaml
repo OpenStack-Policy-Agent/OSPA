@@ -1,0 +1,14 @@
+version: v1
+defaults:
+  workers: 1
+  output: out.jsonl
+policies:
+  - nova:
+    - name: old-instances
+      description: Old instances
+      resource: instance
+      check:
+        age_gt: "30d"
+      action: log
+
+

@@ -62,7 +62,7 @@ func (a *KeypairAuditor) Fix(ctx context.Context, client interface{}, resource i
 			return fmt.Errorf("expected *gophercloud.ServiceClient, got %T", client)
 		}
 
-		return keypairs.Delete(serviceClient, kp.Name).ExtractErr()
+		return keypairs.Delete(serviceClient, kp.Name, nil).ExtractErr()
 	}
 	return nil
 }
