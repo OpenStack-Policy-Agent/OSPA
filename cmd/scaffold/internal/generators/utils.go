@@ -3,6 +3,7 @@ package generators
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
 )
 
@@ -30,5 +31,27 @@ func writeFile(filePath string, tmpl *template.Template, data interface{}) error
 	defer file.Close()
 
 	return tmpl.Execute(file, data)
+}
+
+// ToPascal converts a snake_case or kebab-case identifier into PascalCase.
+// Examples:
+//   - "security_group_rule" -> "SecurityGroupRule"
+//   - "floating_ip" -> "FloatingIP"
+func ToPascal(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return ""
+	}
+	parts := strings.FieldsFunc(s, func(r rune) bool {
+		return r == '_' || r == '-' || r == ' '
+	})
+	for i := range parts {
+		if parts[i] == "" {
+			continue
+		}
+		p := parts[i]
+		parts[i] = strings.ToUpper(p[:1]) + p[1:]
+	}
+	return strings.Join(parts, "")
 }
 

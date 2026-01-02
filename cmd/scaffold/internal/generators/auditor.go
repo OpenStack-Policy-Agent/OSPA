@@ -22,15 +22,14 @@ func GenerateAuditorFiles(baseDir, serviceName, displayName string, resources []
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/audit"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/policy"
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/openstack/{{.ServiceName}}/v2/{{.ResourcePackage}}"
 )
 
 // {{.ResourceTitle}}Auditor audits {{.ServiceName}} resources of type {{.ResourceName}}
+//
+// TODO(OSPA): Replace placeholder logic with real field extraction + rule evaluation for {{.ServiceName}}/{{.ResourceName}}.
 type {{.ResourceTitle}}Auditor struct{}
 
 // ResourceType returns the resource type this auditor handles
@@ -40,101 +39,46 @@ func (a *{{.ResourceTitle}}Auditor) ResourceType() string {
 
 // Check evaluates a resource against a policy rule
 func (a *{{.ResourceTitle}}Auditor) Check(ctx context.Context, resource interface{}, rule *policy.Rule) (*audit.Result, error) {
-	res, ok := resource.({{.ResourcePackage}}.{{.ResourceTitle}})
-	if !ok {
-		return nil, fmt.Errorf("expected {{.ResourcePackage}}.{{.ResourceTitle}}, got %T", resource)
-	}
+	_ = ctx
+	_ = resource
 
+	// TODO(OSPA): Parse 'resource' into the correct OpenStack SDK type for {{.ServiceName}}/{{.ResourceName}}.
+	// Populate ResourceID/ResourceName/ProjectID/Status/UpdatedAt, and implement checks (status, age_gt, unused, etc.).
 	result := &audit.Result{
 		RuleID:       rule.Name,
-		ResourceID:   res.ID,
-		ResourceName: res.Name, // Adjust based on resource structure
-		ProjectID:    res.TenantID, // Adjust based on resource structure
+		ResourceID:   "unknown",
+		ResourceName: "unknown",
+		ProjectID:    "",
 		Compliant:    true,
 		Rule:         rule,
-		Status:       res.Status, // If available
-		UpdatedAt:    res.UpdatedAt, // If available
+		Status:       "",
 	}
-
-	check := rule.Check
-
-	// Check status
-	if check.Status != "" {
-		if res.Status != check.Status {
-			return result, nil // Status doesn't match, but that's not a violation
-		}
-	}
-
-	// Check age
-	if check.AgeGT != "" {
-		ageThreshold, err := check.ParseAgeGT()
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse age_gt: %w", err)
-		}
-
-		evalTime := res.UpdatedAt
-		if evalTime.IsZero() {
-			evalTime = res.CreatedAt
-		}
-		if !evalTime.IsZero() {
-			age := time.Now().Sub(evalTime)
-			if age >= ageThreshold {
-				result.Compliant = false
-				result.Observation = fmt.Sprintf("Resource is %s old (>= %s)", age.Round(time.Hour*24), ageThreshold)
-			}
-		}
-	}
-
-	// Check exemptions
-	if check.ExemptNames != nil {
-		for _, exemptName := range check.ExemptNames {
-			if res.Name == exemptName {
-				return result, nil // Exempt, so compliant
-			}
-		}
-	}
-
-	// Add more check conditions as needed based on resource type
 
 	return result, nil
 }
 
 // Fix applies remediation to a resource based on the rule action
 func (a *{{.ResourceTitle}}Auditor) Fix(ctx context.Context, client interface{}, resource interface{}, rule *policy.Rule) error {
-	res, ok := resource.({{.ResourcePackage}}.{{.ResourceTitle}})
-	if !ok {
-		return fmt.Errorf("expected {{.ResourcePackage}}.{{.ResourceTitle}}, got %T", resource)
-	}
+	_ = ctx
+	_ = client
+	_ = resource
 
-	serviceClient, ok := client.(*gophercloud.ServiceClient)
-	if !ok {
-		return fmt.Errorf("expected *gophercloud.ServiceClient, got %T", client)
-	}
-
+	// TODO(OSPA): Implement remediation actions using the correct OpenStack client calls:
+	// - delete: delete the resource
+	// - tag: apply policy tag/metadata
+	// - log: no-op (already supported)
 	switch rule.Action {
-	case "delete":
-		return {{.ResourcePackage}}.Delete(serviceClient, res.ID).ExtractErr()
-	case "tag":
-		// Implement tagging logic based on resource type
-		tagName := rule.TagName
-		if tagName == "" {
-			tagName = rule.ActionTagName
-		}
-		if tagName == "" {
-			return fmt.Errorf("tag_name or action_tag_name is required for tag action")
-		}
-		// TODO: Implement tagging for {{.ResourceName}}
-		return fmt.Errorf("tag action not yet implemented for {{.ResourceName}}")
 	case "log":
 		return nil
 	default:
-		return fmt.Errorf("unsupported action %q", rule.Action)
+		return fmt.Errorf("%s.%s fix action %q not implemented", "{{.ServiceName}}", "{{.ResourceName}}", rule.Action)
 	}
 }
 `
 
 	funcMap := template.FuncMap{
-		"Title": strings.Title,
+		"Title":  strings.Title,
+		"Pascal": ToPascal,
 	}
 
 	for _, resource := range resources {
@@ -150,13 +94,11 @@ func (a *{{.ResourceTitle}}Auditor) Fix(ctx context.Context, client interface{},
 			DisplayName     string
 			ResourceName    string
 			ResourceTitle   string
-			ResourcePackage string
 		}{
 			ServiceName:     serviceName,
 			DisplayName:     displayName,
 			ResourceName:    resource,
-			ResourceTitle:   strings.Title(resource),
-			ResourcePackage: serviceName, // May need adjustment
+			ResourceTitle:   ToPascal(resource),
 		}
 
 		t, err := template.New("auditor").Funcs(funcMap).Parse(tmpl)

@@ -133,7 +133,7 @@ func addAuditorCases(content, serviceName, displayName string, resources []strin
 		insertPos := switchPos + closingBrace
 		newCases := "\n"
 		for _, res := range resources {
-			titleRes := strings.Title(res)
+			titleRes := ToPascal(res)
 			newCases += fmt.Sprintf("\tcase %q:\n\t\treturn &%s.%sAuditor{}, nil\n", res, serviceName, titleRes)
 		}
 		return content[:insertPos] + newCases + content[insertPos:]
@@ -143,7 +143,7 @@ func addAuditorCases(content, serviceName, displayName string, resources []strin
 	insertPos := switchPos + defaultCase
 	newCases := "\n"
 	for _, res := range resources {
-		titleRes := strings.Title(res)
+		titleRes := ToPascal(res)
 		newCases += fmt.Sprintf("\tcase %q:\n\t\treturn &%s.%sAuditor{}, nil\n", res, serviceName, titleRes)
 	}
 
@@ -177,8 +177,8 @@ func addDiscovererCases(content, displayName string, resources []string) string 
 		insertPos := switchPos + closingBrace
 		newCases := "\n"
 		for _, res := range resources {
-			titleRes := strings.Title(res)
-			newCases += fmt.Sprintf("\tcase %q:\n\t\treturn &discovery.%s%sDiscoverer{}, nil\n", res, displayName, titleRes)
+			titleRes := ToPascal(res)
+			newCases += fmt.Sprintf("\tcase %q:\n\t\treturn &discovery_services.%s%sDiscoverer{}, nil\n", res, displayName, titleRes)
 		}
 		return content[:insertPos] + newCases + content[insertPos:]
 	}
@@ -187,8 +187,8 @@ func addDiscovererCases(content, displayName string, resources []string) string 
 	insertPos := switchPos + defaultCase
 	newCases := "\n"
 	for _, res := range resources {
-		titleRes := strings.Title(res)
-		newCases += fmt.Sprintf("\tcase %q:\n\t\treturn &discovery.%s%sDiscoverer{}, nil\n", res, displayName, titleRes)
+		titleRes := ToPascal(res)
+		newCases += fmt.Sprintf("\tcase %q:\n\t\treturn &discovery_services.%s%sDiscoverer{}, nil\n", res, displayName, titleRes)
 	}
 
 	return content[:insertPos] + newCases + content[insertPos:]

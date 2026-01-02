@@ -9,7 +9,7 @@ import (
 )
 
 // setupRepoPrereqs creates minimal files that the generators expect to exist in a real OSPA repo.
-// Many generators *update* existing files (e.g., pkg/auth/auth.go, pkg/policy/validator.go).
+// Some generators update existing files (e.g., pkg/auth/auth.go).
 func setupRepoPrereqs(baseDir string) error {
 	// Minimal auth.go
 	authContent := `package auth
@@ -37,25 +37,7 @@ func (s *Session) GetDummyClient() (*gophercloud.ServiceClient, error) {
 	if _, err := createTempAuthFile(baseDir, authContent); err != nil {
 		return err
 	}
-
-	// Minimal pkg/policy/validator.go (used by validation generator to add blank imports)
-	validatorDir := filepath.Join(baseDir, "pkg", "policy")
-	if err := os.MkdirAll(validatorDir, 0755); err != nil {
-		return err
-	}
-	validatorPath := filepath.Join(validatorDir, "validator.go")
-	validatorContent := `package policy
-
-import (
-	"github.com/OpenStack-Policy-Agent/OSPA/pkg/policy/validation"
-
-	_ "github.com/OpenStack-Policy-Agent/OSPA/pkg/policy/validation/compute"
-)
-
-// Dummy usage to avoid unused import in this minimal test file.
-var _ = validation.List
-`
-	return os.WriteFile(validatorPath, []byte(validatorContent), 0644)
+	return nil
 }
 
 // createTempProjectStructure creates a temporary project structure for testing

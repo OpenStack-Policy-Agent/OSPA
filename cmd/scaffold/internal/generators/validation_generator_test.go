@@ -60,12 +60,12 @@ func TestGenerateValidationFile_NewFile(t *testing.T) {
 		t.Error("Generated file missing validator struct")
 	}
 
-	// Verify init() with Register call
+	// Verify init() with registration call
 	if !strings.Contains(contentStr, "func init()") {
 		t.Error("Generated file missing init function")
 	}
-	if !strings.Contains(contentStr, "Register(&TestServiceValidator{})") {
-		t.Error("Generated file missing Register call")
+	if !strings.Contains(contentStr, "policy.RegisterValidator(&TestServiceValidator{})") {
+		t.Error("Generated file missing policy.RegisterValidator call")
 	}
 
 	// Verify ServiceName() method

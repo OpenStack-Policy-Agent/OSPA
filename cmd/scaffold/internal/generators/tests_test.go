@@ -44,15 +44,18 @@ func TestGenerateUnitTests_NewFiles(t *testing.T) {
 		}
 
 		// Verify imports
-		requiredImports := []string{"context", "testing", "time", "policy"}
+		requiredImports := []string{"context", "testing", "policy"}
 		for _, imp := range requiredImports {
 			if !strings.Contains(contentStr, imp) {
 				t.Errorf("Generated file missing import %q: %q", imp, filePath)
 			}
 		}
+		if strings.Contains(contentStr, "time") {
+			t.Errorf("Placeholder unit test should not import time: %q", filePath)
+		}
 
 		// Verify test functions
-		testName := strings.Title(res)
+		testName := ToPascal(res)
 		if !strings.Contains(contentStr, "Test"+testName+"Auditor_ResourceType") {
 			t.Errorf("Generated file missing TestResourceType function: %q", filePath)
 		}

@@ -75,11 +75,11 @@ func TestGenerateService_NewService_Complete(t *testing.T) {
 	}
 
 	contentStr = string(content)
-	if !strings.Contains(contentStr, "package discovery") {
+	if !strings.Contains(contentStr, "package services") {
 		t.Error("Discovery file missing package declaration")
 	}
 	for _, res := range resources {
-		discovererName := "TestService" + strings.Title(res) + "Discoverer"
+		discovererName := "TestService" + ToPascal(res) + "Discoverer"
 		if !strings.Contains(contentStr, "type "+discovererName) {
 			t.Errorf("Discovery file missing discoverer for %q", res)
 		}
@@ -159,7 +159,7 @@ func (s *TestServiceService) GetResourceDiscoverer(resourceType string) (discove
 	}
 
 	discoveryFile := filepath.Join(discoveryDir, "testservice.go")
-	discoveryContent := `package discovery
+	discoveryContent := `package services
 
 type TestServiceResource1Discoverer struct{}
 

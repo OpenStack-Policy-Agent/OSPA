@@ -43,16 +43,19 @@ func TestGenerateAuditorFiles_NewFiles(t *testing.T) {
 			t.Errorf("Generated file missing package declaration: %q", filePath)
 		}
 
-		// Verify imports
-		requiredImports := []string{"context", "fmt", "time", "audit", "policy", "gophercloud"}
+		// Verify imports (placeholder auditor should not import gophercloud/openstack SDK packages)
+		requiredImports := []string{"context", "fmt", "audit", "policy"}
 		for _, imp := range requiredImports {
 			if !strings.Contains(contentStr, imp) {
 				t.Errorf("Generated file missing import %q: %q", imp, filePath)
 			}
 		}
+		if strings.Contains(contentStr, "gophercloud/gophercloud/openstack") {
+			t.Errorf("Generated placeholder auditor must not import OpenStack SDK packages: %q", filePath)
+		}
 
 		// Verify auditor struct
-		auditorName := strings.Title(res) + "Auditor"
+		auditorName := ToPascal(res) + "Auditor"
 		if !strings.Contains(contentStr, "type "+auditorName) {
 			t.Errorf("Generated file missing auditor struct: %q", filePath)
 		}

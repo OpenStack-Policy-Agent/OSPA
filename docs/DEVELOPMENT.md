@@ -384,7 +384,7 @@ policies:
 
 **Step 1: Create Discoverer**
 
-Add to `pkg/discovery/services/blockstorage.go`:
+Add to `pkg/discovery/services/cinder.go`:
 
 ```go
 type BlockStorageBackupDiscoverer struct{}
@@ -444,7 +444,7 @@ func (d *BlockStorageBackupDiscoverer) Discover(ctx context.Context, client *gop
 
 **Step 2: Create Auditor**
 
-Create `pkg/audit/blockstorage/backup.go`:
+Create `pkg/audit/cinder/backup.go`:
 
 ```go
 package blockstorage
@@ -525,7 +525,7 @@ func (a *BackupAuditor) Fix(ctx context.Context, client interface{}, resource in
 
 **Step 3: Update Service**
 
-Update `pkg/services/services/blockstorage.go`:
+Update `pkg/services/services/cinder.go`:
 
 ```go
 // In GetResourceAuditor():
@@ -542,7 +542,7 @@ RegisterResource("cinder", "backup")
 
 **Step 4: Write Tests**
 
-Create `pkg/audit/blockstorage/backup_test.go`:
+Create `pkg/audit/cinder/backup_test.go`:
 
 ```go
 package blockstorage
@@ -628,7 +628,7 @@ func TestBackupAuditor_Check_AgeGT(t *testing.T) {
 
 ```bash
 # Run unit tests
-go test ./pkg/audit/blockstorage/... -v
+go test ./pkg/audit/cinder/... -v
 
 # Test with agent
 go run ./cmd/agent \
@@ -650,13 +650,13 @@ go test ./...
 Run tests for specific package:
 
 ```bash
-go test ./pkg/audit/compute/... -v
+go test ./pkg/audit/nova/... -v
 ```
 
 Run specific test:
 
 ```bash
-go test ./pkg/audit/compute/... -run TestInstanceAuditor_Check -v
+go test ./pkg/audit/nova/... -run TestInstanceAuditor_Check -v
 ```
 
 ### Integration Tests
@@ -915,9 +915,9 @@ Use this checklist when adding new services or resources:
 ## Reference Implementations
 
 For detailed implementation examples, see the existing service implementations:
-- Nova: `pkg/services/services/compute.go`, `pkg/discovery/services/compute.go`, `pkg/audit/compute/`
-- Neutron: `pkg/services/services/network.go`, `pkg/discovery/services/network.go`, `pkg/audit/network/`
-- Cinder: `pkg/services/services/blockstorage.go`, `pkg/discovery/services/blockstorage.go`, `pkg/audit/blockstorage/`
+- Nova: `pkg/services/services/nova.go`, `pkg/discovery/services/nova.go`, `pkg/audit/nova/`
+- Neutron: `pkg/services/services/neutron.go`, `pkg/discovery/services/neutron.go`, `pkg/audit/neutron/`
+- Cinder: `pkg/services/services/cinder.go`, `pkg/discovery/services/cinder.go`, `pkg/audit/cinder/`
 
 ## Next Steps
 

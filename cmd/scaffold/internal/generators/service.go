@@ -46,10 +46,12 @@ func GenerateServiceFile(baseDir, serviceName, displayName, serviceType string, 
 import (
 	"fmt"
 
+	rootservices "github.com/OpenStack-Policy-Agent/OSPA/pkg/services"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/audit"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/audit/{{.ServiceName}}"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/auth"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/discovery"
+	discovery_services "github.com/OpenStack-Policy-Agent/OSPA/pkg/discovery/services"
 	"github.com/gophercloud/gophercloud"
 )
 
@@ -57,6 +59,10 @@ import (
 //
 // Supported resources:{{range .Resources}}
 //   - {{.}}: {{$.DisplayName}} {{.}} resources{{end}}
+//
+// TODO(OSPA): Ensure pkg/auth/auth.go has Get{{.DisplayName}}Client() that returns a
+// *gophercloud.ServiceClient for service type "{{.ServiceType}}". The scaffold tool adds this
+// method automatically, but verify it is correct for your cloud/provider.
 //
 // To add support for a new resource type:
 //   1. Create a discoverer in pkg/discovery/services/{{.ServiceName}}.go
@@ -66,9 +72,9 @@ import (
 type {{.DisplayName}}Service struct{}
 
 func init() {
-	MustRegister(&{{.DisplayName}}Service{})
+	rootservices.MustRegister(&{{.DisplayName}}Service{})
 	// Register all supported resources for automatic validation{{range .Resources}}
-	RegisterResource("{{$.ServiceName}}", "{{.}}"){{end}}
+	rootservices.RegisterResource("{{$.ServiceName}}", "{{.}}"){{end}}
 }
 
 // Name returns the service name
@@ -86,7 +92,7 @@ func (s *{{.DisplayName}}Service) GetResourceAuditor(resourceType string) (audit
 	switch resourceType {
 	{{- range .Resources}}
 	case "{{.}}":
-		return &{{$.ServiceName}}.{{. | Title}}Auditor{}, nil
+		return &{{$.ServiceName}}.{{. | Pascal}}Auditor{}, nil
 	{{- end}}
 	default:
 		return nil, fmt.Errorf("unsupported resource type %q for service %q", resourceType, s.Name())
@@ -98,7 +104,7 @@ func (s *{{.DisplayName}}Service) GetResourceDiscoverer(resourceType string) (di
 	switch resourceType {
 	{{- range .Resources}}
 	case "{{.}}":
-		return &discovery.{{$.DisplayName}}{{. | Title}}Discoverer{}, nil
+		return &discovery_services.{{$.DisplayName}}{{. | Pascal}}Discoverer{}, nil
 	{{- end}}
 	default:
 		return nil, fmt.Errorf("unsupported resource type %q for service %q", resourceType, s.Name())
@@ -119,7 +125,8 @@ func (s *{{.DisplayName}}Service) GetResourceDiscoverer(resourceType string) (di
 	}
 
 	funcMap := template.FuncMap{
-		"Title": strings.Title,
+		"Title":  strings.Title,
+		"Pascal": ToPascal,
 	}
 
 	t, err := template.New("service").Funcs(funcMap).Parse(tmpl)

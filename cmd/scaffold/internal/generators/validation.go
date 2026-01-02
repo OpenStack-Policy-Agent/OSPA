@@ -31,10 +31,15 @@ import (
 )
 
 // {{.DisplayName}}Validator validates {{.DisplayName}} service policies
+//
+// TODO(OSPA): Tighten validation rules for {{.ServiceName}} over time:
+// - Require at least one check condition per rule
+// - Validate supported check fields per resource
+// - Validate allowed enum values (status/protocol/ethertype/etc.)
 type {{.DisplayName}}Validator struct{}
 
 func init() {
-	Register(&{{.DisplayName}}Validator{})
+	policy.RegisterValidator(&{{.DisplayName}}Validator{})
 }
 
 func (v *{{.DisplayName}}Validator) ServiceName() string {
@@ -45,15 +50,9 @@ func (v *{{.DisplayName}}Validator) ValidateResource(check *policy.CheckConditio
 	switch resourceType {
 {{range .Resources}}
 	case "{{.}}":
-		// TODO: Add validation rules for {{.}} resource
-		// Example validations:
-		// - Check required fields (e.g., status, age_gt, unused)
-		// - Validate field values (e.g., status must be one of allowed values)
-		// - Ensure at least one check condition is specified
-		// Example:
-		// if check.Status == "" && check.AgeGT == "" {
-		//     return fmt.Errorf("rule %q: check must specify at least one of status or age_gt", ruleName)
-		// }
+		// Placeholder validation: accept any checks for now.
+		// TODO(OSPA): Add real validation for {{$.ServiceName}}/{{.}}.
+		_ = check
 
 {{end}}
 	default:
@@ -83,8 +82,12 @@ func (v *{{.DisplayName}}Validator) ValidateResource(check *policy.CheckConditio
 		return fmt.Errorf("writing validation file: %w", err)
 	}
 
-	// Update validator.go to import the new validation package
-	return updateValidatorImports(baseDir, serviceName)
+	// No need to update pkg/policy/validator.go anymore.
+	//
+	// Validators are registered via init() in pkg/policy/validation (single package),
+	// and the application entrypoints should import that package once (blank import)
+	// to enable resource-specific policy validation.
+	return nil
 }
 
 // updateValidationFile updates an existing validation file with new resources
@@ -131,15 +134,8 @@ func updateValidationFile(filePath, serviceName, displayName string, resources [
 		newCases := "\n"
 		for _, resource := range newResources {
 			newCases += fmt.Sprintf(`	case "%s":
-		// TODO: Add validation rules for %s resource
-		// Example validations:
-		// - Check required fields (e.g., status, age_gt, unused)
-		// - Validate field values (e.g., status must be one of allowed values)
-		// - Ensure at least one check condition is specified
-		// Example:
-		// if check.Status == "" && check.AgeGT == "" {
-		//     return fmt.Errorf("rule %%q: check must specify at least one of status or age_gt", ruleName)
-		// }
+		// TODO(OSPA): Add validation rules for %s resource.
+		_ = check
 
 `, resource, resource)
 		}
@@ -152,58 +148,13 @@ func updateValidationFile(filePath, serviceName, displayName string, resources [
 	newCases := "\n"
 	for _, resource := range newResources {
 		newCases += fmt.Sprintf(`	case "%s":
-		// TODO: Add validation rules for %s resource
-		// Example validations:
-		// - Check required fields (e.g., status, age_gt, unused)
-		// - Validate field values (e.g., status must be one of allowed values)
-		// - Ensure at least one check condition is specified
-		// Example:
-		// if check.Status == "" && check.AgeGT == "" {
-		//     return fmt.Errorf("rule %%q: check must specify at least one of status or age_gt", ruleName)
-		// }
+		// TODO(OSPA): Add validation rules for %s resource.
+		_ = check
 
 `, resource, resource)
 	}
 
 	newContent := contentStr[:defaultCaseIndex] + newCases + contentStr[defaultCaseIndex:]
 	return os.WriteFile(filePath, []byte(newContent), 0644)
-}
-
-// updateValidatorImports updates validator.go to import the new validation package
-func updateValidatorImports(baseDir, serviceName string) error {
-	validatorFile := filepath.Join(baseDir, "pkg", "policy", "validator.go")
-
-	content, err := os.ReadFile(validatorFile)
-	if err != nil {
-		return fmt.Errorf("reading validator.go: %w", err)
-	}
-
-	contentStr := string(content)
-
-	// Check if import already exists
-	importPath := fmt.Sprintf(`_ "github.com/OpenStack-Policy-Agent/OSPA/pkg/policy/validation/%s"`, serviceName)
-	if strings.Contains(contentStr, importPath) {
-		// Already imported
-		return nil
-	}
-
-	// Find the last validation import
-	lastImportIndex := strings.LastIndex(contentStr, `_ "github.com/OpenStack-Policy-Agent/OSPA/pkg/policy/validation/`)
-	if lastImportIndex == -1 {
-		return fmt.Errorf("could not find validation imports in validator.go")
-	}
-
-	// Find the end of that import line
-	lineEnd := strings.Index(contentStr[lastImportIndex:], "\n")
-	if lineEnd == -1 {
-		return fmt.Errorf("could not find end of import line")
-	}
-
-	// Insert new import after the last validation import
-	insertPos := lastImportIndex + lineEnd
-	newImport := fmt.Sprintf("\t_ \"github.com/OpenStack-Policy-Agent/OSPA/pkg/policy/validation/%s\"\n", serviceName)
-	newContent := contentStr[:insertPos] + newImport + contentStr[insertPos:]
-
-	return os.WriteFile(validatorFile, []byte(newContent), 0644)
 }
 

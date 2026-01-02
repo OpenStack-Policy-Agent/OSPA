@@ -23,7 +23,7 @@ func GenerateDiscoveryFile(baseDir, serviceName, displayName string, resources [
 		contentStr := string(content)
 		existingResources := make(map[string]bool)
 		for _, res := range resources {
-			discovererName := displayName + strings.Title(res) + "Discoverer"
+			discovererName := displayName + ToPascal(res) + "Discoverer"
 			if strings.Contains(contentStr, "type "+discovererName) {
 				existingResources[res] = true
 			}
@@ -46,58 +46,41 @@ func GenerateDiscoveryFile(baseDir, serviceName, displayName string, resources [
 		return UpdateDiscoveryFile(baseDir, serviceName, displayName, newResources)
 	}
 
-	tmpl := `package discovery
+	tmpl := `package services
 
 import (
 	"context"
 
+	discovery "github.com/OpenStack-Policy-Agent/OSPA/pkg/discovery"
 	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/openstack/{{.ServiceName}}/v2/{{.ResourcePackage}}"
-	"github.com/gophercloud/gophercloud/pagination"
 )
 
 {{range .Resources}}
-// {{$.DisplayName}}{{. | Title}}Discoverer discovers {{$.ServiceName}} resources of type {{.}}
-type {{$.DisplayName}}{{. | Title}}Discoverer struct{}
+// {{$.DisplayName}}{{. | Pascal}}Discoverer discovers {{$.ServiceName}} resources of type {{.}}.
+// Placeholder implementation: returns no jobs. Fill in real OpenStack calls later.
+//
+// TODO(OSPA): Implement discovery by listing {{$.ServiceName}} {{.}} resources from OpenStack:
+// - Call the appropriate gophercloud API
+// - Handle pagination
+// - Emit discovery.Job{Service, ResourceType, ResourceID, ProjectID, Resource}
+// - Respect allTenants where applicable
+type {{$.DisplayName}}{{. | Pascal}}Discoverer struct{}
 
 // ResourceType returns the resource type this discoverer handles
-func (d *{{$.DisplayName}}{{. | Title}}Discoverer) ResourceType() string {
+func (d *{{$.DisplayName}}{{. | Pascal}}Discoverer) ResourceType() string {
 	return "{{.}}"
 }
 
 // Discover discovers resources and sends them to the returned channel
-func (d *{{$.DisplayName}}{{. | Title}}Discoverer) Discover(ctx context.Context, client *gophercloud.ServiceClient, allTenants bool) (<-chan Job, error) {
-	opts := {{. | Title}}s.ListOpts{}
-	if allTenants {
-		opts.AllTenants = true
-		// Adjust based on API: opts.TenantID = "" or similar
-	}
-	pager := {{. | Title}}s.List(client, opts)
+func (d *{{$.DisplayName}}{{. | Pascal}}Discoverer) Discover(ctx context.Context, client *gophercloud.ServiceClient, allTenants bool) (<-chan discovery.Job, error) {
+	_ = ctx
+	_ = client
+	_ = allTenants
 
-	extract := func(page pagination.Page) ([]interface{}, error) {
-		resourceList, err := {{. | Title}}s.Extract{{. | Title}}s(page)
-		if err != nil {
-			return nil, err
-		}
-		resources := make([]interface{}, len(resourceList))
-		for i := range resourceList {
-			resources[i] = resourceList[i]
-		}
-		return resources, nil
-	}
-
-	createJob := SimpleJobCreator(
-		"{{$.ServiceName}}",
-		func(r interface{}) string {
-			return r.({{. | Title}}s.{{. | Title}}).ID
-		},
-		func(r interface{}) string {
-			// Adjust based on resource structure - may be TenantID, ProjectID, or nested field
-			return r.({{. | Title}}s.{{. | Title}}).TenantID
-		},
-	)
-
-	return DiscoverPaged(ctx, client, "{{$.ServiceName}}", d.ResourceType(), pager, extract, createJob)
+	// TODO(OSPA): Replace this placeholder with real discovery logic.
+	ch := make(chan discovery.Job)
+	close(ch)
+	return ch, nil
 }
 
 {{end}}
@@ -106,17 +89,16 @@ func (d *{{$.DisplayName}}{{. | Title}}Discoverer) Discover(ctx context.Context,
 	data := struct {
 		ServiceName     string
 		DisplayName     string
-		ResourcePackage string
 		Resources       []string
 	}{
 		ServiceName:     serviceName,
 		DisplayName:     displayName,
-		ResourcePackage: serviceName, // Default to service name, may need adjustment
 		Resources:       resources,
 	}
 
 	funcMap := template.FuncMap{
-		"Title": strings.Title,
+		"Title":  strings.Title,
+		"Pascal": ToPascal,
 	}
 
 	t, err := template.New("discovery").Funcs(funcMap).Parse(tmpl)

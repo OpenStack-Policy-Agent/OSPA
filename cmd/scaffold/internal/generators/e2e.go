@@ -23,7 +23,7 @@ func GenerateE2ETest(baseDir, serviceName, displayName string, resources []strin
 		contentStr := string(content)
 		existingResources := make(map[string]bool)
 		for _, res := range resources {
-			testName := "Test" + displayName + "_" + strings.Title(res) + "Audit"
+			testName := "Test" + displayName + "_" + ToPascal(res) + "Audit"
 			if strings.Contains(contentStr, "func "+testName) {
 				existingResources[res] = true
 			}
@@ -58,8 +58,8 @@ import (
 )
 
 {{range .Resources}}
-// Test{{$.DisplayName}}_{{. | Title}}Audit tests {{$.ServiceName}} {{.}} auditing
-func Test{{$.DisplayName}}_{{. | Title}}Audit(t *testing.T) {
+// Test{{$.DisplayName}}_{{. | Pascal}}Audit tests {{$.ServiceName}} {{.}} auditing
+func Test{{$.DisplayName}}_{{. | Pascal}}Audit(t *testing.T) {
 	engine := NewTestEngine(t)
 
 	policyYAML := ` + "`" + `version: v1
@@ -79,13 +79,13 @@ policies:
 	results := engine.RunAudit(t, policy)
 
 	// Filter for {{$.ServiceName}}/{{.}} results
-	{{.}}Results := results.FilterByService("{{$.ServiceName}}").FilterByResourceType("{{.}}")
+	{{. | Pascal}}Results := results.FilterByService("{{$.ServiceName}}").FilterByResourceType("{{.}}")
 
-	{{.}}Results.LogSummary(t)
+	{{. | Pascal}}Results.LogSummary(t)
 
 	// Basic assertions
-	if {{.}}Results.Errors > 0 {
-		t.Logf("Warning: %%d errors encountered during {{.}} audit", {{.}}Results.Errors)
+	if {{. | Pascal}}Results.Errors > 0 {
+		t.Logf("Warning: %%d errors encountered during {{.}} audit", {{. | Pascal}}Results.Errors)
 	}
 }
 
@@ -103,7 +103,8 @@ policies:
 	}
 
 	funcMap := template.FuncMap{
-		"Title": strings.Title,
+		"Title":  strings.Title,
+		"Pascal": ToPascal,
 	}
 
 	t, err := template.New("e2etest").Funcs(funcMap).Parse(tmpl)
@@ -119,7 +120,7 @@ func generateE2ETestCode(serviceName, displayName string, resources []string) st
 	code := ""
 	
 	for _, resource := range resources {
-		titleRes := strings.Title(resource)
+		titleRes := ToPascal(resource)
 		code += fmt.Sprintf(`// Test%s_%sAudit tests %s %s auditing
 func Test%s_%sAudit(t *testing.T) {
 	engine := NewTestEngine(t)
@@ -155,8 +156,12 @@ policies:
 			displayName, titleRes, serviceName, resource,
 			displayName, titleRes,
 			serviceName, resource, resource, serviceName, resource,
-			serviceName, resource, resource, serviceName, resource,
-			resource, resource, resource, resource)
+			serviceName, resource,
+			titleRes, serviceName, resource,
+			titleRes,
+			titleRes,
+			resource,
+			titleRes)
 	}
 	
 	return code

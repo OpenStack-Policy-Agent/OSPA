@@ -23,12 +23,12 @@ func TestUpdateDiscoveryFile_AddSingleDiscoverer(t *testing.T) {
 
 	// Create existing discovery file
 	existingFile := filepath.Join(discoveryDir, "testservice.go")
-	existingContent := `package discovery
+	existingContent := `package services
 
 import (
 	"context"
+	discovery "github.com/OpenStack-Policy-Agent/OSPA/pkg/discovery"
 	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
 )
 
 type TestServiceResource1Discoverer struct{}
@@ -37,8 +37,10 @@ func (d *TestServiceResource1Discoverer) ResourceType() string {
 	return "resource1"
 }
 
-func (d *TestServiceResource1Discoverer) Discover(ctx context.Context, client *gophercloud.ServiceClient, allTenants bool) (<-chan Job, error) {
-	return nil, nil
+func (d *TestServiceResource1Discoverer) Discover(ctx context.Context, client *gophercloud.ServiceClient, allTenants bool) (<-chan discovery.Job, error) {
+	ch := make(chan discovery.Job)
+	close(ch)
+	return ch, nil
 }
 `
 	if err := os.WriteFile(existingFile, []byte(existingContent), 0644); err != nil {
@@ -96,7 +98,7 @@ func TestUpdateDiscoveryFile_AddMultipleDiscoverers(t *testing.T) {
 
 	// Create existing discovery file
 	existingFile := filepath.Join(discoveryDir, "testservice.go")
-	existingContent := `package discovery
+	existingContent := `package services
 
 type TestServiceResource1Discoverer struct{}
 
@@ -122,7 +124,7 @@ func (d *TestServiceResource1Discoverer) ResourceType() string {
 
 	contentStr := string(content)
 	for _, res := range []string{"resource2", "resource3"} {
-		discovererName := "TestService" + strings.Title(res) + "Discoverer"
+		discovererName := "TestService" + ToPascal(res) + "Discoverer"
 		if !strings.Contains(contentStr, "type "+discovererName) {
 			t.Errorf("Discoverer struct was not added for %q", res)
 		}
@@ -143,7 +145,7 @@ func TestUpdateDiscoveryFile_DiscovererAlreadyExists(t *testing.T) {
 
 	// Create existing discovery file
 	existingFile := filepath.Join(discoveryDir, "testservice.go")
-	existingContent := `package discovery
+	existingContent := `package services
 
 type TestServiceResource1Discoverer struct{}
 
@@ -214,12 +216,9 @@ func TestGenerateDiscovererCode_ValidCode(t *testing.T) {
 func TestGenerateDiscovererCode_PackageReferences(t *testing.T) {
 	code := generateDiscovererCode("testservice", "TestService", []string{"resource1"})
 	
-	// Verify package references
-	if !strings.Contains(code, "SimpleJobCreator") {
-		t.Error("Generated code missing SimpleJobCreator reference")
-	}
-	if !strings.Contains(code, "DiscoverPaged") {
-		t.Error("Generated code missing DiscoverPaged reference")
+	// Placeholder should not reference discovery helpers; it returns an empty channel.
+	if !strings.Contains(code, "close(ch)") {
+		t.Error("Generated code missing close(ch) placeholder")
 	}
 }
 
@@ -237,12 +236,11 @@ func TestUpdateDiscoveryFile_GoSyntax(t *testing.T) {
 
 	// Create existing discovery file
 	existingFile := filepath.Join(discoveryDir, "testservice.go")
-	existingContent := `package discovery
+	existingContent := `package services
 
 import (
 	"context"
 	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
 )
 
 type TestServiceResource1Discoverer struct{}

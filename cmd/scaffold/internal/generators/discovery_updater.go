@@ -26,7 +26,7 @@ func UpdateDiscoveryFile(baseDir, serviceName, displayName string, newResources 
 	// Check which resources already have discoverers
 	existingResources := make(map[string]bool)
 	for _, res := range newResources {
-		discovererName := displayName + strings.Title(res) + "Discoverer"
+		discovererName := displayName + ToPascal(res) + "Discoverer"
 		if strings.Contains(contentStr, "type "+discovererName) {
 			existingResources[res] = true
 		}
@@ -58,8 +58,11 @@ func generateDiscovererCode(serviceName, displayName string, resources []string)
 	code := ""
 	
 	for _, resource := range resources {
-		titleRes := strings.Title(resource)
-		code += fmt.Sprintf(`// %s%sDiscoverer discovers %s resources of type %s
+		titleRes := ToPascal(resource)
+		code += fmt.Sprintf(`// %s%sDiscoverer discovers %s resources of type %s.
+// Placeholder implementation: returns no jobs. Fill in real OpenStack calls later.
+//
+// TODO(OSPA): Implement real discovery for %s/%s (pagination + jobs).
 type %s%sDiscoverer struct{}
 
 // ResourceType returns the resource type this discoverer handles
@@ -68,52 +71,22 @@ func (d *%s%sDiscoverer) ResourceType() string {
 }
 
 // Discover discovers resources and sends them to the returned channel
-func (d *%s%sDiscoverer) Discover(ctx context.Context, client *gophercloud.ServiceClient, allTenants bool) (<-chan Job, error) {
-	opts := %ss.ListOpts{}
-	if allTenants {
-		opts.AllTenants = true
-		// Adjust based on API: opts.TenantID = "" or similar
-	}
-	pager := %ss.List(client, opts)
-
-	extract := func(page pagination.Page) ([]interface{}, error) {
-		resourceList, err := %ss.Extract%ss(page)
-		if err != nil {
-			return nil, err
-		}
-		resources := make([]interface{}, len(resourceList))
-		for i := range resourceList {
-			resources[i] = resourceList[i]
-		}
-		return resources, nil
-	}
-
-	createJob := SimpleJobCreator(
-		%q,
-		func(r interface{}) string {
-			return r.(%ss.%s).ID
-		},
-		func(r interface{}) string {
-			// Adjust based on resource structure - may be TenantID, ProjectID, or nested field
-			return r.(%ss.%s).TenantID
-		},
-	)
-
-	return DiscoverPaged(ctx, client, %q, d.ResourceType(), pager, extract, createJob)
+func (d *%s%sDiscoverer) Discover(ctx context.Context, client *gophercloud.ServiceClient, allTenants bool) (<-chan discovery.Job, error) {
+	_ = ctx
+	_ = client
+	_ = allTenants
+	// TODO(OSPA): Replace this placeholder with real discovery logic.
+	ch := make(chan discovery.Job)
+	close(ch)
+	return ch, nil
 }
 
 `, 
 			displayName, titleRes, serviceName, resource,
+			serviceName, resource,
 			displayName, titleRes,
 			displayName, titleRes, resource,
-			displayName, titleRes,
-			titleRes,           // %ss.ListOpts{}
-			titleRes,           // %ss.List(...)
-			titleRes, titleRes, // %ss.Extract%ss(...)
-			serviceName,        // SimpleJobCreator service
-			titleRes, titleRes, // r.(%ss.%s).ID
-			titleRes, titleRes, // r.(%ss.%s).TenantID
-			serviceName)        // DiscoverPaged service
+			displayName, titleRes)
 	}
 
 	return code

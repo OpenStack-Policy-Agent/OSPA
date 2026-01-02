@@ -67,3 +67,36 @@ func (s *Session) GetBlockStorageClient() (*gophercloud.ServiceClient, error) {
 	}
 	return client, nil
 }
+
+// GetNeutronClient returns a client for Neutron
+func (s *Session) GetNeutronClient() (*gophercloud.ServiceClient, error) {
+	client, err := clientconfig.NewServiceClient("network", &clientconfig.ClientOpts{
+		Cloud: s.CloudName,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create neutron client: %w", err)
+	}
+	return client, nil
+}
+
+// GetCinderClient returns a client for Cinder
+func (s *Session) GetCinderClient() (*gophercloud.ServiceClient, error) {
+	client, err := clientconfig.NewServiceClient("volumev3", &clientconfig.ClientOpts{
+		Cloud: s.CloudName,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create cinder client: %w", err)
+	}
+	return client, nil
+}
+
+// GetNovaClient returns a client for Nova
+func (s *Session) GetNovaClient() (*gophercloud.ServiceClient, error) {
+	client, err := clientconfig.NewServiceClient("compute", &clientconfig.ClientOpts{
+		Cloud: s.CloudName,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create nova client: %w", err)
+	}
+	return client, nil
+}

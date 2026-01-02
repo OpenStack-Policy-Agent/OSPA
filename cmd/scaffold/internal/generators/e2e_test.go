@@ -56,7 +56,7 @@ func TestGenerateE2ETest_NewFile(t *testing.T) {
 
 	// Verify test functions for each resource
 	for _, res := range resources {
-		testName := "TestTestService_" + strings.Title(res) + "Audit"
+		testName := "TestTestService_" + ToPascal(res) + "Audit"
 		if !strings.Contains(contentStr, "func "+testName) {
 			t.Errorf("Generated file missing test function: %q", testName)
 		}
@@ -250,7 +250,7 @@ func TestGenerateE2ETest_MultipleResources(t *testing.T) {
 
 	contentStr := string(content)
 	for _, res := range resources {
-		testName := "TestTestService_" + strings.Title(res) + "Audit"
+		testName := "TestTestService_" + ToPascal(res) + "Audit"
 		if !strings.Contains(contentStr, testName) {
 			t.Errorf("Test function missing for resource %q", res)
 		}

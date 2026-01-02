@@ -40,24 +40,25 @@ func TestGenerateDiscoveryFile_NewFile(t *testing.T) {
 	contentStr := string(content)
 
 	// Verify package declaration
-	if !strings.Contains(contentStr, "package discovery") {
+	if !strings.Contains(contentStr, "package services") {
 		t.Error("Generated file missing package declaration")
 	}
 
-	// Verify imports
+	// Verify imports (placeholder should not pull in pagination/openstack SDK packages)
 	if !strings.Contains(contentStr, "context") {
 		t.Error("Generated file missing context import")
 	}
 	if !strings.Contains(contentStr, "gophercloud") {
 		t.Error("Generated file missing gophercloud import")
 	}
-	if !strings.Contains(contentStr, "pagination") {
-		t.Error("Generated file missing pagination import")
+	// The placeholder may mention pagination in TODOs, but must not import the pagination package.
+	if strings.Contains(contentStr, "gophercloud/gophercloud/pagination") {
+		t.Error("Generated placeholder file must not import pagination package")
 	}
 
 	// Verify discoverer structs for each resource
 	for _, res := range resources {
-		discovererName := "TestService" + strings.Title(res) + "Discoverer"
+		discovererName := "TestService" + ToPascal(res) + "Discoverer"
 		if !strings.Contains(contentStr, "type "+discovererName) {
 			t.Errorf("Generated file missing discoverer struct: %q", discovererName)
 		}
@@ -69,12 +70,9 @@ func TestGenerateDiscoveryFile_NewFile(t *testing.T) {
 		}
 	}
 
-	// Verify Discover() methods use DiscoverPaged and SimpleJobCreator
-	if !strings.Contains(contentStr, "DiscoverPaged") {
-		t.Error("Generated file missing DiscoverPaged call")
-	}
-	if !strings.Contains(contentStr, "SimpleJobCreator") {
-		t.Error("Generated file missing SimpleJobCreator call")
+	// Verify placeholder behavior (should return an empty channel)
+	if !strings.Contains(contentStr, "close(ch)") {
+		t.Error("Generated placeholder discovery should close(ch) and return it")
 	}
 
 	// Verify Go syntax
@@ -99,12 +97,12 @@ func TestGenerateDiscoveryFile_ExistingFile_Update(t *testing.T) {
 
 	// Create existing discovery file
 	existingFile := filepath.Join(discoveryDir, "testservice.go")
-	existingContent := `package discovery
+	existingContent := `package services
 
 import (
 	"context"
+	discovery "github.com/OpenStack-Policy-Agent/OSPA/pkg/discovery"
 	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/pagination"
 )
 
 type TestServiceResource1Discoverer struct{}
@@ -113,9 +111,11 @@ func (d *TestServiceResource1Discoverer) ResourceType() string {
 	return "resource1"
 }
 
-func (d *TestServiceResource1Discoverer) Discover(ctx context.Context, client *gophercloud.ServiceClient, allTenants bool) (<-chan Job, error) {
+func (d *TestServiceResource1Discoverer) Discover(ctx context.Context, client *gophercloud.ServiceClient, allTenants bool) (<-chan discovery.Job, error) {
 	// Existing implementation
-	return nil, nil
+	ch := make(chan discovery.Job)
+	close(ch)
+	return ch, nil
 }
 `
 	if err := os.WriteFile(existingFile, []byte(existingContent), 0644); err != nil {
@@ -160,7 +160,7 @@ func TestGenerateDiscoveryFile_ExistingFile_Force(t *testing.T) {
 
 	// Create existing file
 	existingFile := filepath.Join(discoveryDir, "testservice.go")
-	existingContent := "package discovery\n// old content\n"
+	existingContent := "package services\n// old content\n"
 	if err := os.WriteFile(existingFile, []byte(existingContent), 0644); err != nil {
 		t.Fatalf("Failed to write existing file: %v", err)
 	}
@@ -183,7 +183,7 @@ func TestGenerateDiscoveryFile_ExistingFile_Force(t *testing.T) {
 	}
 }
 
-func TestGenerateDiscoveryFile_ResourcePackage(t *testing.T) {
+func TestGenerateDiscoveryFile_PlaceholderDoesNotImportOpenstackSDK(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "test_discovery_gen_*")
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
@@ -208,9 +208,8 @@ func TestGenerateDiscoveryFile_ResourcePackage(t *testing.T) {
 	}
 
 	contentStr := string(content)
-	// Verify resource package in imports (should use service name)
-	if !strings.Contains(contentStr, "openstack/testservice/") {
-		t.Error("Generated file missing correct resource package import")
+	if strings.Contains(contentStr, "gophercloud/gophercloud/openstack") || strings.Contains(contentStr, "openstack/testservice/") {
+		t.Fatalf("Generated placeholder discovery must not import OpenStack SDK packages; got:\n%s", contentStr)
 	}
 }
 

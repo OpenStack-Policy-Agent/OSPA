@@ -19,7 +19,9 @@ func GenerateAuthMethod(baseDir, serviceName, displayName, serviceType string, f
 
 	// Check if method already exists
 	methodName := fmt.Sprintf("Get%sClient", displayName)
-	if strings.Contains(string(content), methodName) && !force {
+	// Always be idempotent: never append duplicate methods, even with --force.
+	// (Overwriting methods safely would require Go AST rewriting; we avoid that here.)
+	if strings.Contains(string(content), methodName) {
 		fmt.Printf("Warning: Auth method %s already exists in auth.go, skipping\n", methodName)
 		return nil
 	}

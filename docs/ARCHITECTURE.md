@@ -78,7 +78,7 @@ Policies define rules for auditing resources. The policy system:
 - `validation/` - Service-specific validation modules
   - `interface.go` - Validator interface
   - `registry.go` - Validator registry
-  - `<servicename>.go` - Service-specific validators (e.g., `compute.go`, `network.go`)
+  - `<servicename>.go` - Service-specific validators (e.g., `nova.go`, `neutron.go`)
 
 **Validation Architecture:**
 - Each OpenStack service has its own validator in `pkg/policy/validation/<servicename>.go`
@@ -207,7 +207,7 @@ Results → Reporter → JSONL Output
 ## Examples
 
 See existing implementations:
-- Nova: `pkg/services/services/compute.go`, `pkg/discovery/services/compute.go`, `pkg/audit/compute/`
-- Neutron: `pkg/services/services/network.go`, `pkg/discovery/services/network.go`, `pkg/audit/network/`
-- Cinder: `pkg/services/services/blockstorage.go`, `pkg/discovery/services/blockstorage.go`, `pkg/audit/blockstorage/`
+- Nova: `pkg/services/services/nova.go`, `pkg/discovery/services/nova.go`, `pkg/audit/nova/`
+- Neutron: `pkg/services/services/neutron.go`, `pkg/discovery/services/neutron.go`, `pkg/audit/neutron/`
+- Cinder: `pkg/services/services/cinder.go`, `pkg/discovery/services/cinder.go`, `pkg/audit/cinder/`
 
