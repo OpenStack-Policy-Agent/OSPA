@@ -1,0 +1,14 @@
+version: v1
+defaults:
+  workers: 1
+  output: out.jsonl
+policies:
+  - nova:
+    - name: bad-resource
+      description: Bad
+      resource: not-a-real-resource
+      check:
+        status: ACTIVE
+      action: log
+
+

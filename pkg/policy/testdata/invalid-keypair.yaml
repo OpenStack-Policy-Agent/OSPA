@@ -1,0 +1,13 @@
+version: v1
+defaults:
+  workers: 1
+  output: out.jsonl
+policies:
+  - nova:
+    - name: kp-unused-missing
+      description: should fail
+      resource: keypair
+      check: {}
+      action: log
+
+

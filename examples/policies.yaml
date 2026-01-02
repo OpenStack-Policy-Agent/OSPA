@@ -1,0 +1,101 @@
+---
+version: v1
+defaults:
+  workers: 50
+  output: findings.jsonl
+policies:
+  - neutron:
+    - name: critical-sg-v4-ssh-open-to-world
+      description: Finds IPv4 SSH (port 22) rules open to 0.0.0.0/0
+      service: neutron
+      resource: security_group_rule
+      check:
+        direction: ingress
+        ethertype: IPv4
+        protocol: tcp
+        port: 22
+        remote_ip_prefix: 0.0.0.0/0
+      action: log
+    - name: critical-sg-v4-rdp-open-to-world
+      description: Finds IPv4 RDP (port 3389) rules open to 0.0.0.0/0
+      service: neutron
+      resource: security_group_rule
+      check:
+        direction: ingress
+        ethertype: IPv4
+        protocol: tcp
+        port: 3389
+        remote_ip_prefix: 0.0.0.0/0
+      action: log
+    - name: warning-sg-icmp-open-to-world
+      description: Finds IPv4 ICMP (ping) rules open to 0.0.0.0/0
+      service: neutron
+      resource: security_group_rule
+      check:
+        direction: ingress
+        ethertype: IPv4
+        protocol: icmp
+        remote_ip_prefix: 0.0.0.0/0
+      action: log
+    - name: cost-fip-unassociated
+      description: Finds Floating IPs that are not associated with any instance
+      service: neutron
+      resource: floating_ip
+      check:
+        status: DOWN
+      action: delete
+    - name: cleanup-sg-unused
+      description: Finds security groups that are not attached to any server
+      service: neutron
+      resource: security_group
+      check:
+        unused: true
+        exempt_names:
+          - default
+      action: log
+  - nova:
+    - name: security-keypair-unused
+      description: Finds keypairs that are not associated with any instance
+      service: nova
+      resource: keypair
+      check:
+        unused: true
+      action: log
+    - name: compliance-instance-stale
+      description: Finds instances running for more than 30 days
+      service: nova
+      resource: instance
+      check:
+        age_gt: 30d
+        exempt_metadata:
+          key: lifecycle
+          value: permanent
+      action: tag
+      action_tag_name: "Old instance"
+      tag_name: audit-stale-instance
+    - name: compliance-instance-deprecated-image
+      description: Finds instances running known deprecated images
+      service: nova
+      resource: instance
+      check:
+        image_name:
+          - ubuntu-18.04-deprecated
+          - centos-7-legacy
+      action: log
+  - cinder:
+    - name: cost-volume-unattached
+      description: Finds Cinder volumes that are 'available' (unattached)
+      service: cinder
+      resource: volume
+      check:
+        status: available
+        age_gt: 7d
+      action: log
+    - name: cleanup-snapshots-old
+      description: Finds Cinder snapshots older than 90 days
+      service: cinder
+      resource: snapshot
+      check:
+        age_gt: 90d
+      action: delete
+

@@ -6,23 +6,22 @@ import (
 	"log"
 	"os"
 	"runtime"
-	"sync"
-	"time"
 
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/auth"
-	"github.com/OpenStack-Policy-Agent/OSPA/pkg/discovery"
-	"github.com/OpenStack-Policy-Agent/OSPA/pkg/engine"
+	"github.com/OpenStack-Policy-Agent/OSPA/pkg/orchestrator"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/policy"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/report"
+	_ "github.com/OpenStack-Policy-Agent/OSPA/pkg/services"        // Register services
+	_ "github.com/OpenStack-Policy-Agent/OSPA/pkg/services/services" // Register service implementations
+	_ "github.com/OpenStack-Policy-Agent/OSPA/pkg/discovery/services" // Register discoverers
 )
 
 func main() {
 	cloudName := flag.String("cloud", "", "The name of the cloud in clouds.yaml")
-	policyPath := flag.String("policy", "", "Path to rules.yaml (MVP mode)")
+	policyPath := flag.String("policy", "", "Path to policies.yaml")
 	outPath := flag.String("out", "", "Write JSONL findings to this file (default: policy defaults.output if set)")
-	days := flag.Int("days", 30, "Find SHUTOFF servers whose Updated timestamp is older than this many days (approximation)")
 	workers := flag.Int("workers", runtime.NumCPU()*8, "Number of concurrent workers")
-	apply := flag.Bool("apply", false, "Apply remediations for enforce-mode rules (default: false, dry-run)")
+	fix := flag.Bool("fix", false, "Apply remediations for enforce-mode rules (default: false, dry-run)")
 	allTenants := flag.Bool("all-tenants", false, "Scan all tenants/projects (requires admin). Default: false")
 	flag.Parse()
 
@@ -33,7 +32,9 @@ func main() {
 		log.Fatal("Error: Please provide a cloud name via --cloud or OS_CLOUD env var")
 	}
 
-	fmt.Println("cloudName", *cloudName)
+	if *policyPath == "" {
+		log.Fatal("Error: Please provide a policy file via --policy")
+	}
 
 	fmt.Printf("Initializing Session for cloud: %q...\n", *cloudName)
 
@@ -43,59 +44,22 @@ func main() {
 	}
 	fmt.Println("Authentication successful!")
 
-	fmt.Println("Creating Compute (Nova) client...")
-	computeClient, err := session.GetComputeClient()
+	fmt.Printf("Loading policy from %q...\n", *policyPath)
+	p, err := policy.Load(*policyPath)
 	if err != nil {
-		log.Fatalf("Failed to get compute client: %v", err)
+		log.Fatalf("Failed to load policy: %v", err)
 	}
-	fmt.Printf("Connected to Compute Endpoint: %s\n", computeClient.Endpoint)
+	fmt.Printf("Policy loaded: %d service policies\n", len(p.Policies))
 
-	jobs := make(chan engine.Job, 1024)
-	results := make(chan engine.Result, 1024)
+	workersCount := p.EffectiveWorkers(*workers)
+	fmt.Printf("Using %d workers\n", workersCount)
 
-	var evaluator engine.Evaluator
+	if *outPath == "" && p.Defaults.Output != "" {
+		*outPath = p.Defaults.Output
+	}
+
 	var findingsWriter *report.JSONLWriter
 	var findingsFile *os.File
-
-	if *policyPath != "" {
-		p, err := policy.Load(*policyPath)
-		if err != nil {
-			log.Fatalf("Failed to load policy: %v", err)
-		}
-
-		rules := make([]engine.ServerRule, 0, len(p.Rules))
-		for _, r := range p.Rules {
-			// MVP: only supports compute.server + stopped instances rule shape.
-			rules = append(rules, engine.StoppedOlderThanRule{
-				RuleID:            r.ID,
-				MatchStatus:       r.Filters.Status,
-				OlderThan:         time.Duration(r.Conditions.UpdatedOlderThanDays) * 24 * time.Hour,
-				RecommendedAction: r.EffectiveRemediation(),
-				Mode:              r.Mode,
-			})
-		}
-
-		*workers = p.EffectiveWorkers(*workers)
-		evaluator = engine.RuleSet{Now: time.Now, Rules: rules}
-
-		if *outPath == "" && p.Defaults.Output != "" {
-			*outPath = p.Defaults.Output
-		}
-	} else {
-		// POC fallback (no policy file): single hardcoded rule driven by flags.
-		evaluator = engine.RuleSet{
-			Now: time.Now,
-			Rules: []engine.ServerRule{
-				engine.StoppedOlderThanRule{
-					RuleID:            "poc.stopped_instances_older_than",
-					MatchStatus:       "SHUTOFF",
-					OlderThan:         time.Duration(*days) * 24 * time.Hour,
-					RecommendedAction: "delete",
-					Mode:              "audit",
-				},
-			},
-		}
-	}
 
 	if *outPath != "" {
 		f, err := os.Create(*outPath)
@@ -107,34 +71,34 @@ func main() {
 		findingsWriter = report.NewJSONLWriter(findingsFile)
 	}
 
-	var wg sync.WaitGroup
-	engine.StartWorkerPool(*workers, *apply, computeClient, evaluator, jobs, results, &wg)
+	// Create orchestrator
+	orch := orchestrator.NewOrchestrator(p, session, workersCount, *fix, *allTenants)
+	defer orch.Stop()
 
-	go func() {
-		wg.Wait()
-		close(results)
-	}()
-
-	// Discovery closes the jobs channel when done
-	discovery.DiscoverServers(computeClient, *allTenants, jobs)
+	fmt.Println("Starting policy audit...")
+	resultsChan, err := orch.Run()
+	if err != nil {
+		log.Fatalf("Failed to start orchestrator: %v", err)
+	}
 
 	var scanned, violations, errors int
 	var written int
-	for r := range results {
+
+	for result := range resultsChan {
 		scanned++
-		if r.Error != nil {
+		if result.Error != nil {
 			errors++
 		}
-		if r.RemediationError != nil {
+		if result.RemediationError != nil {
 			errors++
 		}
-		if !r.Compliant {
+		if !result.Compliant {
 			violations++
 		}
 
 		// Stream findings: write only non-compliant (including errors/remediation errors).
-		if findingsWriter != nil && (!r.Compliant || r.Error != nil || r.RemediationError != nil) {
-			if err := findingsWriter.WriteResult(r); err != nil {
+		if findingsWriter != nil && (!result.Compliant || result.Error != nil || result.RemediationError != nil) {
+			if err := findingsWriter.WriteResult(result); err != nil {
 				log.Printf("Failed to write finding: %v", err)
 			} else {
 				written++
