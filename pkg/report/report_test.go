@@ -68,7 +68,9 @@ func TestJSONLWriter_WriteResult_IncludesErrors(t *testing.T) {
 		ResourceName:     "srv",
 		Compliant:        false,
 		Error:            errString("eval failed"),
+		ErrorKind:        audit.ErrorKindAudit,
 		RemediationError: errString("delete failed"),
+		RemediationErrorKind: audit.ErrorKindRemediation,
 		Rule: &policy.Rule{
 			Name: "r1",
 		},
@@ -88,6 +90,12 @@ func TestJSONLWriter_WriteResult_IncludesErrors(t *testing.T) {
 	}
 	if m["remediation_error"] != "delete failed" {
 		t.Fatalf("expected remediation_error field, got %#v", m["remediation_error"])
+	}
+	if m["error_kind"] != string(audit.ErrorKindAudit) {
+		t.Fatalf("expected error_kind field, got %#v", m["error_kind"])
+	}
+	if m["remediation_error_kind"] != string(audit.ErrorKindRemediation) {
+		t.Fatalf("expected remediation_error_kind field, got %#v", m["remediation_error_kind"])
 	}
 }
 

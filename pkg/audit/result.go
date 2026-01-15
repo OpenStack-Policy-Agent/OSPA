@@ -15,15 +15,27 @@ type Result struct {
 	Compliant    bool
 	Observation  string
 	Error        error
+	ErrorKind    ErrorKind
 	Rule         *policy.Rule
 
 	// Remediation fields
 	RemediationAttempted bool
 	Remediated           bool
 	RemediationError     error
+	RemediationErrorKind ErrorKind
+	RemediationSkipped   bool
+	RemediationSkipReason string
 
 	// Additional metadata
 	UpdatedAt time.Time
 	Status    string
 }
+
+// ErrorKind captures the source of an error to help reporting and metrics.
+type ErrorKind string
+
+const (
+	ErrorKindAudit       ErrorKind = "audit"
+	ErrorKindRemediation ErrorKind = "remediation"
+)
 

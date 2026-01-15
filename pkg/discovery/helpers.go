@@ -3,7 +3,7 @@ package discovery
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/pagination"
@@ -53,7 +53,7 @@ func DiscoverPaged(
 				// Create job from resource
 				job, err := createJob(resource, resourceType)
 				if err != nil {
-					log.Printf("Error creating job for %s/%s: %v", serviceName, resourceType, err)
+					slog.Error("create job error", "service", serviceName, "resource", resourceType, "error", err)
 					continue // Skip this resource but continue processing
 				}
 
@@ -69,7 +69,7 @@ func DiscoverPaged(
 		})
 
 		if err != nil && err != context.Canceled {
-			log.Printf("Error discovering %s/%s: %v", serviceName, resourceType, err)
+			slog.Error("discovery error", "service", serviceName, "resource", resourceType, "error", err)
 		}
 	}()
 

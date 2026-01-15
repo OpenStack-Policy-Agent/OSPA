@@ -2,7 +2,7 @@ package orchestrator
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"sync"
@@ -11,6 +11,7 @@ import (
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/audit"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/auth"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/discovery"
+	"github.com/OpenStack-Policy-Agent/OSPA/pkg/metrics"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/policy"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/services"
 	"github.com/gophercloud/gophercloud"
@@ -26,6 +27,15 @@ type Orchestrator struct {
 	ctx         context.Context
 	cancel      context.CancelFunc
 	resultsChan chan *audit.Result
+
+	jobsBuffer    int
+	resultsBuffer int
+
+	ruleIndex       map[string]map[string][]*policy.Rule
+	clientCache     map[string]*gophercloud.ServiceClient
+	clientCacheLock sync.Mutex
+
+	remediationAllowlist map[string]bool
 }
 
 // NewOrchestrator creates a new orchestrator
@@ -41,7 +51,37 @@ func NewOrchestrator(p *policy.Policy, session *auth.Session, workers int, apply
 		ctx:         ctx,
 		cancel:      cancel,
 		resultsChan: make(chan *audit.Result, 100),
+		jobsBuffer:  1000,
+		resultsBuffer: 100,
+		clientCache: make(map[string]*gophercloud.ServiceClient),
 	}
+}
+
+// SetBuffers configures channel buffer sizes for jobs and results.
+func (o *Orchestrator) SetBuffers(jobsBuffer, resultsBuffer int) {
+	if jobsBuffer > 0 {
+		o.jobsBuffer = jobsBuffer
+	}
+	if resultsBuffer > 0 {
+		o.resultsBuffer = resultsBuffer
+	}
+}
+
+// SetRemediationAllowlist sets which actions are allowed when apply mode is enabled.
+// An empty list means allow all actions (current default behavior).
+func (o *Orchestrator) SetRemediationAllowlist(actions []string) {
+	if len(actions) == 0 {
+		o.remediationAllowlist = nil
+		return
+	}
+	allow := make(map[string]bool, len(actions))
+	for _, action := range actions {
+		if action == "" {
+			continue
+		}
+		allow[action] = true
+	}
+	o.remediationAllowlist = allow
 }
 
 // Run executes the policy audit
@@ -61,10 +101,12 @@ func (o *Orchestrator) Run() (<-chan *audit.Result, error) {
 		}
 		ruleGroups[service][resourceType] = append(ruleGroups[service][resourceType], rule)
 	}
+	o.ruleIndex = ruleGroups
 
 	// Start worker pool
 	var wg sync.WaitGroup
-	jobsChan := make(chan discovery.Job, 1000)
+	jobsChan := make(chan discovery.Job, o.jobsBuffer)
+	o.resultsChan = make(chan *audit.Result, o.resultsBuffer)
 
 	// Start workers
 	for i := 0; i < o.workers; i++ {
@@ -77,20 +119,23 @@ func (o *Orchestrator) Run() (<-chan *audit.Result, error) {
 	for serviceName, resourceRules := range ruleGroups {
 		service, err := services.Get(serviceName)
 		if err != nil {
-			log.Printf("Warning: service %q not found: %v", serviceName, err)
+			slog.Warn("service not found", "service", serviceName, "error", err)
+			metrics.IncServiceNotFound()
 			continue
 		}
 
-		client, err := service.GetClient(o.session)
+		client, err := o.getClient(serviceName, service)
 		if err != nil {
-			log.Printf("Warning: failed to get client for service %q: %v", serviceName, err)
+			slog.Warn("failed to get client", "service", serviceName, "error", err)
+			metrics.IncClientErrors()
 			continue
 		}
 
 		for resourceType, rules := range resourceRules {
 			discoverer, err := service.GetResourceDiscoverer(resourceType)
 			if err != nil {
-				log.Printf("Warning: discoverer not found for %q/%q: %v", serviceName, resourceType, err)
+				slog.Warn("discoverer not found", "service", serviceName, "resource", resourceType, "error", err)
+				metrics.IncDiscovererNotFound()
 				continue
 			}
 
@@ -100,7 +145,8 @@ func (o *Orchestrator) Run() (<-chan *audit.Result, error) {
 
 				jobChan, err := disc.Discover(o.ctx, cli, o.allTenants)
 				if err != nil {
-					log.Printf("Error discovering %q/%q: %v", svc, resType, err)
+					slog.Error("discovery error", "service", svc, "resource", resType, "error", err)
+					metrics.IncDiscoveryErrors()
 					return
 				}
 
@@ -144,28 +190,22 @@ func (o *Orchestrator) worker(id int, jobsChan <-chan discovery.Job, wg *sync.Wa
 		// Get service and auditor
 		service, err := services.Get(job.Service)
 		if err != nil {
-			log.Printf("Worker %d: service %q not found: %v", id, job.Service, err)
+			slog.Warn("service not found", "worker", id, "service", job.Service, "error", err)
+			metrics.IncServiceNotFound()
 			continue
 		}
 
-		client, err := service.GetClient(o.session)
+		client, err := o.getClient(job.Service, service)
 		if err != nil {
-			log.Printf("Worker %d: failed to get client for service %q: %v", id, job.Service, err)
+			slog.Warn("failed to get client", "worker", id, "service", job.Service, "error", err)
+			metrics.IncClientErrors()
 			continue
 		}
 
 		// Get rules for this service/resource type from the policy
-		var relevantRules []*policy.Rule
-		for _, sp := range o.policy.Policies {
-			if sp.Service != job.Service {
-				continue
-			}
-			for i := range sp.Rules {
-				rule := &sp.Rules[i]
-				if rule.Resource == job.ResourceType {
-					relevantRules = append(relevantRules, rule)
-				}
-			}
+		relevantRules := o.ruleIndex[job.Service][job.ResourceType]
+		if len(relevantRules) == 0 {
+			continue
 		}
 
 		// Process each relevant rule
@@ -173,7 +213,8 @@ func (o *Orchestrator) worker(id int, jobsChan <-chan discovery.Job, wg *sync.Wa
 			// Get auditor
 			auditor, err := service.GetResourceAuditor(job.ResourceType)
 			if err != nil {
-				log.Printf("Worker %d: auditor not found for %q/%q: %v", id, job.Service, job.ResourceType, err)
+				slog.Warn("auditor not found", "worker", id, "service", job.Service, "resource", job.ResourceType, "error", err)
+				metrics.IncAuditorNotFound()
 				continue
 			}
 
@@ -185,17 +226,27 @@ func (o *Orchestrator) worker(id int, jobsChan <-chan discovery.Job, wg *sync.Wa
 					ResourceID: job.ResourceID,
 					Compliant:  false,
 					Error:      err,
+					ErrorKind:  audit.ErrorKindAudit,
 					Rule:       rule,
 				}
 			}
 
 			// Apply remediation if needed
-			if !result.Compliant && result.Error == nil && o.apply && rule.Action != "log" {
-				result.RemediationAttempted = true
-				if err := auditor.Fix(o.ctx, client, job.Resource, rule); err != nil {
-					result.RemediationError = err
+			if !result.Compliant && result.Error == nil && rule.Action != "log" {
+				if !o.apply {
+					result.RemediationSkipped = true
+					result.RemediationSkipReason = "dry-run"
+				} else if !o.isActionAllowed(rule.Action) {
+					result.RemediationSkipped = true
+					result.RemediationSkipReason = "action_not_allowed"
 				} else {
-					result.Remediated = true
+					result.RemediationAttempted = true
+					if err := auditor.Fix(o.ctx, client, job.Resource, rule); err != nil {
+						result.RemediationError = err
+						result.RemediationErrorKind = audit.ErrorKindRemediation
+					} else {
+						result.Remediated = true
+					}
 				}
 			}
 
@@ -212,5 +263,28 @@ func (o *Orchestrator) worker(id int, jobsChan <-chan discovery.Job, wg *sync.Wa
 // Stop stops the orchestrator
 func (o *Orchestrator) Stop() {
 	o.cancel()
+}
+
+func (o *Orchestrator) getClient(serviceName string, service services.Service) (*gophercloud.ServiceClient, error) {
+	o.clientCacheLock.Lock()
+	defer o.clientCacheLock.Unlock()
+
+	if client, ok := o.clientCache[serviceName]; ok {
+		return client, nil
+	}
+
+	client, err := service.GetClient(o.session)
+	if err != nil {
+		return nil, err
+	}
+	o.clientCache[serviceName] = client
+	return client, nil
+}
+
+func (o *Orchestrator) isActionAllowed(action string) bool {
+	if o.remediationAllowlist == nil {
+		return true
+	}
+	return o.remediationAllowlist[action]
 }
 

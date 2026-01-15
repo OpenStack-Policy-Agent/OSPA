@@ -7,6 +7,7 @@ This directory contains all documentation for the OpenStack Policy Agent (OSPA).
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** - Detailed architecture guide explaining the system design, components, and data flow
 - **[DEVELOPMENT.md](DEVELOPMENT.md)** - Comprehensive developer guide covering setup, adding services/resources, testing, and troubleshooting
 - **[scaffold-README.md](scaffold-README.md)** - Documentation for the code generation scaffold tool
+- **[POLICY_PACKS.md](POLICY_PACKS.md)** - Reusable policy packs and usage guidance
 
 ## Quick Links
 
@@ -14,4 +15,5 @@ This directory contains all documentation for the OpenStack Policy Agent (OSPA).
 - **Adding a Service**: Use the scaffold tool or follow [DEVELOPMENT.md](DEVELOPMENT.md)
 - **Understanding the Code**: Read [ARCHITECTURE.md](ARCHITECTURE.md)
 - **Development Setup**: See [DEVELOPMENT.md](DEVELOPMENT.md)
+- **Policy Packs**: See [POLICY_PACKS.md](POLICY_PACKS.md)
 

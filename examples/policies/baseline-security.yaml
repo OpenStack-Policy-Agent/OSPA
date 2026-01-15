@@ -1,0 +1,31 @@
+version: v1
+defaults:
+  workers: 10
+  output: findings.jsonl
+policies:
+  - nova:
+    - name: nova-instance-active
+      description: Flag instances that are not active.
+      service: nova
+      resource: instance
+      check:
+        status: active
+      action: log
+  - neutron:
+    - name: neutron-security-group-open
+      description: Flag security group rules that allow wide-open ingress.
+      service: neutron
+      resource: security_group_rule
+      check:
+        cidr: 0.0.0.0/0
+        direction: ingress
+      action: log
+  - cinder:
+    - name: cinder-old-snapshot
+      description: Flag snapshots older than 30 days.
+      service: cinder
+      resource: snapshot
+      check:
+        age_gt: 30d
+      action: log
+

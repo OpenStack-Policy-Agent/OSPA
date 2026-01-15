@@ -19,6 +19,7 @@ OSPA is a policy-driven audit + remediation agent for OpenStack clouds.
 - **E2E engine**: `e2e/`
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
+Policy packs: see [`docs/POLICY_PACKS.md`](docs/POLICY_PACKS.md).
 
 ### Supported OpenStack resources
 
@@ -118,6 +119,22 @@ go run ./cmd/agent --cloud mycloud --policy ./examples/policies.yaml --out findi
 Notes:
 - Use `--all-tenants` only with admin credentials.
 - Policies may set enforce mode, but **nothing changes unless `--fix` is set**.
+- Use `--allow-actions` to restrict remediation actions.
+
+### Output formats
+
+- **JSONL (default)**:
+  - `--out findings.jsonl --out-format jsonl`
+- **CSV**:
+  - `--out findings.csv --out-format csv`
+
+### Metrics
+
+Expose Prometheus metrics:
+
+```bash
+go run ./cmd/agent --cloud mycloud --policy ./examples/policies.yaml --metrics-addr :9090
+```
 
 ### Extending OSPA (scaffold)
 
