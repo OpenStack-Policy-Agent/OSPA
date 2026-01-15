@@ -14,7 +14,7 @@ func TestGenerateE2ETest_NewFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	e2eDir := filepath.Join(tmpDir, "e2e")
 	if err := os.MkdirAll(e2eDir, 0755); err != nil {
@@ -86,7 +86,7 @@ func TestGenerateE2ETest_ExistingFile_Append(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	e2eDir := filepath.Join(tmpDir, "e2e")
 	if err := os.MkdirAll(e2eDir, 0755); err != nil {
@@ -142,7 +142,7 @@ func TestGenerateE2ETest_ExistingFile_Force(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	e2eDir := filepath.Join(tmpDir, "e2e")
 	if err := os.MkdirAll(e2eDir, 0755); err != nil {
@@ -179,7 +179,7 @@ func TestGenerateE2ETest_ExistingTest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	e2eDir := filepath.Join(tmpDir, "e2e")
 	if err := os.MkdirAll(e2eDir, 0755); err != nil {
@@ -229,7 +229,7 @@ func TestGenerateE2ETest_MultipleResources(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	e2eDir := filepath.Join(tmpDir, "e2e")
 	if err := os.MkdirAll(e2eDir, 0755); err != nil {
@@ -262,7 +262,7 @@ func TestGenerateE2ETest_GoSyntax(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	e2eDir := filepath.Join(tmpDir, "e2e")
 	if err := os.MkdirAll(e2eDir, 0755); err != nil {

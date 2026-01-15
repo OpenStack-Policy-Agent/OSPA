@@ -14,7 +14,7 @@ func TestGenerateDiscoveryFile_NewFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	discoveryDir := filepath.Join(tmpDir, "pkg", "discovery", "services")
 	if err := os.MkdirAll(discoveryDir, 0755); err != nil {
@@ -88,7 +88,7 @@ func TestGenerateDiscoveryFile_ExistingFile_Update(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	discoveryDir := filepath.Join(tmpDir, "pkg", "discovery", "services")
 	if err := os.MkdirAll(discoveryDir, 0755); err != nil {
@@ -151,7 +151,7 @@ func TestGenerateDiscoveryFile_ExistingFile_Force(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	discoveryDir := filepath.Join(tmpDir, "pkg", "discovery", "services")
 	if err := os.MkdirAll(discoveryDir, 0755); err != nil {
@@ -188,7 +188,7 @@ func TestGenerateDiscoveryFile_PlaceholderDoesNotImportOpenstackSDK(t *testing.T
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	discoveryDir := filepath.Join(tmpDir, "pkg", "discovery", "services")
 	if err := os.MkdirAll(discoveryDir, 0755); err != nil {
@@ -218,7 +218,7 @@ func TestGenerateDiscoveryFile_GoSyntax(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	discoveryDir := filepath.Join(tmpDir, "pkg", "discovery", "services")
 	if err := os.MkdirAll(discoveryDir, 0755); err != nil {

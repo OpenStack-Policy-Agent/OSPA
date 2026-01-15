@@ -14,7 +14,7 @@ func TestGenerateUnitTests_NewFiles(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	resources := []string{"resource1", "resource2"}
 	err = GenerateUnitTests(tmpDir, "testservice", "TestService", resources, false)
@@ -83,7 +83,7 @@ func TestGenerateUnitTests_ExistingFile_Skip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	auditDir := filepath.Join(tmpDir, "pkg", "audit", "testservice")
 	if err := os.MkdirAll(auditDir, 0755); err != nil {
@@ -126,7 +126,7 @@ func TestGenerateUnitTests_Force(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	auditDir := filepath.Join(tmpDir, "pkg", "audit", "testservice")
 	if err := os.MkdirAll(auditDir, 0755); err != nil {
@@ -163,7 +163,7 @@ func TestGenerateUnitTests_MultipleResources(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	resources := []string{"resource1", "resource2", "resource3", "resource4"}
 	err = GenerateUnitTests(tmpDir, "testservice", "TestService", resources, false)
@@ -185,7 +185,7 @@ func TestGenerateUnitTests_DirectoryCreation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Directory doesn't exist yet
 	resources := []string{"resource1"}
@@ -210,7 +210,7 @@ func TestGenerateUnitTests_GoSyntax(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	resources := []string{"resource1"}
 	err = GenerateUnitTests(tmpDir, "testservice", "TestService", resources, false)

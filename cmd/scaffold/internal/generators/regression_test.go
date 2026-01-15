@@ -14,15 +14,17 @@ func TestRegression_OriginalScaffoldBehavior(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Test that original scaffold behavior still works
 	// Generate a new service (should work as before)
 	// Change to tmpDir for GenerateService
 	oldDir, err := os.Getwd()
 	if err == nil {
-		defer os.Chdir(oldDir)
-		os.Chdir(tmpDir)
+		defer func() { _ = os.Chdir(oldDir) }()
+		if err := os.Chdir(tmpDir); err != nil {
+			t.Fatalf("Failed to change dir: %v", err)
+		}
 	}
 	if err := setupRepoPrereqs(tmpDir); err != nil {
 		t.Fatalf("setupRepoPrereqs() = %v", err)
@@ -60,13 +62,15 @@ func TestRegression_AllFileTypesGenerated(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Change to tmpDir for GenerateService
 	oldDir, err := os.Getwd()
 	if err == nil {
-		defer os.Chdir(oldDir)
-		os.Chdir(tmpDir)
+		defer func() { _ = os.Chdir(oldDir) }()
+		if err := os.Chdir(tmpDir); err != nil {
+			t.Fatalf("Failed to change dir: %v", err)
+		}
 	}
 	if err := setupRepoPrereqs(tmpDir); err != nil {
 		t.Fatalf("setupRepoPrereqs() = %v", err)
@@ -124,7 +128,7 @@ func TestRegression_ForceFlagBehavior(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Create existing file
 	serviceDir := filepath.Join(tmpDir, "pkg/services/services")
@@ -161,7 +165,7 @@ func TestRegression_GeneratedCodeStructure(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	resources := []string{"resource1"}
 	err = GenerateServiceFile(tmpDir, "testservice", "TestService", "test", resources, false)

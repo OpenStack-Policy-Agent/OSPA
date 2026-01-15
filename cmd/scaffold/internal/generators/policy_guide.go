@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"text/template"
 )
 
@@ -380,7 +379,7 @@ For more information about {{.DisplayName}} resources and their properties:
 	}
 
 	funcMap := template.FuncMap{
-		"Title": strings.Title,
+		"Title": ToPascal,
 	}
 
 	t, err := template.New("policyguide").Funcs(funcMap).Parse(tmpl)

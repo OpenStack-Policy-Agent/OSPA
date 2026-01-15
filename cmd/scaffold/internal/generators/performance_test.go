@@ -16,7 +16,7 @@ func TestPerformance_GenerateLargeService(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Generate service with many resources (10+)
 	largeResourceList := []string{
@@ -28,8 +28,10 @@ func TestPerformance_GenerateLargeService(t *testing.T) {
 	// Change to tmpDir for GenerateService
 	oldDir, err := os.Getwd()
 	if err == nil {
-		defer os.Chdir(oldDir)
-		os.Chdir(tmpDir)
+		defer func() { _ = os.Chdir(oldDir) }()
+		if err := os.Chdir(tmpDir); err != nil {
+			t.Fatalf("Failed to change dir: %v", err)
+		}
 	}
 	if err := setupRepoPrereqs(tmpDir); err != nil {
 		t.Fatalf("setupRepoPrereqs() = %v", err)
@@ -60,7 +62,7 @@ func TestPerformance_AnalyzeLargeService(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Create service file with many resources
 	serviceDir := filepath.Join(tmpDir, "pkg/services/services")
@@ -110,7 +112,7 @@ func TestPerformance_UpdateLargeService(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Create service file with many existing resources
 	serviceDir := filepath.Join(tmpDir, "pkg/services/services")
@@ -174,13 +176,15 @@ func TestPerformance_FileIOCount(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Change to tmpDir for GenerateService
 	oldDir, err := os.Getwd()
 	if err == nil {
-		defer os.Chdir(oldDir)
-		os.Chdir(tmpDir)
+		defer func() { _ = os.Chdir(oldDir) }()
+		if err := os.Chdir(tmpDir); err != nil {
+			t.Fatalf("Failed to change dir: %v", err)
+		}
 	}
 	if err := setupRepoPrereqs(tmpDir); err != nil {
 		t.Fatalf("setupRepoPrereqs() = %v", err)

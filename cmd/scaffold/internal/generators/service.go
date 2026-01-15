@@ -3,7 +3,6 @@ package generators
 import (
 	"fmt"
 	"path/filepath"
-	"strings"
 	"text/template"
 )
 
@@ -125,7 +124,6 @@ func (s *{{.DisplayName}}Service) GetResourceDiscoverer(resourceType string) (di
 	}
 
 	funcMap := template.FuncMap{
-		"Title":  strings.Title,
 		"Pascal": ToPascal,
 	}
 
