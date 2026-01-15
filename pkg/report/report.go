@@ -154,8 +154,8 @@ func ConsumeResults(results <-chan *audit.Result, writer ResultWriter) Summary {
 }
 
 func PrintSummary(out io.Writer, summary Summary) {
-	fmt.Fprintln(out, "---- Summary ----")
-	fmt.Fprintf(out, "Scanned: %d\nViolations: %d\nErrors: %d\n", summary.Scanned, summary.Violations, summary.Errors)
-	fmt.Fprintf(out, "Remediation attempted: %d\nRemediated: %d\nRemediation skipped: %d\n",
+	_, _ = fmt.Fprintln(out, "---- Summary ----")
+	_, _ = fmt.Fprintf(out, "Scanned: %d\nViolations: %d\nErrors: %d\n", summary.Scanned, summary.Violations, summary.Errors)
+	_, _ = fmt.Fprintf(out, "Remediation attempted: %d\nRemediated: %d\nRemediation skipped: %d\n",
 		summary.RemediationAttempted, summary.Remediated, summary.RemediationSkipped)
 }

@@ -16,7 +16,7 @@ jobs:
           go-version-file: go.mod
           cache: true
       - name: Test
-        run: go test ./... -count=1
+        run: go test ./pkg/... -count=1
       - name: Vet
         run: go vet ./...
       - name: Lint

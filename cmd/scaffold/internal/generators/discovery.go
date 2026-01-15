@@ -97,7 +97,6 @@ func (d *{{$.DisplayName}}{{. | Pascal}}Discoverer) Discover(ctx context.Context
 	}
 
 	funcMap := template.FuncMap{
-		"Title":  strings.Title,
 		"Pascal": ToPascal,
 	}
 

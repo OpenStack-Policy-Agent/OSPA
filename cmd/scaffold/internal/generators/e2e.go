@@ -109,7 +109,6 @@ policies:
 	}
 
 	funcMap := template.FuncMap{
-		"Title":  strings.Title,
 		"Pascal": ToPascal,
 	}
 
