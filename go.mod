@@ -1,6 +1,6 @@
 module github.com/OpenStack-Policy-Agent/OSPA
 
-go 1.25.5
+go 1.23.0
 
 require (
 	github.com/gophercloud/gophercloud v1.14.1
