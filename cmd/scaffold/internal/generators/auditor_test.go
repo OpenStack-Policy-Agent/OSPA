@@ -14,7 +14,7 @@ func TestGenerateAuditorFiles_NewFiles(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	resources := []string{"resource1", "resource2"}
 	err = GenerateAuditorFiles(tmpDir, "testservice", "TestService", resources, false)
@@ -89,7 +89,7 @@ func TestGenerateAuditorFiles_ExistingFile_Skip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	auditDir := filepath.Join(tmpDir, "pkg", "audit", "testservice")
 	if err := os.MkdirAll(auditDir, 0755); err != nil {
@@ -132,7 +132,7 @@ func TestGenerateAuditorFiles_Force(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	auditDir := filepath.Join(tmpDir, "pkg", "audit", "testservice")
 	if err := os.MkdirAll(auditDir, 0755); err != nil {
@@ -169,7 +169,7 @@ func TestGenerateAuditorFiles_DirectoryCreation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Directory doesn't exist yet
 	resources := []string{"resource1"}
@@ -194,7 +194,7 @@ func TestGenerateAuditorFiles_MultipleResources(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	resources := []string{"resource1", "resource2", "resource3", "resource4"}
 	err = GenerateAuditorFiles(tmpDir, "testservice", "TestService", resources, false)
@@ -216,7 +216,7 @@ func TestGenerateAuditorFiles_TemplateRendering(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	resources := []string{"resource1"}
 	err = GenerateAuditorFiles(tmpDir, "testservice", "TestService", resources, false)

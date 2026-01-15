@@ -15,13 +15,15 @@ func TestRegression_GeneratedCodeCompiles(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Change to tmpDir for GenerateService
 	oldDir, err := os.Getwd()
 	if err == nil {
-		defer os.Chdir(oldDir)
-		os.Chdir(tmpDir)
+		defer func() { _ = os.Chdir(oldDir) }()
+		if err := os.Chdir(tmpDir); err != nil {
+			t.Fatalf("Failed to change dir: %v", err)
+		}
 	}
 	if err := setupRepoPrereqs(tmpDir); err != nil {
 		t.Fatalf("setupRepoPrereqs() = %v", err)
@@ -69,7 +71,7 @@ func TestRegression_GeneratedCodeFormatted(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	resources := []string{"resource1"}
 	err = GenerateServiceFile(tmpDir, "testservice", "TestService", "test", resources, false)
@@ -110,13 +112,15 @@ func TestRegression_NoSyntaxErrors(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Change to tmpDir for GenerateService
 	oldDir, err := os.Getwd()
 	if err == nil {
-		defer os.Chdir(oldDir)
-		os.Chdir(tmpDir)
+		defer func() { _ = os.Chdir(oldDir) }()
+		if err := os.Chdir(tmpDir); err != nil {
+			t.Fatalf("Failed to change dir: %v", err)
+		}
 	}
 	if err := setupRepoPrereqs(tmpDir); err != nil {
 		t.Fatalf("setupRepoPrereqs() = %v", err)
@@ -161,7 +165,7 @@ func TestRegression_ImportsCorrect(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	resources := []string{"resource1"}
 	err = GenerateServiceFile(tmpDir, "testservice", "TestService", "test", resources, false)

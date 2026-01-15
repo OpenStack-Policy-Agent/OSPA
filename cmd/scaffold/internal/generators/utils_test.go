@@ -13,8 +13,10 @@ func TestFileExists_ExistingFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
-	defer os.Remove(tmpFile.Name())
-	tmpFile.Close()
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
+	if err := tmpFile.Close(); err != nil {
+		t.Fatalf("Failed to close temp file: %v", err)
+	}
 	
 	if !fileExists(tmpFile.Name()) {
 		t.Errorf("fileExists(%q) = false, want true", tmpFile.Name())
@@ -34,7 +36,7 @@ func TestFileExists_Directory(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 	
 	// fileExists should return false for directories
 	if fileExists(tmpDir) {
@@ -47,7 +49,7 @@ func TestWriteFile_NewFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 	
 	filePath := filepath.Join(tmpDir, "test.go")
 	
@@ -86,7 +88,7 @@ func TestWriteFile_ExistingFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 	
 	filePath := filepath.Join(tmpDir, "test.go")
 	
@@ -128,7 +130,7 @@ func TestWriteFile_DirectoryCreation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 	
 	// File path with nested directories that don't exist
 	filePath := filepath.Join(tmpDir, "nested", "deep", "test.go")
@@ -152,7 +154,7 @@ func TestWriteFile_TemplateExecution(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 	
 	filePath := filepath.Join(tmpDir, "test.go")
 	
@@ -203,7 +205,7 @@ func TestWriteFile_Permissions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 	
 	filePath := filepath.Join(tmpDir, "test.go")
 	

@@ -14,7 +14,7 @@ func TestGenerateServiceFile_NewService(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	serviceDir := filepath.Join(tmpDir, "pkg", "services", "services")
 	if err := os.MkdirAll(serviceDir, 0755); err != nil {
@@ -94,7 +94,7 @@ func TestGenerateServiceFile_ExistingService_Update(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	serviceDir := filepath.Join(tmpDir, "pkg", "services", "services")
 	if err := os.MkdirAll(serviceDir, 0755); err != nil {
@@ -187,7 +187,7 @@ func TestGenerateServiceFile_ExistingService_Force(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	serviceDir := filepath.Join(tmpDir, "pkg", "services", "services")
 	if err := os.MkdirAll(serviceDir, 0755); err != nil {
@@ -224,7 +224,7 @@ func TestGenerateServiceFile_SingleResource(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	serviceDir := filepath.Join(tmpDir, "pkg", "services", "services")
 	if err := os.MkdirAll(serviceDir, 0755); err != nil {
@@ -254,7 +254,7 @@ func TestGenerateServiceFile_MultipleResources(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	serviceDir := filepath.Join(tmpDir, "pkg", "services", "services")
 	if err := os.MkdirAll(serviceDir, 0755); err != nil {
@@ -286,7 +286,7 @@ func TestGenerateServiceFile_TemplateRendering(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	serviceDir := filepath.Join(tmpDir, "pkg", "services", "services")
 	if err := os.MkdirAll(serviceDir, 0755); err != nil {
@@ -327,7 +327,7 @@ func TestGenerateServiceFile_TemplateRendering(t *testing.T) {
 			}
 
 			// Clean up for next iteration
-			os.Remove(filePath)
+			_ = os.Remove(filePath)
 		})
 	}
 }
@@ -337,7 +337,7 @@ func TestGenerateServiceFile_GoSyntax(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	serviceDir := filepath.Join(tmpDir, "pkg", "services", "services")
 	if err := os.MkdirAll(serviceDir, 0755); err != nil {

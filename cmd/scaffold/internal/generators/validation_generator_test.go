@@ -14,7 +14,7 @@ func TestGenerateValidationFile_NewFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 	if err := setupRepoPrereqs(tmpDir); err != nil {
 		t.Fatalf("setupRepoPrereqs() = %v", err)
 	}
@@ -99,7 +99,7 @@ func TestGenerateValidationFile_ExistingFile_Update(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	validationDir := filepath.Join(tmpDir, "pkg", "policy", "validation")
 	if err := os.MkdirAll(validationDir, 0755); err != nil {
@@ -168,7 +168,7 @@ func TestGenerateValidationFile_ExistingFile_Force(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 	if err := setupRepoPrereqs(tmpDir); err != nil {
 		t.Fatalf("setupRepoPrereqs() = %v", err)
 	}
@@ -208,7 +208,7 @@ func TestUpdateValidationFile_AddResource(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	validationDir := filepath.Join(tmpDir, "pkg", "policy", "validation")
 	if err := os.MkdirAll(validationDir, 0755); err != nil {
@@ -255,7 +255,7 @@ func TestUpdateValidationFile_ResourceExists(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	validationDir := filepath.Join(tmpDir, "pkg", "policy", "validation")
 	if err := os.MkdirAll(validationDir, 0755); err != nil {
@@ -303,7 +303,7 @@ func TestUpdateValidationFile_InsertBeforeDefault(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	validationDir := filepath.Join(tmpDir, "pkg", "policy", "validation")
 	if err := os.MkdirAll(validationDir, 0755); err != nil {
@@ -355,7 +355,7 @@ func TestGenerateValidationFile_GoSyntax(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 	if err := setupRepoPrereqs(tmpDir); err != nil {
 		t.Fatalf("setupRepoPrereqs() = %v", err)
 	}

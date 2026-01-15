@@ -14,7 +14,7 @@ func TestUpdateServiceFile_AddSingleResource(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	serviceDir := filepath.Join(tmpDir, "pkg", "services", "services")
 	if err := os.MkdirAll(serviceDir, 0755); err != nil {
@@ -113,7 +113,7 @@ func TestUpdateServiceFile_AddMultipleResources(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	serviceDir := filepath.Join(tmpDir, "pkg", "services", "services")
 	if err := os.MkdirAll(serviceDir, 0755); err != nil {
@@ -179,7 +179,7 @@ func TestUpdateServiceFile_ResourceAlreadyExists(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	serviceDir := filepath.Join(tmpDir, "pkg", "services", "services")
 	if err := os.MkdirAll(serviceDir, 0755); err != nil {
@@ -235,7 +235,7 @@ func TestUpdateServiceFile_NoResourcesToAdd(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	serviceDir := filepath.Join(tmpDir, "pkg", "services", "services")
 	if err := os.MkdirAll(serviceDir, 0755); err != nil {
@@ -282,7 +282,7 @@ func TestUpdateServiceFile_MissingFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// File doesn't exist
 	err = UpdateServiceFile(tmpDir, "testservice", "TestService", []string{"resource1"})
@@ -296,7 +296,7 @@ func TestUpdateServiceFile_GoSyntax(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	serviceDir := filepath.Join(tmpDir, "pkg", "services", "services")
 	if err := os.MkdirAll(serviceDir, 0755); err != nil {

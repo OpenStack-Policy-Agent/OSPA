@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"text/template"
 )
 
@@ -77,7 +76,6 @@ func (a *{{.ResourceTitle}}Auditor) Fix(ctx context.Context, client interface{},
 `
 
 	funcMap := template.FuncMap{
-		"Title":  strings.Title,
 		"Pascal": ToPascal,
 	}
 

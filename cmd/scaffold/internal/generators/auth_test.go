@@ -12,7 +12,7 @@ func TestGenerateAuthMethod_NewMethod(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	authDir := filepath.Join(tmpDir, "pkg", "auth")
 	if err := os.MkdirAll(authDir, 0755); err != nil {
@@ -72,7 +72,7 @@ func TestGenerateAuthMethod_ExistingMethod_Skip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	authDir := filepath.Join(tmpDir, "pkg", "auth")
 	if err := os.MkdirAll(authDir, 0755); err != nil {
@@ -119,7 +119,7 @@ func TestGenerateAuthMethod_ExistingMethod_Force(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	authDir := filepath.Join(tmpDir, "pkg", "auth")
 	if err := os.MkdirAll(authDir, 0755); err != nil {
@@ -166,7 +166,7 @@ func TestGenerateAuthMethod_MissingAuthFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Don't create auth.go
 	err = GenerateAuthMethod(tmpDir, "testservice", "TestService", "test", false)
@@ -180,7 +180,7 @@ func TestGenerateAuthMethod_AppendBehavior(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	authDir := filepath.Join(tmpDir, "pkg", "auth")
 	if err := os.MkdirAll(authDir, 0755); err != nil {
@@ -240,7 +240,7 @@ func TestGenerateAuthMethod_GoSyntax(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	authDir := filepath.Join(tmpDir, "pkg", "auth")
 	if err := os.MkdirAll(authDir, 0755); err != nil {

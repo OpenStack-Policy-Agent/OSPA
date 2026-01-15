@@ -14,7 +14,7 @@ func TestUpdateDiscoveryFile_AddSingleDiscoverer(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	discoveryDir := filepath.Join(tmpDir, "pkg", "discovery", "services")
 	if err := os.MkdirAll(discoveryDir, 0755); err != nil {
@@ -89,7 +89,7 @@ func TestUpdateDiscoveryFile_AddMultipleDiscoverers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	discoveryDir := filepath.Join(tmpDir, "pkg", "discovery", "services")
 	if err := os.MkdirAll(discoveryDir, 0755); err != nil {
@@ -136,7 +136,7 @@ func TestUpdateDiscoveryFile_DiscovererAlreadyExists(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	discoveryDir := filepath.Join(tmpDir, "pkg", "discovery", "services")
 	if err := os.MkdirAll(discoveryDir, 0755); err != nil {
@@ -185,7 +185,7 @@ func TestUpdateDiscoveryFile_MissingFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// File doesn't exist
 	err = UpdateDiscoveryFile(tmpDir, "testservice", "TestService", []string{"resource1"})
@@ -227,7 +227,7 @@ func TestUpdateDiscoveryFile_GoSyntax(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	discoveryDir := filepath.Join(tmpDir, "pkg", "discovery", "services")
 	if err := os.MkdirAll(discoveryDir, 0755); err != nil {

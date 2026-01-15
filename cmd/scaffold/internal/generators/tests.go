@@ -3,7 +3,6 @@ package generators
 import (
 	"fmt"
 	"path/filepath"
-	"strings"
 	"text/template"
 )
 
@@ -72,7 +71,6 @@ func Test{{.ResourceTitle}}Auditor_Fix(t *testing.T) {
 `
 
 	funcMap := template.FuncMap{
-		"Title":  strings.Title,
 		"Pascal": ToPascal,
 	}
 

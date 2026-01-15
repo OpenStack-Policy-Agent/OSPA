@@ -12,13 +12,15 @@ func TestGenerateService_NewService_Complete(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Change to tmpDir for GenerateService
 	oldDir, err := os.Getwd()
 	if err == nil {
-		defer os.Chdir(oldDir)
-		os.Chdir(tmpDir)
+		defer func() { _ = os.Chdir(oldDir) }()
+		if err := os.Chdir(tmpDir); err != nil {
+			t.Fatalf("Failed to change dir: %v", err)
+		}
 	}
 	if err := setupRepoPrereqs(tmpDir); err != nil {
 		t.Fatalf("setupRepoPrereqs() = %v", err)
@@ -111,7 +113,7 @@ func TestGenerateService_ExistingService_AddResource(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 	if err := setupRepoPrereqs(tmpDir); err != nil {
 		t.Fatalf("setupRepoPrereqs() = %v", err)
 	}
@@ -175,8 +177,10 @@ func (d *TestServiceResource1Discoverer) ResourceType() string {
 	// Change to tmpDir for GenerateService
 	oldDir, err := os.Getwd()
 	if err == nil {
-		defer os.Chdir(oldDir)
-		os.Chdir(tmpDir)
+		defer func() { _ = os.Chdir(oldDir) }()
+		if err := os.Chdir(tmpDir); err != nil {
+			t.Fatalf("Failed to change dir: %v", err)
+		}
 	}
 
 	resources := []string{"resource1", "resource2"}
@@ -217,7 +221,7 @@ func TestGenerateService_ExistingService_AllResourcesExist(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 	if err := setupRepoPrereqs(tmpDir); err != nil {
 		t.Fatalf("setupRepoPrereqs() = %v", err)
 	}
@@ -261,8 +265,10 @@ func init() {
 	// Change to tmpDir for GenerateService
 	oldDir, err := os.Getwd()
 	if err == nil {
-		defer os.Chdir(oldDir)
-		os.Chdir(tmpDir)
+		defer func() { _ = os.Chdir(oldDir) }()
+		if err := os.Chdir(tmpDir); err != nil {
+			t.Fatalf("Failed to change dir: %v", err)
+		}
 	}
 
 	resources := []string{"resource1", "resource2"}
@@ -286,7 +292,7 @@ func TestGenerateService_ForceFlag(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 	if err := setupRepoPrereqs(tmpDir); err != nil {
 		t.Fatalf("setupRepoPrereqs() = %v", err)
 	}
@@ -306,8 +312,10 @@ func TestGenerateService_ForceFlag(t *testing.T) {
 	// Change to tmpDir for GenerateService
 	oldDir, err := os.Getwd()
 	if err == nil {
-		defer os.Chdir(oldDir)
-		os.Chdir(tmpDir)
+		defer func() { _ = os.Chdir(oldDir) }()
+		if err := os.Chdir(tmpDir); err != nil {
+			t.Fatalf("Failed to change dir: %v", err)
+		}
 	}
 
 	// Generate with force
@@ -333,7 +341,7 @@ func TestGenerateService_PartialUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 	if err := setupRepoPrereqs(tmpDir); err != nil {
 		t.Fatalf("setupRepoPrereqs() = %v", err)
 	}
@@ -370,8 +378,10 @@ func init() {
 	// Change to tmpDir for GenerateService
 	oldDir, err := os.Getwd()
 	if err == nil {
-		defer os.Chdir(oldDir)
-		os.Chdir(tmpDir)
+		defer func() { _ = os.Chdir(oldDir) }()
+		if err := os.Chdir(tmpDir); err != nil {
+			t.Fatalf("Failed to change dir: %v", err)
+		}
 	}
 
 	resources := []string{"resource1", "resource2"}
@@ -409,14 +419,14 @@ func TestGenerateService_FileSystemIsolation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Change to temp directory
 	oldDir, err := os.Getwd()
 	if err != nil {
 		t.Fatalf("Failed to get current directory: %v", err)
 	}
-	defer os.Chdir(oldDir)
+	defer func() { _ = os.Chdir(oldDir) }()
 
 	if err := os.Chdir(tmpDir); err != nil {
 		t.Fatalf("Failed to change directory: %v", err)

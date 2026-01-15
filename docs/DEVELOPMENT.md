@@ -749,6 +749,35 @@ go run ./cmd/agent \
   --workers 10
 ```
 
+### Output Formats
+
+```bash
+# CSV output
+go run ./cmd/agent \
+  --cloud "$OS_CLOUD" \
+  --policy ./examples/policies.yaml \
+  --out findings.csv \
+  --out-format csv
+
+```
+
+### Metrics And Logging
+
+```bash
+# Prometheus metrics
+go run ./cmd/agent \
+  --cloud "$OS_CLOUD" \
+  --policy ./examples/policies.yaml \
+  --metrics-addr :9090
+
+# Structured logs
+go run ./cmd/agent \
+  --cloud "$OS_CLOUD" \
+  --policy ./examples/policies.yaml \
+  --log-format json \
+  --log-level debug
+```
+
 ## Troubleshooting
 
 ### Service Not Found

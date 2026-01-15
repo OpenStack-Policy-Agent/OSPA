@@ -12,7 +12,7 @@ func TestGeneratePolicyGuide_NewFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	resources := []string{"resource1", "resource2"}
 	err = GeneratePolicyGuide(tmpDir, "testservice", "TestService", "test", resources, false)
@@ -79,7 +79,7 @@ func TestGeneratePolicyGuide_ExistingFile_Skip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	examplesDir := filepath.Join(tmpDir, "examples", "policies")
 	if err := os.MkdirAll(examplesDir, 0755); err != nil {
@@ -116,7 +116,7 @@ func TestGeneratePolicyGuide_Force(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	examplesDir := filepath.Join(tmpDir, "examples", "policies")
 	if err := os.MkdirAll(examplesDir, 0755); err != nil {
@@ -153,7 +153,7 @@ func TestGeneratePolicyGuide_DirectoryCreation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Directory doesn't exist yet
 	resources := []string{"resource1"}
@@ -178,7 +178,7 @@ func TestGeneratePolicyGuide_MultipleResources(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	resources := []string{"resource1", "resource2", "resource3", "resource4"}
 	err = GeneratePolicyGuide(tmpDir, "testservice", "TestService", "test", resources, false)
@@ -205,7 +205,7 @@ func TestGeneratePolicyGuide_MarkdownValidity(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	resources := []string{"resource1"}
 	err = GeneratePolicyGuide(tmpDir, "testservice", "TestService", "test", resources, false)

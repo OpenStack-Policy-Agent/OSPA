@@ -28,9 +28,14 @@ func writeFile(filePath string, tmpl *template.Template, data interface{}) error
 	if err != nil {
 		return err
 	}
-	defer file.Close()
-
-	return tmpl.Execute(file, data)
+	if err := tmpl.Execute(file, data); err != nil {
+		_ = file.Close()
+		return err
+	}
+	if err := file.Close(); err != nil {
+		return err
+	}
+	return nil
 }
 
 // ToPascal converts a snake_case or kebab-case identifier into PascalCase.

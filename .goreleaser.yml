@@ -1,0 +1,21 @@
+project_name: ospa
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: agent
+    main: ./cmd/agent
+    binary: ospa-agent
+  - id: scaffold
+    main: ./cmd/scaffold
+    binary: ospa-scaffold
+
+archives:
+  - format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+changelog:
+  use: github
+

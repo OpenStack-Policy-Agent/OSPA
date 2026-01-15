@@ -45,10 +45,13 @@ func (s *Session) Get%sClient() (*gophercloud.ServiceClient, error) {
 	if err != nil {
 		return fmt.Errorf("opening auth.go: %w", err)
 	}
-	defer file.Close()
 
 	if _, err := file.WriteString(methodCode); err != nil {
+		_ = file.Close()
 		return fmt.Errorf("writing to auth.go: %w", err)
+	}
+	if err := file.Close(); err != nil {
+		return fmt.Errorf("closing auth.go: %w", err)
 	}
 
 	return nil

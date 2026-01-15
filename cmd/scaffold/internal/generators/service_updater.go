@@ -2,7 +2,6 @@ package generators
 
 import (
 	"fmt"
-	"go/format"
 	"os"
 	"path/filepath"
 	"strings"
@@ -234,21 +233,5 @@ func updateSupportedResourcesComment(content string, resources []string) string 
 	}
 
 	return beforeComment + strings.Join(newCommentLines, "\n") + "\n" + afterComment
-}
-
-// formatGoFile formats a Go source file
-func formatGoFile(filePath string) error {
-	src, err := os.ReadFile(filePath)
-	if err != nil {
-		return err
-	}
-
-	formatted, err := format.Source(src)
-	if err != nil {
-		// If formatting fails, don't fail the whole operation
-		return nil
-	}
-
-	return os.WriteFile(filePath, formatted, 0644)
 }
 

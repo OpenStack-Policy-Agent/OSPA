@@ -12,7 +12,7 @@ func TestAnalyzeService_NewService(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	analysis, err := AnalyzeService(tmpDir, "nonexistent", []string{"resource1", "resource2"})
 	if err != nil {
@@ -44,7 +44,7 @@ func TestAnalyzeService_ExistingService(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Create service file structure
 	serviceDir := filepath.Join(tmpDir, "pkg", "services", "services")
@@ -101,7 +101,7 @@ func TestAnalyzeService_PartialResources(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	serviceDir := filepath.Join(tmpDir, "pkg", "services", "services")
 	if err := os.MkdirAll(serviceDir, 0755); err != nil {
@@ -140,7 +140,7 @@ func TestAnalyzeService_AllResourcesExist(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	serviceDir := filepath.Join(tmpDir, "pkg", "services", "services")
 	if err := os.MkdirAll(serviceDir, 0755); err != nil {
@@ -174,8 +174,10 @@ func TestExtractResourcesFromServiceFile_ValidFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
-	defer os.Remove(tmpFile.Name())
-	tmpFile.Close()
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
+	if err := tmpFile.Close(); err != nil {
+		t.Fatalf("Failed to close temp file: %v", err)
+	}
 
 	content := `package services
 
@@ -212,8 +214,10 @@ func TestExtractResourcesFromServiceFile_NoResources(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
-	defer os.Remove(tmpFile.Name())
-	tmpFile.Close()
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
+	if err := tmpFile.Close(); err != nil {
+		t.Fatalf("Failed to close temp file: %v", err)
+	}
 
 	content := `package services
 
@@ -240,8 +244,10 @@ func TestExtractResourcesFromServiceFile_InvalidFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
-	defer os.Remove(tmpFile.Name())
-	tmpFile.Close()
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
+	if err := tmpFile.Close(); err != nil {
+		t.Fatalf("Failed to close temp file: %v", err)
+	}
 
 	content := `package services
 
@@ -271,8 +277,10 @@ func TestCheckAuthMethodExists_Exists(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
-	defer os.Remove(tmpFile.Name())
-	tmpFile.Close()
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
+	if err := tmpFile.Close(); err != nil {
+		t.Fatalf("Failed to close temp file: %v", err)
+	}
 
 	content := `package auth
 
@@ -294,8 +302,10 @@ func TestCheckAuthMethodExists_NotExists(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
-	defer os.Remove(tmpFile.Name())
-	tmpFile.Close()
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
+	if err := tmpFile.Close(); err != nil {
+		t.Fatalf("Failed to close temp file: %v", err)
+	}
 
 	content := `package auth
 
@@ -353,7 +363,7 @@ func TestAnalyzeService_MissingFiles(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Create service file but not other files
 	serviceDir := filepath.Join(tmpDir, "pkg", "services", "services")
