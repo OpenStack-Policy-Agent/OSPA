@@ -30,5 +30,3 @@ func TestIntegration_NewSession_AndCreateClients(t *testing.T) {
 		t.Fatalf("GetBlockStorageClient() = %v", err)
 	}
 }
-
-

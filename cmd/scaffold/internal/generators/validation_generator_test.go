@@ -233,7 +233,8 @@ func (v *TestServiceValidator) ValidateResource(check *policy.CheckConditions, r
 	}
 
 	// Update with new resource
-	err = updateValidationFile(existingFile, "testservice", "TestService", []string{"resource2"})
+	specs, _ := buildResourceSpecs("testservice", []string{"resource2"})
+	err = updateValidationFile(existingFile, "testservice", "TestService", specs)
 	if err != nil {
 		t.Fatalf("updateValidationFile() = %v, want nil", err)
 	}
@@ -280,7 +281,8 @@ func (v *TestServiceValidator) ValidateResource(check *policy.CheckConditions, r
 	}
 
 	// Try to update with existing resource
-	err = updateValidationFile(existingFile, "testservice", "TestService", []string{"resource1"})
+	specs, _ := buildResourceSpecs("testservice", []string{"resource1"})
+	err = updateValidationFile(existingFile, "testservice", "TestService", specs)
 	if err != nil {
 		t.Fatalf("updateValidationFile() = %v, want nil", err)
 	}
@@ -328,7 +330,8 @@ func (v *TestServiceValidator) ValidateResource(check *policy.CheckConditions, r
 	}
 
 	// Update with new resource
-	err = updateValidationFile(existingFile, "testservice", "TestService", []string{"resource2"})
+	specs, _ := buildResourceSpecs("testservice", []string{"resource2"})
+	err = updateValidationFile(existingFile, "testservice", "TestService", specs)
 	if err != nil {
 		t.Fatalf("updateValidationFile() = %v, want nil", err)
 	}
@@ -384,4 +387,3 @@ func TestGenerateValidationFile_GoSyntax(t *testing.T) {
 		t.Errorf("Generated file has invalid Go syntax: %v", err)
 	}
 }
-

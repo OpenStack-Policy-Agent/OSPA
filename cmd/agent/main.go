@@ -10,13 +10,13 @@ import (
 	"strings"
 
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/auth"
+	_ "github.com/OpenStack-Policy-Agent/OSPA/pkg/discovery/services" // Register discoverers
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/metrics"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/orchestrator"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/policy"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/report"
-	_ "github.com/OpenStack-Policy-Agent/OSPA/pkg/services"        // Register services
+	_ "github.com/OpenStack-Policy-Agent/OSPA/pkg/services"          // Register services
 	_ "github.com/OpenStack-Policy-Agent/OSPA/pkg/services/services" // Register service implementations
-	_ "github.com/OpenStack-Policy-Agent/OSPA/pkg/discovery/services" // Register discoverers
 )
 
 func main() {

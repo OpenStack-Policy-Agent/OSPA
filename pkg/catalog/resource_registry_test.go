@@ -18,5 +18,3 @@ func TestRegisterAndQuery(t *testing.T) {
 		t.Fatalf("expected supported resources map to include svc/res")
 	}
 }
-
-

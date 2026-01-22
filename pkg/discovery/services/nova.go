@@ -7,7 +7,6 @@ import (
 	"github.com/gophercloud/gophercloud"
 )
 
-
 // NovaInstanceDiscoverer discovers nova resources of type instance.
 // Placeholder implementation: returns no jobs. Fill in real OpenStack calls later.
 //
@@ -35,7 +34,6 @@ func (d *NovaInstanceDiscoverer) Discover(ctx context.Context, client *gopherclo
 	return ch, nil
 }
 
-
 // NovaKeypairDiscoverer discovers nova resources of type keypair.
 // Placeholder implementation: returns no jobs. Fill in real OpenStack calls later.
 //
@@ -62,5 +60,3 @@ func (d *NovaKeypairDiscoverer) Discover(ctx context.Context, client *gopherclou
 	close(ch)
 	return ch, nil
 }
-
-

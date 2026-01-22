@@ -1,0 +1,58 @@
+name: trove
+display_name: Trove
+service_type: database
+defaults:
+  actions:
+  - log
+  - delete
+  - tag
+  checks:
+  - status
+  - age_gt
+  - unused
+  - exempt_names
+resources:
+  instance:
+    description: Database instances
+    actions:
+    - log
+    - delete
+    - tag
+    checks:
+    - status
+    - age_gt
+    - unused
+    - exempt_names
+  cluster:
+    description: Database clusters
+    actions:
+    - log
+    - delete
+    - tag
+    checks:
+    - status
+    - age_gt
+    - unused
+    - exempt_names
+  backup:
+    description: Database backups
+    actions:
+    - log
+    - delete
+    - tag
+    checks:
+    - status
+    - age_gt
+    - unused
+    - exempt_names
+  datastore:
+    description: Datastores
+    actions:
+    - log
+    - delete
+    - tag
+    checks:
+    - status
+    - age_gt
+    - unused
+    - exempt_names

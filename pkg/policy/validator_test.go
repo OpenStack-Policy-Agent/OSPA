@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/policy"
@@ -58,6 +59,126 @@ policies:
 	}
 }
 
+func TestValidate_RejectsEmptyCheck(t *testing.T) {
+	serviceName := "testsvc_emptycheck"
+	resourceName := "testresource_emptycheck"
+
+	services.RegisterResource(serviceName, resourceName)
+
+	b := []byte(fmt.Sprintf(`version: v1
+defaults:
+  workers: 1
+policies:
+  - %s:
+    - name: test-rule
+      description: test rule
+      service: %s
+      resource: %s
+      check: {}
+      action: log
+`, serviceName, serviceName, resourceName))
+
+	dir := t.TempDir()
+	p := filepath.Join(dir, "policy.yaml")
+	if err := os.WriteFile(p, b, 0644); err != nil {
+		t.Fatalf("write policy: %v", err)
+	}
+
+	_, err := policy.Load(p)
+	if err == nil {
+		t.Fatalf("Load() error = nil, want error")
+	}
+	if !strings.Contains(err.Error(), "check must specify") {
+		t.Fatalf("Load() error = %q, want check guardrail error", err.Error())
+	}
+}
+
+func TestValidate_CompositeRules(t *testing.T) {
+	serviceName := "testsvc_composite"
+	res1 := "resource1"
+	res2 := "resource2"
+
+	services.RegisterResource(serviceName, res1)
+	services.RegisterResource(serviceName, res2)
+
+	b := []byte(fmt.Sprintf(`version: v1
+defaults:
+  workers: 1
+policies:
+  - %s:
+    - name: base-rule
+      description: base rule
+      service: %s
+      resource: %s
+      check:
+        status: active
+      action: log
+composites:
+  - %s:
+    - name: composite-rule
+      description: composite rule
+      service: %s
+      resources: [%s, %s]
+      check:
+        policy: any
+      action: log
+`, serviceName, serviceName, res1, serviceName, serviceName, res1, res2))
+
+	dir := t.TempDir()
+	p := filepath.Join(dir, "policy.yaml")
+	if err := os.WriteFile(p, b, 0644); err != nil {
+		t.Fatalf("write policy: %v", err)
+	}
+
+	if _, err := policy.Load(p); err != nil {
+		t.Fatalf("Load() error = %v, want nil", err)
+	}
+}
+
+func TestValidate_CompositeRequiresTwoResources(t *testing.T) {
+	serviceName := "testsvc_composite_single"
+	res1 := "resource1"
+
+	services.RegisterResource(serviceName, res1)
+
+	b := []byte(fmt.Sprintf(`version: v1
+defaults:
+  workers: 1
+policies:
+  - %s:
+    - name: base-rule
+      description: base rule
+      service: %s
+      resource: %s
+      check:
+        status: active
+      action: log
+composites:
+  - %s:
+    - name: composite-rule
+      description: composite rule
+      service: %s
+      resources: [%s]
+      check:
+        policy: any
+      action: log
+`, serviceName, serviceName, res1, serviceName, serviceName, res1))
+
+	dir := t.TempDir()
+	p := filepath.Join(dir, "policy.yaml")
+	if err := os.WriteFile(p, b, 0644); err != nil {
+		t.Fatalf("write policy: %v", err)
+	}
+
+	_, err := policy.Load(p)
+	if err == nil {
+		t.Fatalf("Load() error = nil, want error")
+	}
+	if !strings.Contains(err.Error(), "composite rules must specify at least two resources") {
+		t.Fatalf("Load() error = %q, want composite resource error", err.Error())
+	}
+}
+
 type testValidator struct {
 	serviceName string
 	err         error
@@ -89,5 +210,3 @@ func policyTestSafeName(s string) string {
 	}
 	return string(out)
 }
-
-

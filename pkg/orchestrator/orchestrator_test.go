@@ -50,10 +50,10 @@ func (a *fakeAuditor) Fix(context.Context, interface{}, interface{}, *policy.Rul
 }
 
 type fakeService struct {
-	name      string
-	resType   string
-	disc      discovery.Discoverer
-	aud       audit.Auditor
+	name    string
+	resType string
+	disc    discovery.Discoverer
+	aud     audit.Auditor
 }
 
 func (s *fakeService) Name() string { return s.name }
@@ -132,5 +132,3 @@ func TestOrchestrator_Run_ProducesResultAndCanRemediate(t *testing.T) {
 		t.Fatalf("expected auditor.Fix to be called in apply mode")
 	}
 }
-
-

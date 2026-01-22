@@ -93,5 +93,3 @@ policies:
 		t.Fatalf("Load() error = %q, want contains %q", err.Error(), "duplicate rule name")
 	}
 }
-
-

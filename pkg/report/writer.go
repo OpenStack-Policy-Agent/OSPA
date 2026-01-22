@@ -17,4 +17,3 @@ func NewWriter(format string, w io.Writer) (ResultWriter, error) {
 		return nil, fmt.Errorf("unsupported output format: %s", format)
 	}
 }
-

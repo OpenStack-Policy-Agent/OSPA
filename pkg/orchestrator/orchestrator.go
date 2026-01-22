@@ -2,6 +2,7 @@ package orchestrator
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -36,6 +37,10 @@ type Orchestrator struct {
 	clientCacheLock sync.Mutex
 
 	remediationAllowlist map[string]bool
+
+	compositeRules     map[string][]*policy.CompositeRule
+	compositeResources map[string]map[string][]discovery.Job
+	compositeLock      sync.Mutex
 }
 
 // NewOrchestrator creates a new orchestrator
@@ -43,17 +48,19 @@ func NewOrchestrator(p *policy.Policy, session *auth.Session, workers int, apply
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 
 	return &Orchestrator{
-		policy:      p,
-		session:     session,
-		workers:     workers,
-		apply:       apply,
-		allTenants:  allTenants,
-		ctx:         ctx,
-		cancel:      cancel,
-		resultsChan: make(chan *audit.Result, 100),
-		jobsBuffer:  1000,
-		resultsBuffer: 100,
-		clientCache: make(map[string]*gophercloud.ServiceClient),
+		policy:             p,
+		session:            session,
+		workers:            workers,
+		apply:              apply,
+		allTenants:         allTenants,
+		ctx:                ctx,
+		cancel:             cancel,
+		resultsChan:        make(chan *audit.Result, 100),
+		jobsBuffer:         1000,
+		resultsBuffer:      100,
+		clientCache:        make(map[string]*gophercloud.ServiceClient),
+		compositeRules:     make(map[string][]*policy.CompositeRule),
+		compositeResources: make(map[string]map[string][]discovery.Job),
 	}
 }
 
@@ -102,6 +109,8 @@ func (o *Orchestrator) Run() (<-chan *audit.Result, error) {
 		ruleGroups[service][resourceType] = append(ruleGroups[service][resourceType], rule)
 	}
 	o.ruleIndex = ruleGroups
+
+	o.compositeRules = o.buildCompositeRules()
 
 	// Start worker pool
 	var wg sync.WaitGroup
@@ -167,9 +176,10 @@ func (o *Orchestrator) Run() (<-chan *audit.Result, error) {
 		close(jobsChan)
 	}()
 
-	// Close results channel when all workers are done
+	// Close results channel when all workers are done (after composite checks).
 	go func() {
 		wg.Wait()
+		o.runCompositeAudits()
 		close(o.resultsChan)
 	}()
 
@@ -194,6 +204,8 @@ func (o *Orchestrator) worker(id int, jobsChan <-chan discovery.Job, wg *sync.Wa
 			metrics.IncServiceNotFound()
 			continue
 		}
+
+		o.recordCompositeResource(job)
 
 		client, err := o.getClient(job.Service, service)
 		if err != nil {
@@ -288,3 +300,141 @@ func (o *Orchestrator) isActionAllowed(action string) bool {
 	return o.remediationAllowlist[action]
 }
 
+func (o *Orchestrator) buildCompositeRules() map[string][]*policy.CompositeRule {
+	composites := make(map[string][]*policy.CompositeRule)
+	for i := range o.policy.Composites {
+		sp := &o.policy.Composites[i]
+		service := sp.Service
+		for j := range sp.Rules {
+			rule := &sp.Rules[j]
+			if rule.Service == "" {
+				rule.Service = service
+			}
+			composites[rule.Service] = append(composites[rule.Service], rule)
+		}
+	}
+	return composites
+}
+
+func (o *Orchestrator) recordCompositeResource(job discovery.Job) {
+	if len(o.compositeRules[job.Service]) == 0 {
+		return
+	}
+	o.compositeLock.Lock()
+	defer o.compositeLock.Unlock()
+
+	if o.compositeResources[job.Service] == nil {
+		o.compositeResources[job.Service] = make(map[string][]discovery.Job)
+	}
+	o.compositeResources[job.Service][job.ResourceType] = append(o.compositeResources[job.Service][job.ResourceType], job)
+}
+
+func (o *Orchestrator) runCompositeAudits() {
+	if len(o.compositeRules) == 0 {
+		return
+	}
+
+	o.compositeLock.Lock()
+	resources := make(map[string]map[string][]discovery.Job, len(o.compositeResources))
+	for svc, res := range o.compositeResources {
+		resources[svc] = res
+	}
+	o.compositeLock.Unlock()
+
+	for service, rules := range o.compositeRules {
+		auditor, ok := audit.GetComposite(service)
+		if !ok {
+			for _, rule := range rules {
+				o.emitCompositeError(rule, fmt.Errorf("composite auditor not registered for service %q", service))
+			}
+			continue
+		}
+
+		serviceResources := resources[service]
+		if serviceResources == nil {
+			serviceResources = map[string][]discovery.Job{}
+		}
+
+		for _, rule := range rules {
+			result, err := auditor.Check(serviceResources, rule)
+			if err != nil {
+				o.emitCompositeError(rule, err)
+				continue
+			}
+			if result == nil {
+				o.emitCompositeError(rule, fmt.Errorf("composite auditor returned nil result"))
+				continue
+			}
+
+			o.normalizeCompositeResult(rule, result)
+
+			if !result.Compliant && result.Error == nil && rule.Action != "log" {
+				if !o.apply {
+					result.RemediationSkipped = true
+					result.RemediationSkipReason = "dry-run"
+				} else if !o.isActionAllowed(rule.Action) {
+					result.RemediationSkipped = true
+					result.RemediationSkipReason = "action_not_allowed"
+				} else {
+					result.RemediationAttempted = true
+					if err := auditor.Fix(serviceResources, rule); err != nil {
+						result.RemediationError = err
+						result.RemediationErrorKind = audit.ErrorKindRemediation
+					} else {
+						result.Remediated = true
+					}
+				}
+			}
+
+			select {
+			case <-o.ctx.Done():
+				return
+			case o.resultsChan <- result:
+			}
+		}
+	}
+}
+
+func (o *Orchestrator) normalizeCompositeResult(rule *policy.CompositeRule, result *audit.Result) {
+	if result.RuleID == "" {
+		result.RuleID = rule.Name
+	}
+	if result.Rule == nil {
+		result.Rule = &policy.Rule{
+			Name:          rule.Name,
+			Description:   rule.Description,
+			Service:       rule.Service,
+			Resource:      "composite",
+			Action:        rule.Action,
+			TagName:       rule.TagName,
+			ActionTagName: rule.ActionTagName,
+		}
+	}
+	if result.ResourceID == "" {
+		result.ResourceID = "composite"
+	}
+}
+
+func (o *Orchestrator) emitCompositeError(rule *policy.CompositeRule, err error) {
+	result := &audit.Result{
+		RuleID:     rule.Name,
+		ResourceID: "composite",
+		Compliant:  false,
+		Error:      err,
+		ErrorKind:  audit.ErrorKindAudit,
+		Rule: &policy.Rule{
+			Name:          rule.Name,
+			Description:   rule.Description,
+			Service:       rule.Service,
+			Resource:      "composite",
+			Action:        rule.Action,
+			TagName:       rule.TagName,
+			ActionTagName: rule.ActionTagName,
+		},
+	}
+	select {
+	case <-o.ctx.Done():
+		return
+	case o.resultsChan <- result:
+	}
+}

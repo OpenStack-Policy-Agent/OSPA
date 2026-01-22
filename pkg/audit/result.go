@@ -19,11 +19,11 @@ type Result struct {
 	Rule         *policy.Rule
 
 	// Remediation fields
-	RemediationAttempted bool
-	Remediated           bool
-	RemediationError     error
-	RemediationErrorKind ErrorKind
-	RemediationSkipped   bool
+	RemediationAttempted  bool
+	Remediated            bool
+	RemediationError      error
+	RemediationErrorKind  ErrorKind
+	RemediationSkipped    bool
 	RemediationSkipReason string
 
 	// Additional metadata
@@ -38,4 +38,3 @@ const (
 	ErrorKindAudit       ErrorKind = "audit"
 	ErrorKindRemediation ErrorKind = "remediation"
 )
-

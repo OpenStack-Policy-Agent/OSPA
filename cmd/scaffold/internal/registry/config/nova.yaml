@@ -1,0 +1,69 @@
+name: nova
+display_name: Nova
+service_type: compute
+defaults:
+  actions:
+  - log
+  - delete
+  - tag
+  checks:
+  - status
+  - age_gt
+  - unused
+  - exempt_names
+resources:
+  instance:
+    description: Server instances
+    actions:
+    - log
+    - delete
+    - tag
+    checks:
+    - status
+    - age_gt
+    - unused
+    - exempt_names
+  keypair:
+    description: SSH keypairs
+    actions:
+    - log
+    - delete
+    - tag
+    checks:
+    - status
+    - age_gt
+    - unused
+    - exempt_names
+  server:
+    description: Server instances (alias for instance)
+    actions:
+    - log
+    - delete
+    - tag
+    checks:
+    - status
+    - age_gt
+    - unused
+    - exempt_names
+  flavor:
+    description: Flavor definitions
+    actions:
+    - log
+    - delete
+    - tag
+    checks:
+    - status
+    - age_gt
+    - unused
+    - exempt_names
+  hypervisor:
+    description: Hypervisor information
+    actions:
+    - log
+    - delete
+    - tag
+    checks:
+    - status
+    - age_gt
+    - unused
+    - exempt_names

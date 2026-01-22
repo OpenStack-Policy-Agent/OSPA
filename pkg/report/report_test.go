@@ -63,13 +63,13 @@ func TestJSONLWriter_WriteResult_IncludesErrors(t *testing.T) {
 	w := NewJSONLWriter(&buf)
 
 	r := &audit.Result{
-		RuleID:           "r1",
-		ResourceID:       "srv-1",
-		ResourceName:     "srv",
-		Compliant:        false,
-		Error:            errString("eval failed"),
-		ErrorKind:        audit.ErrorKindAudit,
-		RemediationError: errString("delete failed"),
+		RuleID:               "r1",
+		ResourceID:           "srv-1",
+		ResourceName:         "srv",
+		Compliant:            false,
+		Error:                errString("eval failed"),
+		ErrorKind:            audit.ErrorKindAudit,
+		RemediationError:     errString("delete failed"),
 		RemediationErrorKind: audit.ErrorKindRemediation,
 		Rule: &policy.Rule{
 			Name: "r1",
@@ -102,5 +102,3 @@ func TestJSONLWriter_WriteResult_IncludesErrors(t *testing.T) {
 type errString string
 
 func (e errString) Error() string { return string(e) }
-
-

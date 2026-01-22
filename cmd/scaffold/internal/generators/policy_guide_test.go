@@ -229,4 +229,3 @@ func TestGeneratePolicyGuide_MarkdownValidity(t *testing.T) {
 		t.Error("Generated guide missing code blocks")
 	}
 }
-

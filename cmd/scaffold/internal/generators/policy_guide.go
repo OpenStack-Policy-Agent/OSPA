@@ -7,8 +7,16 @@ import (
 	"text/template"
 )
 
-// GeneratePolicyGuide generates the policy guide markdown file
+// GeneratePolicyGuide generates the policy guide markdown file.
 func GeneratePolicyGuide(baseDir, serviceName, displayName, serviceType string, resources []string, force bool) error {
+	specs, err := buildResourceSpecs(serviceName, resources)
+	if err != nil {
+		return err
+	}
+	return generatePolicyGuideWithSpecs(baseDir, serviceName, displayName, serviceType, specs, force)
+}
+
+func generatePolicyGuideWithSpecs(baseDir, serviceName, displayName, serviceType string, resources []ResourceSpec, force bool) error {
 	// Create examples/policies directory if it doesn't exist
 	examplesDir := filepath.Join(baseDir, "examples", "policies")
 	if err := os.MkdirAll(examplesDir, 0755); err != nil {
@@ -16,7 +24,7 @@ func GeneratePolicyGuide(baseDir, serviceName, displayName, serviceType string, 
 	}
 
 	guideFile := filepath.Join(examplesDir, serviceName+"-policy-guide.md")
-	
+
 	if !force && fileExists(guideFile) {
 		fmt.Printf("Warning: %s already exists, skipping (use --force to overwrite)\n", guideFile)
 		return nil
@@ -35,9 +43,12 @@ This guide explains how to write policies for {{.DisplayName}} resources in OSPA
 ## Supported Resources
 
 {{range .Resources}}
-### {{. | Title}}
+### {{.Name | Title}}
 
-**Resource Type:** ` + "`{{.}}`" + `
+**Resource Type:** ` + "`{{.Name}}`" + `
+
+**Allowed Actions:** {{JoinOrNone .Actions}}
+**Allowed Checks:** {{JoinOrNone .Checks}}
 
 {{end}}
 
@@ -225,39 +236,39 @@ action_tag_name: "Display Name for Tag"
 ## Resource-Specific Examples
 
 {{range .Resources}}
-### {{. | Title}} Examples
+### {{.Name | Title}} Examples
 
-#### Example 1: Find Inactive {{. | Title}} Resources
+#### Example 1: Find Inactive {{.Name | Title}} Resources
 
 {{printf "%c%c%c" 96 96 96}}yaml
-- name: find-inactive-{{.}}
-  description: Find inactive {{.}} resources
+- name: find-inactive-{{.Name}}
+  description: Find inactive {{.Name}} resources
   service: {{$.ServiceName}}
-  resource: {{.}}
+  resource: {{.Name}}
   check:
     status: inactive
   action: log
 {{printf "%c%c%c" 96 96 96}}
 
-#### Example 2: Find Old {{. | Title}} Resources
+#### Example 2: Find Old {{.Name | Title}} Resources
 
 {{printf "%c%c%c" 96 96 96}}yaml
-- name: find-old-{{.}}
-  description: Find {{.}} resources older than 30 days
+- name: find-old-{{.Name}}
+  description: Find {{.Name}} resources older than 30 days
   service: {{$.ServiceName}}
-  resource: {{.}}
+  resource: {{.Name}}
   check:
     age_gt: 30d
   action: log
 {{printf "%c%c%c" 96 96 96}}
 
-#### Example 3: Cleanup Unused {{. | Title}} Resources
+#### Example 3: Cleanup Unused {{.Name | Title}} Resources
 
 {{printf "%c%c%c" 96 96 96}}yaml
-- name: cleanup-unused-{{.}}
-  description: Delete unused {{.}} resources
+- name: cleanup-unused-{{.Name}}
+  description: Delete unused {{.Name}} resources
   service: {{$.ServiceName}}
-  resource: {{.}}
+  resource: {{.Name}}
   check:
     unused: true
     exempt_names:
@@ -265,18 +276,18 @@ action_tag_name: "Display Name for Tag"
   action: delete
 {{printf "%c%c%c" 96 96 96}}
 
-#### Example 4: Tag Old {{. | Title}} Resources
+#### Example 4: Tag Old {{.Name | Title}} Resources
 
 {{printf "%c%c%c" 96 96 96}}yaml
-- name: tag-old-{{.}}
-  description: Tag {{.}} resources older than 7 days
+- name: tag-old-{{.Name}}
+  description: Tag {{.Name}} resources older than 7 days
   service: {{$.ServiceName}}
-  resource: {{.}}
+  resource: {{.Name}}
   check:
     age_gt: 7d
   action: tag
-  tag_name: audit-old-{{.}}
-  action_tag_name: "Old {{. | Title}}"
+  tag_name: audit-old-{{.Name}}
+  action_tag_name: "Old {{.Name | Title}}"
 {{printf "%c%c%c" 96 96 96}}
 
 {{end}}
@@ -292,17 +303,17 @@ defaults:
   output: findings.jsonl
 policies:
   - {{.ServiceName}}:{{range .Resources}}
-    - name: audit-{{.}}
-      description: Audit {{.}} resources
+    - name: audit-{{.Name}}
+      description: Audit {{.Name}} resources
       service: {{$.ServiceName}}
-      resource: {{.}}
+      resource: {{.Name}}
       check:
         status: active
       action: log
-    - name: cleanup-old-{{.}}
-      description: Find {{.}} resources older than 90 days
+    - name: cleanup-old-{{.Name}}
+      description: Find {{.Name}} resources older than 90 days
       service: {{$.ServiceName}}
-      resource: {{.}}
+      resource: {{.Name}}
       check:
         age_gt: 90d
         exempt_names:
@@ -370,7 +381,7 @@ For more information about {{.DisplayName}} resources and their properties:
 		ServiceName string
 		DisplayName string
 		ServiceType string
-		Resources   []string
+		Resources   []ResourceSpec
 	}{
 		ServiceName: serviceName,
 		DisplayName: displayName,
@@ -379,7 +390,8 @@ For more information about {{.DisplayName}} resources and their properties:
 	}
 
 	funcMap := template.FuncMap{
-		"Title": ToPascal,
+		"Title":      ToPascal,
+		"JoinOrNone": JoinOrNone,
 	}
 
 	t, err := template.New("policyguide").Funcs(funcMap).Parse(tmpl)
@@ -389,4 +401,3 @@ For more information about {{.DisplayName}} resources and their properties:
 
 	return writeFile(guideFile, t, data)
 }
-

@@ -243,4 +243,3 @@ func TestGenerateAuditorFiles_TemplateRendering(t *testing.T) {
 		t.Error("Template missing service name")
 	}
 }
-

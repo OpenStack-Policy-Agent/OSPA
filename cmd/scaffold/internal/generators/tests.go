@@ -6,8 +6,16 @@ import (
 	"text/template"
 )
 
-// GenerateUnitTests generates unit test files for each resource auditor
+// GenerateUnitTests generates unit test files for each resource auditor.
 func GenerateUnitTests(baseDir, serviceName, displayName string, resources []string, force bool) error {
+	specs, err := buildResourceSpecs(serviceName, resources)
+	if err != nil {
+		return err
+	}
+	return generateUnitTestsWithSpecs(baseDir, serviceName, displayName, specs, force)
+}
+
+func generateUnitTestsWithSpecs(baseDir, serviceName, displayName string, resources []ResourceSpec, force bool) error {
 	auditDir := filepath.Join(baseDir, "pkg", "audit", serviceName)
 
 	tmpl := `package {{.ServiceName}}
@@ -32,6 +40,9 @@ func Test{{.ResourceTitle}}Auditor_Check(t *testing.T) {
 	// TODO(OSPA): Replace this placeholder resource with the real SDK type used by the discoverer.
 	resource := map[string]interface{}{"id": "test-id", "name": "test-resource"}
 
+	// TODO(OSPA): Update these checks/actions to match the resource's allowed list.
+	// Allowed checks: {{JoinOrNone .Checks}}
+	// Allowed actions: {{JoinOrNone .Actions}}
 	rule := &policy.Rule{
 		Name:     "test-rule",
 		Service:  "{{.ServiceName}}",
@@ -71,39 +82,43 @@ func Test{{.ResourceTitle}}Auditor_Fix(t *testing.T) {
 `
 
 	funcMap := template.FuncMap{
-		"Pascal": ToPascal,
+		"Pascal":     ToPascal,
+		"JoinOrNone": JoinOrNone,
 	}
 
 	for _, resource := range resources {
-		filePath := filepath.Join(auditDir, resource+"_test.go")
-		
+		filePath := filepath.Join(auditDir, resource.Name+"_test.go")
+
 		if !force && fileExists(filePath) {
 			fmt.Printf("Warning: %s already exists, skipping (use --force to overwrite)\n", filePath)
 			continue
 		}
 
 		data := struct {
-			ServiceName     string
-			DisplayName     string
-			ResourceName    string
-			ResourceTitle   string
+			ServiceName   string
+			DisplayName   string
+			ResourceName  string
+			ResourceTitle string
+			Checks        []string
+			Actions       []string
 		}{
-			ServiceName:     serviceName,
-			DisplayName:     displayName,
-			ResourceName:    resource,
-			ResourceTitle:   ToPascal(resource),
+			ServiceName:   serviceName,
+			DisplayName:   displayName,
+			ResourceName:  resource.Name,
+			ResourceTitle: ToPascal(resource.Name),
+			Checks:        append([]string{}, resource.Checks...),
+			Actions:       append([]string{}, resource.Actions...),
 		}
 
 		t, err := template.New("unittest").Funcs(funcMap).Parse(tmpl)
 		if err != nil {
-			return fmt.Errorf("parsing unit test template for %s: %w", resource, err)
+			return fmt.Errorf("parsing unit test template for %s: %w", resource.Name, err)
 		}
 
 		if err := writeFile(filePath, t, data); err != nil {
-			return fmt.Errorf("writing unit test file for %s: %w", resource, err)
+			return fmt.Errorf("writing unit test file for %s: %w", resource.Name, err)
 		}
 	}
 
 	return nil
 }
-

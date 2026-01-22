@@ -448,4 +448,3 @@ func TestGenerateService_FileSystemIsolation(t *testing.T) {
 		t.Error("Service file was not created in current directory")
 	}
 }
-

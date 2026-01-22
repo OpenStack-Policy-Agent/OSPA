@@ -7,9 +7,10 @@ import (
 
 // Policy represents the top-level policy configuration
 type Policy struct {
-	Version  string         `yaml:"version"`
-	Defaults Defaults       `yaml:"defaults"`
-	Policies []ServicePolicy `yaml:"policies"`
+	Version    string                   `yaml:"version"`
+	Defaults   Defaults                 `yaml:"defaults"`
+	Policies   []ServicePolicy          `yaml:"policies"`
+	Composites []CompositeServicePolicy `yaml:"composites,omitempty"`
 }
 
 // Defaults contains default configuration values
@@ -21,8 +22,14 @@ type Defaults struct {
 
 // ServicePolicy groups rules by OpenStack service
 type ServicePolicy struct {
-	Service string  `yaml:"service"`
-	Rules   []Rule  `yaml:"rules"`
+	Service string `yaml:"service"`
+	Rules   []Rule `yaml:"rules"`
+}
+
+// CompositeServicePolicy groups composite rules by OpenStack service.
+type CompositeServicePolicy struct {
+	Service string          `yaml:"service"`
+	Rules   []CompositeRule `yaml:"rules"`
 }
 
 // Rule represents a single audit rule
@@ -35,6 +42,18 @@ type Rule struct {
 	Action        string          `yaml:"action"`
 	ActionTagName string          `yaml:"action_tag_name,omitempty"`
 	TagName       string          `yaml:"tag_name,omitempty"`
+}
+
+// CompositeRule represents a rule that evaluates multiple resource types together.
+type CompositeRule struct {
+	Name          string                 `yaml:"name"`
+	Description   string                 `yaml:"description"`
+	Service       string                 `yaml:"service"`
+	Resources     []string               `yaml:"resources"`
+	Check         map[string]interface{} `yaml:"check"`
+	Action        string                 `yaml:"action"`
+	ActionTagName string                 `yaml:"action_tag_name,omitempty"`
+	TagName       string                 `yaml:"tag_name,omitempty"`
 }
 
 // CheckConditions supports flexible condition matching
@@ -56,7 +75,7 @@ type CheckConditions struct {
 	Unused bool `yaml:"unused,omitempty"`
 
 	// Exemptions
-	ExemptNames    []string      `yaml:"exempt_names,omitempty"`
+	ExemptNames    []string       `yaml:"exempt_names,omitempty"`
 	ExemptMetadata *MetadataMatch `yaml:"exempt_metadata,omitempty"`
 
 	// Image name checks
@@ -115,6 +134,20 @@ func (p *Policy) GetAllRules() []Rule {
 	for _, sp := range p.Policies {
 		for _, rule := range sp.Rules {
 			// Ensure service is set from parent if not in rule
+			if rule.Service == "" {
+				rule.Service = sp.Service
+			}
+			allRules = append(allRules, rule)
+		}
+	}
+	return allRules
+}
+
+// GetAllCompositeRules returns all composite rules from all composite service policies.
+func (p *Policy) GetAllCompositeRules() []CompositeRule {
+	var allRules []CompositeRule
+	for _, sp := range p.Composites {
+		for _, rule := range sp.Rules {
 			if rule.Service == "" {
 				rule.Service = sp.Service
 			}

@@ -1,0 +1,36 @@
+name: glance
+display_name: Glance
+service_type: image
+defaults:
+  actions:
+  - log
+  - delete
+  - tag
+  checks:
+  - status
+  - age_gt
+  - unused
+  - exempt_names
+resources:
+  image:
+    description: Images
+    actions:
+    - log
+    - delete
+    - tag
+    checks:
+    - status
+    - age_gt
+    - unused
+    - exempt_names
+  member:
+    description: Image members
+    actions:
+    - log
+    - delete
+    - tag
+    checks:
+    - status
+    - age_gt
+    - unused
+    - exempt_names

@@ -7,10 +7,18 @@ import (
 	"text/template"
 )
 
-// GenerateAuditorFiles generates auditor implementation files for each resource
+// GenerateAuditorFiles generates auditor implementation files for each resource.
 func GenerateAuditorFiles(baseDir, serviceName, displayName string, resources []string, force bool) error {
+	specs, err := buildResourceSpecs(serviceName, resources)
+	if err != nil {
+		return err
+	}
+	return generateAuditorFilesWithSpecs(baseDir, serviceName, displayName, specs, force)
+}
+
+func generateAuditorFilesWithSpecs(baseDir, serviceName, displayName string, resources []ResourceSpec, force bool) error {
 	auditDir := filepath.Join(baseDir, "pkg", "audit", serviceName)
-	
+
 	// Create directory if it doesn't exist
 	if err := os.MkdirAll(auditDir, 0755); err != nil {
 		return fmt.Errorf("creating audit directory: %w", err)
@@ -27,6 +35,9 @@ import (
 )
 
 // {{.ResourceTitle}}Auditor audits {{.ServiceName}} resources of type {{.ResourceName}}
+// Description: {{.ResourceDesc}}
+// Allowed checks: {{JoinOrNone .Checks}}
+// Allowed actions: {{JoinOrNone .Actions}}
 //
 // TODO(OSPA): Replace placeholder logic with real field extraction + rule evaluation for {{.ServiceName}}/{{.ResourceName}}.
 type {{.ResourceTitle}}Auditor struct{}
@@ -42,7 +53,8 @@ func (a *{{.ResourceTitle}}Auditor) Check(ctx context.Context, resource interfac
 	_ = resource
 
 	// TODO(OSPA): Parse 'resource' into the correct OpenStack SDK type for {{.ServiceName}}/{{.ResourceName}}.
-	// Populate ResourceID/ResourceName/ProjectID/Status/UpdatedAt, and implement checks (status, age_gt, unused, etc.).
+	// Populate ResourceID/ResourceName/ProjectID/Status/UpdatedAt, and implement checks for:
+	//   {{JoinOrNone .Checks}}
 	result := &audit.Result{
 		RuleID:       rule.Name,
 		ResourceID:   "unknown",
@@ -66,6 +78,7 @@ func (a *{{.ResourceTitle}}Auditor) Fix(ctx context.Context, client interface{},
 	// - delete: delete the resource
 	// - tag: apply policy tag/metadata
 	// - log: no-op (already supported)
+	// Allowed actions: {{JoinOrNone .Actions}}
 	switch rule.Action {
 	case "log":
 		return nil
@@ -76,39 +89,45 @@ func (a *{{.ResourceTitle}}Auditor) Fix(ctx context.Context, client interface{},
 `
 
 	funcMap := template.FuncMap{
-		"Pascal": ToPascal,
+		"Pascal":     ToPascal,
+		"JoinOrNone": JoinOrNone,
 	}
 
 	for _, resource := range resources {
-		filePath := filepath.Join(auditDir, resource+".go")
-		
+		filePath := filepath.Join(auditDir, resource.Name+".go")
+
 		if !force && fileExists(filePath) {
 			fmt.Printf("Warning: %s already exists, skipping (use --force to overwrite)\n", filePath)
 			continue
 		}
 
 		data := struct {
-			ServiceName     string
-			DisplayName     string
-			ResourceName    string
-			ResourceTitle   string
+			ServiceName   string
+			DisplayName   string
+			ResourceName  string
+			ResourceTitle string
+			ResourceDesc  string
+			Checks        []string
+			Actions       []string
 		}{
-			ServiceName:     serviceName,
-			DisplayName:     displayName,
-			ResourceName:    resource,
-			ResourceTitle:   ToPascal(resource),
+			ServiceName:   serviceName,
+			DisplayName:   displayName,
+			ResourceName:  resource.Name,
+			ResourceTitle: ToPascal(resource.Name),
+			ResourceDesc:  resource.Description,
+			Checks:        append([]string{}, resource.Checks...),
+			Actions:       append([]string{}, resource.Actions...),
 		}
 
 		t, err := template.New("auditor").Funcs(funcMap).Parse(tmpl)
 		if err != nil {
-			return fmt.Errorf("parsing template for %s: %w", resource, err)
+			return fmt.Errorf("parsing template for %s: %w", resource.Name, err)
 		}
 
 		if err := writeFile(filePath, t, data); err != nil {
-			return fmt.Errorf("writing auditor file for %s: %w", resource, err)
+			return fmt.Errorf("writing auditor file for %s: %w", resource.Name, err)
 		}
 	}
 
 	return nil
 }
-

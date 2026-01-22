@@ -1,0 +1,58 @@
+name: ironic
+display_name: Ironic
+service_type: baremetal
+defaults:
+  actions:
+  - log
+  - delete
+  - tag
+  checks:
+  - status
+  - age_gt
+  - unused
+  - exempt_names
+resources:
+  node:
+    description: Bare metal nodes
+    actions:
+    - log
+    - delete
+    - tag
+    checks:
+    - status
+    - age_gt
+    - unused
+    - exempt_names
+  port:
+    description: Node ports
+    actions:
+    - log
+    - delete
+    - tag
+    checks:
+    - status
+    - age_gt
+    - unused
+    - exempt_names
+  driver:
+    description: Drivers
+    actions:
+    - log
+    - delete
+    - tag
+    checks:
+    - status
+    - age_gt
+    - unused
+    - exempt_names
+  chassis:
+    description: Chassis
+    actions:
+    - log
+    - delete
+    - tag
+    checks:
+    - status
+    - age_gt
+    - unused
+    - exempt_names

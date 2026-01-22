@@ -41,5 +41,3 @@ func MustGetValidator(serviceName string) (ResourceValidator, error) {
 	}
 	return v, nil
 }
-
-

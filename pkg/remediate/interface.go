@@ -14,4 +14,3 @@ type Remediator interface {
 	// Action returns the action name this remediator handles
 	Action() string
 }
-

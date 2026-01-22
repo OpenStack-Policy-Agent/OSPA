@@ -133,23 +133,23 @@ func listServices() {
 
 	fmt.Println("Available OpenStack Services:")
 	fmt.Println("==============================")
-	
+
 	for _, svcName := range services {
 		info, err := registry.GetServiceInfo(svcName)
 		if err != nil {
 			continue
 		}
-		
+
 		fmt.Printf("\n%s (%s)\n", info.DisplayName, svcName)
 		fmt.Printf("  Service Type: %s\n", info.ServiceType)
 		fmt.Printf("  Resources: ")
-		
+
 		resList, err := registry.ListResources(svcName)
 		if err != nil {
 			fmt.Println("(error listing resources)")
 			continue
 		}
-		
+
 		for i, res := range resList {
 			if i > 0 {
 				fmt.Print(", ")
@@ -158,7 +158,7 @@ func listServices() {
 		}
 		fmt.Println()
 	}
-	
+
 	fmt.Printf("\nExample usage:\n")
 	fmt.Printf("  %s --service glance --resources image,member --type image\n", os.Args[0])
 }

@@ -222,4 +222,3 @@ func TestPerformance_FileIOCount(t *testing.T) {
 		t.Logf("Generated %d files for %d resources (expected %d-%d)", fileCount, len(resources), expectedMin, expectedMax)
 	}
 }
-

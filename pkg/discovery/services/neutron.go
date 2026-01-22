@@ -7,7 +7,6 @@ import (
 	"github.com/gophercloud/gophercloud"
 )
 
-
 // NeutronSecurityGroupRuleDiscoverer discovers neutron resources of type security_group_rule.
 // Placeholder implementation: returns no jobs. Fill in real OpenStack calls later.
 //
@@ -34,7 +33,6 @@ func (d *NeutronSecurityGroupRuleDiscoverer) Discover(ctx context.Context, clien
 	close(ch)
 	return ch, nil
 }
-
 
 // NeutronFloatingIpDiscoverer discovers neutron resources of type floating_ip.
 // Placeholder implementation: returns no jobs. Fill in real OpenStack calls later.
@@ -63,7 +61,6 @@ func (d *NeutronFloatingIpDiscoverer) Discover(ctx context.Context, client *goph
 	return ch, nil
 }
 
-
 // NeutronSecurityGroupDiscoverer discovers neutron resources of type security_group.
 // Placeholder implementation: returns no jobs. Fill in real OpenStack calls later.
 //
@@ -90,5 +87,3 @@ func (d *NeutronSecurityGroupDiscoverer) Discover(ctx context.Context, client *g
 	close(ch)
 	return ch, nil
 }
-
-

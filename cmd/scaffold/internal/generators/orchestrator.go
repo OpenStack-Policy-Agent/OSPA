@@ -7,14 +7,14 @@ import (
 // GenerateService orchestrates the generation of all files for a service
 func GenerateService(serviceName, displayName, serviceType string, resources []string, force bool) error {
 	baseDir := "."
-	
+
 	// Analyze existing service to determine what needs to be generated
 	analysis, err := AnalyzeService(baseDir, serviceName, resources)
 	if err != nil && !force {
 		// If analysis fails and we're not forcing, continue anyway
 		analysis = &ServiceAnalysis{}
 	}
-	
+
 	// Determine which resources are new
 	newResources := resources
 	if analysis != nil && len(analysis.ExistingResources) > 0 {
@@ -29,7 +29,7 @@ func GenerateService(serviceName, displayName, serviceType string, resources []s
 			}
 		}
 	}
-	
+
 	// Generate service file (will update if exists and not forcing)
 	if err := GenerateServiceFile(baseDir, serviceName, displayName, serviceType, resources, force); err != nil {
 		return fmt.Errorf("generating service file: %w", err)
@@ -76,4 +76,3 @@ func GenerateService(serviceName, displayName, serviceType string, resources []s
 
 	return nil
 }
-

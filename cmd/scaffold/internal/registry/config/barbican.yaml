@@ -1,0 +1,47 @@
+name: barbican
+display_name: Barbican
+service_type: key-manager
+defaults:
+  actions:
+  - log
+  - delete
+  - tag
+  checks:
+  - status
+  - age_gt
+  - unused
+  - exempt_names
+resources:
+  secret:
+    description: Secrets
+    actions:
+    - log
+    - delete
+    - tag
+    checks:
+    - status
+    - age_gt
+    - unused
+    - exempt_names
+  container:
+    description: Secret containers
+    actions:
+    - log
+    - delete
+    - tag
+    checks:
+    - status
+    - age_gt
+    - unused
+    - exempt_names
+  order:
+    description: Orders
+    actions:
+    - log
+    - delete
+    - tag
+    checks:
+    - status
+    - age_gt
+    - unused
+    - exempt_names

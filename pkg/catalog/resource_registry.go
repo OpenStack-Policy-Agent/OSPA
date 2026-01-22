@@ -65,5 +65,3 @@ func GetSupportedResources() map[string]map[string]bool {
 	}
 	return result
 }
-
-

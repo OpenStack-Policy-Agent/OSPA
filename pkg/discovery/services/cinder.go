@@ -7,7 +7,6 @@ import (
 	"github.com/gophercloud/gophercloud"
 )
 
-
 // CinderVolumeDiscoverer discovers cinder resources of type volume.
 // Placeholder implementation: returns no jobs. Fill in real OpenStack calls later.
 //
@@ -35,7 +34,6 @@ func (d *CinderVolumeDiscoverer) Discover(ctx context.Context, client *gopherclo
 	return ch, nil
 }
 
-
 // CinderSnapshotDiscoverer discovers cinder resources of type snapshot.
 // Placeholder implementation: returns no jobs. Fill in real OpenStack calls later.
 //
@@ -62,5 +60,3 @@ func (d *CinderSnapshotDiscoverer) Discover(ctx context.Context, client *gopherc
 	close(ch)
 	return ch, nil
 }
-
-

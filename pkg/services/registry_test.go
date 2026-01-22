@@ -3,9 +3,9 @@ package services_test
 import (
 	"testing"
 
-	"github.com/OpenStack-Policy-Agent/OSPA/pkg/catalog"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/audit"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/auth"
+	"github.com/OpenStack-Policy-Agent/OSPA/pkg/catalog"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/discovery"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/services"
 
@@ -16,9 +16,11 @@ import (
 type fakeService struct{ name string }
 
 func (s *fakeService) Name() string { return s.name }
-func (s *fakeService) GetClient(_ *auth.Session) (*gophercloud.ServiceClient, error) { return &gophercloud.ServiceClient{}, nil }
-func (s *fakeService) GetResourceAuditor(string) (audit.Auditor, error)               { return nil, nil }
-func (s *fakeService) GetResourceDiscoverer(string) (discovery.Discoverer, error)    { return nil, nil }
+func (s *fakeService) GetClient(_ *auth.Session) (*gophercloud.ServiceClient, error) {
+	return &gophercloud.ServiceClient{}, nil
+}
+func (s *fakeService) GetResourceAuditor(string) (audit.Auditor, error)           { return nil, nil }
+func (s *fakeService) GetResourceDiscoverer(string) (discovery.Discoverer, error) { return nil, nil }
 
 func TestGet_KnownServiceRegistered(t *testing.T) {
 	// Registered via blank import above.
@@ -56,5 +58,3 @@ func TestRegister_DuplicateServiceFails(t *testing.T) {
 		t.Fatalf("Register() second call error = nil, want error")
 	}
 }
-
-

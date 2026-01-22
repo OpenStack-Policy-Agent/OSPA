@@ -122,10 +122,10 @@ func extractResourcesFromServiceFile(filePath string) ([]string, error) {
 			}
 
 			// Extract resource name from arguments: RegisterResource("<service>", "<resource>")
-					if len(x.Args) >= 2 {
+			if len(x.Args) >= 2 {
 				if lit, ok := x.Args[1].(*ast.BasicLit); ok && lit.Kind == token.STRING {
-							resource := strings.Trim(lit.Value, `"`)
-							resources = append(resources, resource)
+					resource := strings.Trim(lit.Value, `"`)
+					resources = append(resources, resource)
 				}
 			}
 		}
@@ -158,4 +158,3 @@ func getDisplayName(serviceName string) string {
 	}
 	return strings.ToUpper(serviceName[:1]) + serviceName[1:]
 }
-

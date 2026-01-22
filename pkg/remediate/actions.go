@@ -58,4 +58,3 @@ func init() {
 	Register(&DeleteRemediator{})
 	Register(&TagRemediator{})
 }
-

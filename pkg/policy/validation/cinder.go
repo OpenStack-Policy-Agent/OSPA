@@ -30,12 +30,10 @@ func (v *CinderValidator) ValidateResource(check *policy.CheckConditions, resour
 		// TODO(OSPA): Add real validation for cinder/volume.
 		_ = check
 
-
 	case "snapshot":
 		// Placeholder validation: accept any checks for now.
 		// TODO(OSPA): Add real validation for cinder/snapshot.
 		_ = check
-
 
 	default:
 		return fmt.Errorf("rule %q: unsupported resource type %q for cinder service", ruleName, resourceType)

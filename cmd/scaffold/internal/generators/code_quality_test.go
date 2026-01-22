@@ -204,4 +204,3 @@ func TestRegression_ImportsCorrect(t *testing.T) {
 		}
 	}
 }
-

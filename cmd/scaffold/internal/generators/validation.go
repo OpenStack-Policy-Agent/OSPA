@@ -2,20 +2,31 @@ package generators
 
 import (
 	"fmt"
-	"os"
+	"go/ast"
+	"go/token"
 	"path/filepath"
-	"strings"
+	"strconv"
 	"text/template"
+
+	"github.com/OpenStack-Policy-Agent/OSPA/cmd/scaffold/internal/astutil"
 )
 
-// GenerateValidationFile generates or updates a validation file for a service
+// GenerateValidationFile generates or updates a validation file for a service.
 func GenerateValidationFile(baseDir, serviceName, displayName string, resources []string, force bool) error {
+	specs, err := buildResourceSpecs(serviceName, resources)
+	if err != nil {
+		return err
+	}
+	return generateValidationFileWithSpecs(baseDir, serviceName, displayName, specs, force)
+}
+
+func generateValidationFileWithSpecs(baseDir, serviceName, displayName string, resources []ResourceSpec, force bool) error {
 	validationDir := filepath.Join(baseDir, "pkg", "policy", "validation")
 	validationFile := filepath.Join(validationDir, fmt.Sprintf("%s.go", serviceName))
 
 	// Check if file exists
 	exists := fileExists(validationFile)
-	
+
 	// If file exists and we're not forcing, we need to update it instead of overwriting
 	if exists && !force {
 		return updateValidationFile(validationFile, serviceName, displayName, resources)
@@ -26,16 +37,12 @@ func GenerateValidationFile(baseDir, serviceName, displayName string, resources 
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/policy"
 )
 
-// {{.DisplayName}}Validator validates {{.DisplayName}} service policies
-//
-// TODO(OSPA): Tighten validation rules for {{.ServiceName}} over time:
-// - Require at least one check condition per rule
-// - Validate supported check fields per resource
-// - Validate allowed enum values (status/protocol/ethertype/etc.)
+// {{.DisplayName}}Validator validates {{.DisplayName}} service policies.
 type {{.DisplayName}}Validator struct{}
 
 func init() {
@@ -49,10 +56,10 @@ func (v *{{.DisplayName}}Validator) ServiceName() string {
 func (v *{{.DisplayName}}Validator) ValidateResource(check *policy.CheckConditions, resourceType, ruleName string) error {
 	switch resourceType {
 {{range .Resources}}
-	case "{{.}}":
-		// Placeholder validation: accept any checks for now.
-		// TODO(OSPA): Add real validation for {{$.ServiceName}}/{{.}}.
-		_ = check
+	case "{{.Name}}":
+		if err := validateAllowedChecks(check, []string{ {{range $i, $c := .Checks}}{{if $i}}, {{end}}"{{$c}}"{{end}} }); err != nil {
+			return fmt.Errorf("rule %q: %w", ruleName, err)
+		}
 
 {{end}}
 	default:
@@ -61,12 +68,93 @@ func (v *{{.DisplayName}}Validator) ValidateResource(check *policy.CheckConditio
 
 	return nil
 }
+
+func validateAllowedChecks(check *policy.CheckConditions, allowed []string) error {
+	if len(allowed) == 0 {
+		return nil
+	}
+	allowedSet := make(map[string]bool, len(allowed))
+	for _, name := range allowed {
+		allowedSet[name] = true
+	}
+
+	if !hasAnyCheck(check, allowedSet) {
+		return fmt.Errorf("check must specify at least one of: %s", strings.Join(allowed, ", "))
+	}
+
+	disallowed := findDisallowedChecks(check, allowedSet)
+	if len(disallowed) > 0 {
+		return fmt.Errorf("check specifies unsupported fields: %s", strings.Join(disallowed, ", "))
+	}
+
+	return nil
+}
+
+func hasAnyCheck(check *policy.CheckConditions, allowed map[string]bool) bool {
+	for name := range allowed {
+		if isCheckSet(check, name) {
+			return true
+		}
+	}
+	return false
+}
+
+func findDisallowedChecks(check *policy.CheckConditions, allowed map[string]bool) []string {
+	var disallowed []string
+	for _, name := range []string{
+		"direction",
+		"ethertype",
+		"protocol",
+		"port",
+		"remote_ip_prefix",
+		"status",
+		"age_gt",
+		"unused",
+		"exempt_names",
+		"exempt_metadata",
+		"image_name",
+	} {
+		if isCheckSet(check, name) && !allowed[name] {
+			disallowed = append(disallowed, name)
+		}
+	}
+	return disallowed
+}
+
+func isCheckSet(check *policy.CheckConditions, name string) bool {
+	switch name {
+	case "direction":
+		return check.Direction != ""
+	case "ethertype":
+		return check.Ethertype != ""
+	case "protocol":
+		return check.Protocol != ""
+	case "port":
+		return check.Port != 0
+	case "remote_ip_prefix":
+		return check.RemoteIPPrefix != ""
+	case "status":
+		return check.Status != ""
+	case "age_gt":
+		return check.AgeGT != ""
+	case "unused":
+		return check.Unused
+	case "exempt_names":
+		return len(check.ExemptNames) > 0
+	case "exempt_metadata":
+		return check.ExemptMetadata != nil
+	case "image_name":
+		return len(check.ImageName) > 0
+	default:
+		return false
+	}
+}
 `
 
 	data := struct {
 		ServiceName string
 		DisplayName string
-		Resources   []string
+		Resources   []ResourceSpec
 	}{
 		ServiceName: serviceName,
 		DisplayName: displayName,
@@ -91,70 +179,83 @@ func (v *{{.DisplayName}}Validator) ValidateResource(check *policy.CheckConditio
 }
 
 // updateValidationFile updates an existing validation file with new resources
-func updateValidationFile(filePath, serviceName, displayName string, resources []string) error {
-	// Read existing file
-	content, err := os.ReadFile(filePath)
+func updateValidationFile(filePath, serviceName, displayName string, resources []ResourceSpec) error {
+	fset, file, err := astutil.ParseFile(filePath)
 	if err != nil {
-		return fmt.Errorf("reading existing validation file: %w", err)
+		return fmt.Errorf("parsing existing validation file: %w", err)
 	}
 
-	contentStr := string(content)
+	fn := astutil.FindFunc(file, "ValidateResource")
+	sw := astutil.FindSwitchOnIdent(fn, "resourceType")
+	if sw == nil {
+		return fmt.Errorf("ValidateResource switch not found in %s", filePath)
+	}
 
-	// Check which resources are already in the switch statement
-	existingResources := make(map[string]bool)
+	existing := astutil.CaseValues(sw)
+	var cases []*ast.CaseClause
 	for _, resource := range resources {
-		if strings.Contains(contentStr, fmt.Sprintf(`case "%s":`, resource)) {
-			existingResources[resource] = true
+		if existing[strconv.Quote(resource.Name)] {
+			continue
 		}
+		cases = append(cases, validationCase(resource))
 	}
 
-	// Find resources that need to be added
-	newResources := []string{}
-	for _, resource := range resources {
-		if !existingResources[resource] {
-			newResources = append(newResources, resource)
-		}
-	}
-
-	if len(newResources) == 0 {
-		// All resources already exist, nothing to update
+	if len(cases) == 0 {
 		return nil
 	}
 
-	// Find the switch statement and add new cases before the default case
-	defaultCaseIndex := strings.Index(contentStr, "\n\tdefault:")
-	if defaultCaseIndex == -1 {
-		// No default case found, append before the closing brace
-		closingBraceIndex := strings.LastIndex(contentStr, "\treturn nil\n}")
-		if closingBraceIndex == -1 {
-			return fmt.Errorf("could not find insertion point in validation file")
-		}
-
-		// Build new cases
-		newCases := "\n"
-		for _, resource := range newResources {
-			newCases += fmt.Sprintf(`	case "%s":
-		// TODO(OSPA): Add validation rules for %s resource.
-		_ = check
-
-`, resource, resource)
-		}
-
-		newContent := contentStr[:closingBraceIndex] + newCases + contentStr[closingBraceIndex:]
-		return os.WriteFile(filePath, []byte(newContent), 0644)
-	}
-
-	// Insert before default case
-	newCases := "\n"
-	for _, resource := range newResources {
-		newCases += fmt.Sprintf(`	case "%s":
-		// TODO(OSPA): Add validation rules for %s resource.
-		_ = check
-
-`, resource, resource)
-	}
-
-	newContent := contentStr[:defaultCaseIndex] + newCases + contentStr[defaultCaseIndex:]
-	return os.WriteFile(filePath, []byte(newContent), 0644)
+	astutil.InsertCasesBeforeDefault(sw, cases)
+	return astutil.WriteFile(filePath, fset, file)
 }
 
+func validationCase(resource ResourceSpec) *ast.CaseClause {
+	return &ast.CaseClause{
+		List: []ast.Expr{&ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(resource.Name)}},
+		Body: []ast.Stmt{
+			&ast.IfStmt{
+				Init: &ast.AssignStmt{
+					Lhs: []ast.Expr{ast.NewIdent("err")},
+					Tok: token.DEFINE,
+					Rhs: []ast.Expr{
+						&ast.CallExpr{
+							Fun:  ast.NewIdent("validateAllowedChecks"),
+							Args: []ast.Expr{ast.NewIdent("check"), stringSlice(resource.Checks)},
+						},
+					},
+				},
+				Cond: &ast.BinaryExpr{
+					X:  ast.NewIdent("err"),
+					Op: token.NEQ,
+					Y:  ast.NewIdent("nil"),
+				},
+				Body: &ast.BlockStmt{
+					List: []ast.Stmt{
+						&ast.ReturnStmt{
+							Results: []ast.Expr{
+								&ast.CallExpr{
+									Fun: ast.NewIdent("fmt.Errorf"),
+									Args: []ast.Expr{
+										&ast.BasicLit{Kind: token.STRING, Value: strconv.Quote("rule %q: %w")},
+										ast.NewIdent("ruleName"),
+										ast.NewIdent("err"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func stringSlice(items []string) ast.Expr {
+	elts := make([]ast.Expr, 0, len(items))
+	for _, item := range items {
+		elts = append(elts, &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(item)})
+	}
+	return &ast.CompositeLit{
+		Type: &ast.ArrayType{Elt: ast.NewIdent("string")},
+		Elts: elts,
+	}
+}

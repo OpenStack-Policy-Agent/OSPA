@@ -9,7 +9,7 @@ import (
 
 // Session holds the authenticated provider client and configuration options.
 type Session struct {
-	Provider *gophercloud.ProviderClient
+	Provider  *gophercloud.ProviderClient
 	CloudName string
 	Region    string
 }
@@ -21,7 +21,7 @@ func NewSession(cloudName string) (*Session, error) {
 		Cloud: cloudName,
 	}
 
-	// This helper function looks for clouds.yaml in standard locations 
+	// This helper function looks for clouds.yaml in standard locations
 	// (~/.config/openstack, /etc/openstack, current dir)
 	provider, err := clientconfig.AuthenticatedClient(opts)
 	if err != nil {
@@ -29,7 +29,7 @@ func NewSession(cloudName string) (*Session, error) {
 	}
 
 	return &Session{
-		Provider: provider,
+		Provider:  provider,
 		CloudName: cloudName,
 	}, nil
 }

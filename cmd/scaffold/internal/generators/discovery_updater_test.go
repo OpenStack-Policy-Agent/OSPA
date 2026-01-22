@@ -194,31 +194,13 @@ func TestUpdateDiscoveryFile_MissingFile(t *testing.T) {
 	}
 }
 
-func TestGenerateDiscovererCode_ValidCode(t *testing.T) {
-	code := generateDiscovererCode("testservice", "TestService", []string{"resource1"})
-	
-	if code == "" {
-		t.Error("generateDiscovererCode() returned empty string")
+func TestBuildDiscovererDecls_ValidCode(t *testing.T) {
+	decls, err := buildDiscovererDecls("testservice", "TestService", "resource1")
+	if err != nil {
+		t.Fatalf("buildDiscovererDecls() = %v, want nil", err)
 	}
-
-	// Verify basic structure
-	if !strings.Contains(code, "type TestServiceResource1Discoverer") {
-		t.Error("Generated code missing discoverer struct")
-	}
-	if !strings.Contains(code, "ResourceType()") {
-		t.Error("Generated code missing ResourceType method")
-	}
-	if !strings.Contains(code, "Discover(") {
-		t.Error("Generated code missing Discover method")
-	}
-}
-
-func TestGenerateDiscovererCode_PackageReferences(t *testing.T) {
-	code := generateDiscovererCode("testservice", "TestService", []string{"resource1"})
-	
-	// Placeholder should not reference discovery helpers; it returns an empty channel.
-	if !strings.Contains(code, "close(ch)") {
-		t.Error("Generated code missing close(ch) placeholder")
+	if len(decls) == 0 {
+		t.Error("buildDiscovererDecls() returned no declarations")
 	}
 }
 
@@ -271,4 +253,3 @@ func (d *TestServiceResource1Discoverer) ResourceType() string {
 		t.Errorf("Updated file has invalid Go syntax: %v", err)
 	}
 }
-

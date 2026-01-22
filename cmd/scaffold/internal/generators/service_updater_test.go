@@ -351,4 +351,3 @@ func (s *TestServiceService) GetResourceDiscoverer(resourceType string) (discove
 		t.Errorf("Updated file has invalid Go syntax: %v", err)
 	}
 }
-

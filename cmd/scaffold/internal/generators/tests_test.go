@@ -231,4 +231,3 @@ func TestGenerateUnitTests_GoSyntax(t *testing.T) {
 		t.Errorf("Generated file has invalid Go syntax: %v", err)
 	}
 }
-

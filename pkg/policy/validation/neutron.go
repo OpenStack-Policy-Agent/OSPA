@@ -30,18 +30,15 @@ func (v *NeutronValidator) ValidateResource(check *policy.CheckConditions, resou
 		// TODO(OSPA): Add real validation for neutron/security_group_rule.
 		_ = check
 
-
 	case "floating_ip":
 		// Placeholder validation: accept any checks for now.
 		// TODO(OSPA): Add real validation for neutron/floating_ip.
 		_ = check
 
-
 	case "security_group":
 		// Placeholder validation: accept any checks for now.
 		// TODO(OSPA): Add real validation for neutron/security_group.
 		_ = check
-
 
 	default:
 		return fmt.Errorf("rule %q: unsupported resource type %q for neutron service", ruleName, resourceType)

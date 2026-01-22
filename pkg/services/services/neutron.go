@@ -3,12 +3,12 @@ package services
 import (
 	"fmt"
 
-	rootservices "github.com/OpenStack-Policy-Agent/OSPA/pkg/services"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/audit"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/audit/neutron"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/auth"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/discovery"
 	discovery_services "github.com/OpenStack-Policy-Agent/OSPA/pkg/discovery/services"
+	rootservices "github.com/OpenStack-Policy-Agent/OSPA/pkg/services"
 	"github.com/gophercloud/gophercloud"
 )
 
@@ -24,10 +24,10 @@ import (
 // method automatically, but verify it is correct for your cloud/provider.
 //
 // To add support for a new resource type:
-//   1. Create a discoverer in pkg/discovery/services/neutron.go
-//   2. Create an auditor in pkg/audit/neutron/
-//   3. Add cases in GetResourceAuditor() and GetResourceDiscoverer() below
-//   4. Register the resource in init() using RegisterResource()
+//  1. Create a discoverer in pkg/discovery/services/neutron.go
+//  2. Create an auditor in pkg/audit/neutron/
+//  3. Add cases in GetResourceAuditor() and GetResourceDiscoverer() below
+//  4. Register the resource in init() using RegisterResource()
 type NeutronService struct{}
 
 func init() {

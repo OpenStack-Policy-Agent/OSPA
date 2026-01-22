@@ -10,7 +10,7 @@ import (
 // GenerateAuthMethod generates and appends the auth client method to auth.go
 func GenerateAuthMethod(baseDir, serviceName, displayName, serviceType string, force bool) error {
 	authFile := filepath.Join(baseDir, "pkg", "auth", "auth.go")
-	
+
 	// Read existing file
 	content, err := os.ReadFile(authFile)
 	if err != nil {
@@ -56,4 +56,3 @@ func (s *Session) Get%sClient() (*gophercloud.ServiceClient, error) {
 
 	return nil
 }
-

@@ -293,4 +293,3 @@ func TestValidateResources_CaseVariations(t *testing.T) {
 		})
 	}
 }
-

@@ -39,4 +39,3 @@ func Get(service, resourceType string) (Auditor, error) {
 
 	return auditor, nil
 }
-

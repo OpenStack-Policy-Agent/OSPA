@@ -2,236 +2,185 @@ package generators
 
 import (
 	"fmt"
-	"os"
+	"go/ast"
+	"go/token"
 	"path/filepath"
+	"strconv"
 	"strings"
+
+	"github.com/OpenStack-Policy-Agent/OSPA/cmd/scaffold/internal/astutil"
 )
 
 // UpdateServiceFile adds new resources to an existing service file
 func UpdateServiceFile(baseDir, serviceName, displayName string, newResources []string) error {
 	filePath := filepath.Join(baseDir, "pkg", "services", "services", serviceName+".go")
-	
+
 	if !fileExists(filePath) {
 		return fmt.Errorf("service file %s does not exist", filePath)
 	}
 
-	// Read existing file
-	src, err := os.ReadFile(filePath)
+	fset, file, err := astutil.ParseFile(filePath)
 	if err != nil {
-		return fmt.Errorf("reading service file: %w", err)
+		return fmt.Errorf("parsing service file: %w", err)
 	}
 
-	// Extract existing resources from the file
-	existingResources, err := extractResourcesFromServiceFile(filePath)
+	added, err := addRegisterResourceCallsAST(file, serviceName, newResources)
 	if err != nil {
-		return fmt.Errorf("extracting existing resources: %w", err)
-	}
-	
-	// Track existing resources in a set
-	existingSet := make(map[string]bool)
-	for _, r := range existingResources {
-		existingSet[r] = true
-	}
-	
-	// Find resources to add (not already present)
-	resourcesToAdd := []string{}
-	for _, res := range newResources {
-		if !existingSet[res] {
-			resourcesToAdd = append(resourcesToAdd, res)
-		}
+		return err
 	}
 
-	if len(resourcesToAdd) == 0 {
-		return nil // Nothing to add
+	addedAuditor, err := addAuditorCasesAST(file, serviceName, displayName, newResources)
+	if err != nil {
+		return err
 	}
 
-	// Convert source to string and modify
-	content := string(src)
-	
-	// Add RegisterResource calls in init()
-	content = addRegisterResourceCalls(content, serviceName, resourcesToAdd)
-	
-	// Add cases to GetResourceAuditor switch
-	content = addAuditorCases(content, serviceName, displayName, resourcesToAdd)
-	
-	// Add cases to GetResourceDiscoverer switch
-	content = addDiscovererCases(content, displayName, resourcesToAdd)
-	
-	// Update supported resources comment
-	content = updateSupportedResourcesComment(content, resourcesToAdd)
+	addedDiscoverer, err := addDiscovererCasesAST(file, displayName, newResources)
+	if err != nil {
+		return err
+	}
 
-	// Write updated file
-	return os.WriteFile(filePath, []byte(content), 0644)
+	if !added && !addedAuditor && !addedDiscoverer {
+		return nil
+	}
+
+	return astutil.WriteFile(filePath, fset, file)
 }
+func addRegisterResourceCallsAST(file *ast.File, serviceName string, resources []string) (bool, error) {
+	initFn := astutil.FindFunc(file, "init")
+	if initFn == nil || initFn.Body == nil {
+		return false, fmt.Errorf("init() not found in service file")
+	}
 
-// addRegisterResourceCalls adds RegisterResource calls to init() function
-func addRegisterResourceCalls(content, serviceName string, resources []string) string {
-	// Find the init() function and add RegisterResource calls
-	initPattern := `RegisterResource("` + serviceName + `", "`
-	
-	// Find last RegisterResource call
-	lastRegisterIndex := strings.LastIndex(content, initPattern)
-	if lastRegisterIndex == -1 {
-		// No existing RegisterResource, find init() and add after MustRegister
-		mustRegisterIndex := strings.Index(content, "MustRegister(&")
-		if mustRegisterIndex != -1 {
-			// Find end of MustRegister line
-			lineEnd := strings.Index(content[mustRegisterIndex:], "\n")
-			if lineEnd != -1 {
-				insertPos := mustRegisterIndex + lineEnd + 1
-				newCalls := "\t// Register all supported resources for automatic validation\n"
-				for _, res := range resources {
-					newCalls += fmt.Sprintf("\tRegisterResource(%q, %q)\n", serviceName, res)
-				}
-				return content[:insertPos] + newCalls + content[insertPos:]
+	existing := make(map[string]bool)
+	qualifier := ""
+
+	for _, stmt := range initFn.Body.List {
+		exprStmt, ok := stmt.(*ast.ExprStmt)
+		if !ok {
+			continue
+		}
+		call, ok := exprStmt.X.(*ast.CallExpr)
+		if !ok {
+			continue
+		}
+		switch fun := call.Fun.(type) {
+		case *ast.Ident:
+			if fun.Name != "RegisterResource" {
+				continue
 			}
+		case *ast.SelectorExpr:
+			if fun.Sel == nil || fun.Sel.Name != "RegisterResource" {
+				continue
+			}
+			if ident, ok := fun.X.(*ast.Ident); ok {
+				qualifier = ident.Name
+			}
+		default:
+			continue
 		}
-		return content
+		if len(call.Args) < 2 {
+			continue
+		}
+		if lit, ok := call.Args[1].(*ast.BasicLit); ok && lit.Kind == token.STRING {
+			existing[strings.Trim(lit.Value, "\"")] = true
+		}
 	}
 
-	// Find the end of the last RegisterResource line
-	lineEnd := strings.Index(content[lastRegisterIndex:], "\n")
-	if lineEnd == -1 {
-		return content
-	}
-
-	// Insert AFTER the newline; otherwise we inject code into the middle of the existing line.
-	insertPos := lastRegisterIndex + lineEnd + 1
-	newCalls := ""
+	added := false
 	for _, res := range resources {
-		newCalls += fmt.Sprintf("\tRegisterResource(%q, %q)\n", serviceName, res)
-	}
-
-	return content[:insertPos] + newCalls + content[insertPos:]
-}
-
-// addAuditorCases adds cases to GetResourceAuditor switch statement
-func addAuditorCases(content, serviceName, displayName string, resources []string) string {
-	// Find GetResourceAuditor function
-	funcStart := strings.Index(content, "func (s *"+displayName+"Service) GetResourceAuditor")
-	if funcStart == -1 {
-		return content
-	}
-
-	// Find the switch statement
-	switchStart := strings.Index(content[funcStart:], "switch resourceType {")
-	if switchStart == -1 {
-		return content
-	}
-
-	switchPos := funcStart + switchStart
-	
-	// Find the default case
-	defaultCase := strings.Index(content[switchPos:], "\n\tdefault:")
-	if defaultCase == -1 {
-		// No default case, find closing brace
-		closingBrace := strings.LastIndex(content[switchPos:], "\t}")
-		if closingBrace == -1 {
-			return content
+		if existing[res] {
+			continue
 		}
-		insertPos := switchPos + closingBrace
-		newCases := "\n"
-		for _, res := range resources {
-			titleRes := ToPascal(res)
-			newCases += fmt.Sprintf("\tcase %q:\n\t\treturn &%s.%sAuditor{}, nil\n", res, serviceName, titleRes)
-		}
-		return content[:insertPos] + newCases + content[insertPos:]
-	}
-
-	// Insert before default case
-	insertPos := switchPos + defaultCase
-	newCases := "\n"
-	for _, res := range resources {
-		titleRes := ToPascal(res)
-		newCases += fmt.Sprintf("\tcase %q:\n\t\treturn &%s.%sAuditor{}, nil\n", res, serviceName, titleRes)
-	}
-
-	return content[:insertPos] + newCases + content[insertPos:]
-}
-
-// addDiscovererCases adds cases to GetResourceDiscoverer switch statement
-func addDiscovererCases(content, displayName string, resources []string) string {
-	// Find GetResourceDiscoverer function
-	funcStart := strings.Index(content, "func (s *"+displayName+"Service) GetResourceDiscoverer")
-	if funcStart == -1 {
-		return content
-	}
-
-	// Find the switch statement
-	switchStart := strings.Index(content[funcStart:], "switch resourceType {")
-	if switchStart == -1 {
-		return content
-	}
-
-	switchPos := funcStart + switchStart
-	
-	// Find the default case
-	defaultCase := strings.Index(content[switchPos:], "\n\tdefault:")
-	if defaultCase == -1 {
-		// No default case, find closing brace
-		closingBrace := strings.LastIndex(content[switchPos:], "\t}")
-		if closingBrace == -1 {
-			return content
-		}
-		insertPos := switchPos + closingBrace
-		newCases := "\n"
-		for _, res := range resources {
-			titleRes := ToPascal(res)
-			newCases += fmt.Sprintf("\tcase %q:\n\t\treturn &discovery_services.%s%sDiscoverer{}, nil\n", res, displayName, titleRes)
-		}
-		return content[:insertPos] + newCases + content[insertPos:]
-	}
-
-	// Insert before default case
-	insertPos := switchPos + defaultCase
-	newCases := "\n"
-	for _, res := range resources {
-		titleRes := ToPascal(res)
-		newCases += fmt.Sprintf("\tcase %q:\n\t\treturn &discovery_services.%s%sDiscoverer{}, nil\n", res, displayName, titleRes)
-	}
-
-	return content[:insertPos] + newCases + content[insertPos:]
-}
-
-// updateSupportedResourcesComment updates the supported resources comment
-func updateSupportedResourcesComment(content string, resources []string) string {
-	// Find the "Supported resources:" comment
-	commentStart := strings.Index(content, "// Supported resources:")
-	if commentStart == -1 {
-		return content
-	}
-
-	// Find the end of the comment block (next non-comment line)
-	lines := strings.Split(content[commentStart:], "\n")
-	commentEnd := 0
-	for i, line := range lines {
-		if i > 0 && !strings.HasPrefix(strings.TrimSpace(line), "//") && strings.TrimSpace(line) != "" {
-			commentEnd = i
-			break
-		}
-	}
-
-	if commentEnd == 0 {
-		return content
-	}
-
-	// Build new comment lines
-	newCommentLines := []string{"// Supported resources:"}
-	for _, res := range resources {
-		newCommentLines = append(newCommentLines, fmt.Sprintf("//   - %s: Resource of type %s", res, res))
-	}
-
-	// Reconstruct content
-	beforeComment := content[:commentStart]
-	afterComment := ""
-	for i := commentEnd; i < len(lines); i++ {
-		if i == commentEnd {
-			afterComment = lines[i]
+		added = true
+		var fun ast.Expr
+		if qualifier != "" {
+			fun = &ast.SelectorExpr{X: ast.NewIdent(qualifier), Sel: ast.NewIdent("RegisterResource")}
 		} else {
-			afterComment += "\n" + lines[i]
+			fun = ast.NewIdent("RegisterResource")
 		}
+		call := &ast.CallExpr{
+			Fun: fun,
+			Args: []ast.Expr{
+				&ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(serviceName)},
+				&ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(res)},
+			},
+		}
+		initFn.Body.List = append(initFn.Body.List, &ast.ExprStmt{X: call})
 	}
 
-	return beforeComment + strings.Join(newCommentLines, "\n") + "\n" + afterComment
+	return added, nil
 }
 
+func addAuditorCasesAST(file *ast.File, serviceName, displayName string, resources []string) (bool, error) {
+	fn := astutil.FindFunc(file, "GetResourceAuditor")
+	sw := astutil.FindSwitchOnIdent(fn, "resourceType")
+	if sw == nil {
+		return false, nil
+	}
+
+	existing := astutil.CaseValues(sw)
+	var cases []*ast.CaseClause
+	for _, res := range resources {
+		if existing[strconv.Quote(res)] {
+			continue
+		}
+		cases = append(cases, auditorCase(serviceName, res))
+	}
+	astutil.InsertCasesBeforeDefault(sw, cases)
+	return len(cases) > 0, nil
+}
+
+func addDiscovererCasesAST(file *ast.File, displayName string, resources []string) (bool, error) {
+	fn := astutil.FindFunc(file, "GetResourceDiscoverer")
+	sw := astutil.FindSwitchOnIdent(fn, "resourceType")
+	if sw == nil {
+		return false, nil
+	}
+
+	existing := astutil.CaseValues(sw)
+	var cases []*ast.CaseClause
+	for _, res := range resources {
+		if existing[strconv.Quote(res)] {
+			continue
+		}
+		cases = append(cases, discovererCase(displayName, res))
+	}
+	astutil.InsertCasesBeforeDefault(sw, cases)
+	return len(cases) > 0, nil
+}
+
+func auditorCase(serviceName, resource string) *ast.CaseClause {
+	titleRes := ToPascal(resource)
+	return &ast.CaseClause{
+		List: []ast.Expr{&ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(resource)}},
+		Body: []ast.Stmt{
+			&ast.ReturnStmt{Results: []ast.Expr{
+				&ast.UnaryExpr{
+					Op: token.AND,
+					X: &ast.CompositeLit{
+						Type: &ast.SelectorExpr{X: ast.NewIdent(serviceName), Sel: ast.NewIdent(titleRes + "Auditor")},
+					},
+				},
+				ast.NewIdent("nil"),
+			}},
+		},
+	}
+}
+
+func discovererCase(displayName, resource string) *ast.CaseClause {
+	titleRes := ToPascal(resource)
+	return &ast.CaseClause{
+		List: []ast.Expr{&ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(resource)}},
+		Body: []ast.Stmt{
+			&ast.ReturnStmt{Results: []ast.Expr{
+				&ast.UnaryExpr{
+					Op: token.AND,
+					X: &ast.CompositeLit{
+						Type: &ast.SelectorExpr{X: ast.NewIdent("discovery_services"), Sel: ast.NewIdent(displayName + titleRes + "Discoverer")},
+					},
+				},
+				ast.NewIdent("nil"),
+			}},
+		},
+	}
+}

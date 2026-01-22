@@ -84,12 +84,12 @@ func TestRegression_AllFileTypesGenerated(t *testing.T) {
 
 	// Verify all file types are still generated
 	fileTypes := map[string]string{
-		"service":     "pkg/services/services/testservice.go",
-		"discovery":   "pkg/discovery/services/testservice.go",
-		"auditor":     "pkg/audit/testservice/resource1.go",
-		"test":        "pkg/audit/testservice/resource1_test.go",
-		"validation":  "pkg/policy/validation/testservice.go",
-		"e2e":         "e2e/testservice_test.go",
+		"service":      "pkg/services/services/testservice.go",
+		"discovery":    "pkg/discovery/services/testservice.go",
+		"auditor":      "pkg/audit/testservice/resource1.go",
+		"test":         "pkg/audit/testservice/resource1_test.go",
+		"validation":   "pkg/policy/validation/testservice.go",
+		"e2e":          "e2e/testservice_test.go",
 		"policy_guide": "examples/policies/testservice-policy-guide.md",
 	}
 
@@ -200,4 +200,3 @@ func TestRegression_GeneratedCodeStructure(t *testing.T) {
 		}
 	}
 }
-

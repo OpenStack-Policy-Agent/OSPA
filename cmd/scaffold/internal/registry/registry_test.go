@@ -7,7 +7,7 @@ import (
 
 func TestValidateService_ValidService(t *testing.T) {
 	validServices := []string{"nova", "neutron", "cinder", "glance", "keystone"}
-	
+
 	for _, service := range validServices {
 		t.Run(service, func(t *testing.T) {
 			if err := ValidateService(service); err != nil {
@@ -19,7 +19,7 @@ func TestValidateService_ValidService(t *testing.T) {
 
 func TestValidateService_InvalidService(t *testing.T) {
 	invalidServices := []string{"invalid", "unknown", "test"}
-	
+
 	for _, service := range invalidServices {
 		t.Run(service, func(t *testing.T) {
 			err := ValidateService(service)
@@ -47,7 +47,7 @@ func TestValidateService_CaseInsensitive(t *testing.T) {
 		{"mixed", "NoVa", false},
 		{"title", "Nova", false},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			err := ValidateService(tc.service)
@@ -69,7 +69,7 @@ func TestValidateResources_ValidResources(t *testing.T) {
 		{"glance", []string{"image", "member"}},
 		{"keystone", []string{"user", "role", "project"}},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.service, func(t *testing.T) {
 			if err := ValidateResources(tc.service, tc.resources); err != nil {
@@ -88,7 +88,7 @@ func TestValidateResources_InvalidResource(t *testing.T) {
 		{"neutron", []string{"unknown"}},
 		{"cinder", []string{"fake"}},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.service, func(t *testing.T) {
 			err := ValidateResources(tc.service, tc.resources)
@@ -134,7 +134,7 @@ func TestGetServiceInfo_ValidService(t *testing.T) {
 		{"glance", "image", "Glance"},
 		{"keystone", "identity", "Keystone"},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.service, func(t *testing.T) {
 			info, err := GetServiceInfo(tc.service)
@@ -170,7 +170,7 @@ func TestGetServiceType_ValidService(t *testing.T) {
 		{"neutron", "network"},
 		{"cinder", "volumev3"},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.service, func(t *testing.T) {
 			got, err := GetServiceType(tc.service)
@@ -195,7 +195,7 @@ func TestGetDisplayName_ValidService(t *testing.T) {
 		{"glance", "Glance"},
 		{"keystone", "Keystone"},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.service, func(t *testing.T) {
 			got, err := GetDisplayName(tc.service)
@@ -211,17 +211,17 @@ func TestGetDisplayName_ValidService(t *testing.T) {
 
 func TestListServices_AllServices(t *testing.T) {
 	services := ListServices()
-	
+
 	if len(services) == 0 {
 		t.Error("ListServices() returned empty list")
 	}
-	
+
 	expectedServices := []string{"nova", "neutron", "cinder", "glance", "keystone"}
 	serviceMap := make(map[string]bool)
 	for _, s := range services {
 		serviceMap[s] = true
 	}
-	
+
 	for _, expected := range expectedServices {
 		if !serviceMap[expected] {
 			t.Errorf("ListServices() missing expected service: %q", expected)
@@ -240,7 +240,7 @@ func TestListResources_ValidService(t *testing.T) {
 		{"glance", 2},
 		{"keystone", 3},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.service, func(t *testing.T) {
 			resources, err := ListResources(tc.service)
@@ -266,30 +266,30 @@ func TestListResources_InvalidService(t *testing.T) {
 
 func TestServiceRegistry_Completeness(t *testing.T) {
 	services := ListServices()
-	
+
 	if len(services) == 0 {
 		t.Fatal("No services in registry")
 	}
-	
+
 	for _, serviceName := range services {
 		t.Run(serviceName, func(t *testing.T) {
 			info, err := GetServiceInfo(serviceName)
 			if err != nil {
 				t.Fatalf("GetServiceInfo(%q) = %v", serviceName, err)
 			}
-			
+
 			if info.ServiceType == "" {
 				t.Errorf("Service %q has empty ServiceType", serviceName)
 			}
-			
+
 			if info.DisplayName == "" {
 				t.Errorf("Service %q has empty DisplayName", serviceName)
 			}
-			
+
 			if len(info.Resources) == 0 {
 				t.Errorf("Service %q has no resources", serviceName)
 			}
-			
+
 			for resourceName, resourceInfo := range info.Resources {
 				if resourceName == "" {
 					t.Errorf("Service %q has empty resource name", serviceName)
@@ -305,21 +305,21 @@ func TestServiceRegistry_Completeness(t *testing.T) {
 func TestServiceRegistry_NoDuplicates(t *testing.T) {
 	services := ListServices()
 	serviceMap := make(map[string]bool)
-	
+
 	for _, service := range services {
 		if serviceMap[service] {
 			t.Errorf("Duplicate service name in registry: %q", service)
 		}
 		serviceMap[service] = true
 	}
-	
+
 	// Check for duplicate resources within each service
 	for _, serviceName := range services {
 		info, err := GetServiceInfo(serviceName)
 		if err != nil {
 			continue
 		}
-		
+
 		resourceMap := make(map[string]bool)
 		for resourceName := range info.Resources {
 			if resourceMap[resourceName] {
@@ -339,7 +339,7 @@ func TestValidateService_EmptyString(t *testing.T) {
 
 func TestValidateService_Whitespace(t *testing.T) {
 	testCases := []string{" nova", "nova ", " nova ", "\tnova", "nova\n"}
-	
+
 	for _, service := range testCases {
 		t.Run(service, func(t *testing.T) {
 			err := ValidateService(service)
@@ -375,7 +375,7 @@ func TestValidateResources_CaseVariations(t *testing.T) {
 		{"nova", []string{"Instance", "INSTANCE", "instance"}, false},
 		{"neutron", []string{"Security_Group", "security_group"}, false},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.service, func(t *testing.T) {
 			err := ValidateResources(tc.service, tc.resources)
@@ -385,4 +385,3 @@ func TestValidateResources_CaseVariations(t *testing.T) {
 		})
 	}
 }
-

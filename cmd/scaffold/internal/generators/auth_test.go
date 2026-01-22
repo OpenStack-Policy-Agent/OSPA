@@ -286,4 +286,3 @@ type Session struct {
 		t.Error("Generated code missing return statement")
 	}
 }
-

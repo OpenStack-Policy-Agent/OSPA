@@ -8,10 +8,18 @@ import (
 	"text/template"
 )
 
-// GenerateDiscoveryFile generates the discovery implementation file
+// GenerateDiscoveryFile generates the discovery implementation file.
 func GenerateDiscoveryFile(baseDir, serviceName, displayName string, resources []string, force bool) error {
+	specs, err := buildResourceSpecs(serviceName, resources)
+	if err != nil {
+		return err
+	}
+	return generateDiscoveryFileWithSpecs(baseDir, serviceName, displayName, specs, force)
+}
+
+func generateDiscoveryFileWithSpecs(baseDir, serviceName, displayName string, resources []ResourceSpec, force bool) error {
 	filePath := filepath.Join(baseDir, "pkg", "discovery", "services", serviceName+".go")
-	
+
 	// If file exists and not forcing, try to update it instead
 	if !force && fileExists(filePath) {
 		// Check which resources already have discoverers
@@ -19,31 +27,31 @@ func GenerateDiscoveryFile(baseDir, serviceName, displayName string, resources [
 		if err != nil {
 			return fmt.Errorf("file %s already exists and could not be read (use --force to overwrite): %w", filePath, err)
 		}
-		
+
 		contentStr := string(content)
 		existingResources := make(map[string]bool)
 		for _, res := range resources {
-			discovererName := displayName + ToPascal(res) + "Discoverer"
+			discovererName := displayName + ToPascal(res.Name) + "Discoverer"
 			if strings.Contains(contentStr, "type "+discovererName) {
-				existingResources[res] = true
+				existingResources[res.Name] = true
 			}
 		}
-		
+
 		// Find new resources
-		newResources := []string{}
+		newResources := []ResourceSpec{}
 		for _, r := range resources {
-			if !existingResources[r] {
+			if !existingResources[r.Name] {
 				newResources = append(newResources, r)
 			}
 		}
-		
+
 		if len(newResources) == 0 {
 			// All resources already have discoverers
 			return nil
 		}
-		
+
 		// Update existing file with new discoverers
-		return UpdateDiscoveryFile(baseDir, serviceName, displayName, newResources)
+		return UpdateDiscoveryFile(baseDir, serviceName, displayName, namesFromSpecs(newResources))
 	}
 
 	tmpl := `package services
@@ -56,23 +64,25 @@ import (
 )
 
 {{range .Resources}}
-// {{$.DisplayName}}{{. | Pascal}}Discoverer discovers {{$.ServiceName}} resources of type {{.}}.
+// {{$.DisplayName}}{{.Name | Pascal}}Discoverer discovers {{$.ServiceName}} resources of type {{.Name}}.
 // Placeholder implementation: returns no jobs. Fill in real OpenStack calls later.
 //
-// TODO(OSPA): Implement discovery by listing {{$.ServiceName}} {{.}} resources from OpenStack:
+// TODO(OSPA): Implement discovery by listing {{$.ServiceName}} {{.Name}} resources from OpenStack:
 // - Call the appropriate gophercloud API
 // - Handle pagination
 // - Emit discovery.Job{Service, ResourceType, ResourceID, ProjectID, Resource}
 // - Respect allTenants where applicable
-type {{$.DisplayName}}{{. | Pascal}}Discoverer struct{}
+// Discovery traits: pagination={{.Discovery.Pagination}}, all_tenants={{.Discovery.AllTenants}}, regions={{.Discovery.Regions}}
+// TODO(OSPA): Add unit tests in pkg/discovery/services/{{$.ServiceName}}_test.go once implemented.
+type {{$.DisplayName}}{{.Name | Pascal}}Discoverer struct{}
 
 // ResourceType returns the resource type this discoverer handles
-func (d *{{$.DisplayName}}{{. | Pascal}}Discoverer) ResourceType() string {
-	return "{{.}}"
+func (d *{{$.DisplayName}}{{.Name | Pascal}}Discoverer) ResourceType() string {
+	return "{{.Name}}"
 }
 
 // Discover discovers resources and sends them to the returned channel
-func (d *{{$.DisplayName}}{{. | Pascal}}Discoverer) Discover(ctx context.Context, client *gophercloud.ServiceClient, allTenants bool) (<-chan discovery.Job, error) {
+func (d *{{$.DisplayName}}{{.Name | Pascal}}Discoverer) Discover(ctx context.Context, client *gophercloud.ServiceClient, allTenants bool) (<-chan discovery.Job, error) {
 	_ = ctx
 	_ = client
 	_ = allTenants
@@ -87,13 +97,13 @@ func (d *{{$.DisplayName}}{{. | Pascal}}Discoverer) Discover(ctx context.Context
 `
 
 	data := struct {
-		ServiceName     string
-		DisplayName     string
-		Resources       []string
+		ServiceName string
+		DisplayName string
+		Resources   []ResourceSpec
 	}{
-		ServiceName:     serviceName,
-		DisplayName:     displayName,
-		Resources:       resources,
+		ServiceName: serviceName,
+		DisplayName: displayName,
+		Resources:   resources,
 	}
 
 	funcMap := template.FuncMap{
@@ -107,4 +117,3 @@ func (d *{{$.DisplayName}}{{. | Pascal}}Discoverer) Discover(ctx context.Context
 
 	return writeFile(filePath, t, data)
 }
-

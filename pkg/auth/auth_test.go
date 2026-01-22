@@ -39,5 +39,3 @@ clouds:
 		t.Fatalf("NewSession() error = %q, want contains %q", err.Error(), "failed to authenticate")
 	}
 }
-
-

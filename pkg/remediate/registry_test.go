@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/OpenStack-Policy-Agent/OSPA/pkg/remediate"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/policy"
+	"github.com/OpenStack-Policy-Agent/OSPA/pkg/remediate"
 )
 
 type fakeRemediator struct{ action string }
@@ -35,5 +35,3 @@ func TestRegister_OverridesExisting(t *testing.T) {
 		t.Fatalf("Get(log) error = %v", err)
 	}
 }
-
-

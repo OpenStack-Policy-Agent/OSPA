@@ -32,5 +32,3 @@ func TestRegisterAndGet(t *testing.T) {
 		t.Fatalf("auditor.ResourceType = %q, want %q", got.ResourceType(), "res-unit")
 	}
 }
-
-
