@@ -8,27 +8,21 @@ import (
 )
 
 // GeneratePolicyGuide generates the policy guide markdown file.
-func GeneratePolicyGuide(baseDir, serviceName, displayName, serviceType string, resources []string, force bool) error {
+func GeneratePolicyGuide(baseDir, serviceName, displayName, serviceType string, resources []string) error {
 	specs, err := buildResourceSpecs(serviceName, resources)
 	if err != nil {
 		return err
 	}
-	return generatePolicyGuideWithSpecs(baseDir, serviceName, displayName, serviceType, specs, force)
+	return generatePolicyGuideWithSpecs(baseDir, serviceName, displayName, serviceType, specs)
 }
 
-func generatePolicyGuideWithSpecs(baseDir, serviceName, displayName, serviceType string, resources []ResourceSpec, force bool) error {
-	// Create examples/policies directory if it doesn't exist
+func generatePolicyGuideWithSpecs(baseDir, serviceName, displayName, serviceType string, resources []ResourceSpec) error {
 	examplesDir := filepath.Join(baseDir, "examples", "policies")
 	if err := os.MkdirAll(examplesDir, 0755); err != nil {
 		return fmt.Errorf("creating examples/policies directory: %w", err)
 	}
 
 	guideFile := filepath.Join(examplesDir, serviceName+"-policy-guide.md")
-
-	if !force && fileExists(guideFile) {
-		fmt.Printf("Warning: %s already exists, skipping (use --force to overwrite)\n", guideFile)
-		return nil
-	}
 
 	tmpl := `# Policy Guide: {{.DisplayName}} ({{.ServiceName}})
 

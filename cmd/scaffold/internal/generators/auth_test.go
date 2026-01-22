@@ -38,7 +38,7 @@ type Session struct {
 	}
 
 	// Generate new method
-	err = GenerateAuthMethod(tmpDir, "testservice", "TestService", "test", false)
+	err = GenerateAuthMethod(tmpDir, "testservice", "TestService", "test")
 	if err != nil {
 		t.Fatalf("GenerateAuthMethod() = %v, want nil", err)
 	}
@@ -96,7 +96,7 @@ func (s *Session) GetTestServiceClient() (*gophercloud.ServiceClient, error) {
 	}
 
 	// Generate without force
-	err = GenerateAuthMethod(tmpDir, "testservice", "TestService", "test", false)
+	err = GenerateAuthMethod(tmpDir, "testservice", "TestService", "test")
 	if err != nil {
 		t.Fatalf("GenerateAuthMethod() = %v, want nil", err)
 	}
@@ -143,7 +143,7 @@ func (s *Session) GetTestServiceClient() (*gophercloud.ServiceClient, error) {
 	}
 
 	// Generate with force
-	err = GenerateAuthMethod(tmpDir, "testservice", "TestService", "test", true)
+	err = GenerateAuthMethod(tmpDir, "testservice", "TestService", "test")
 	if err != nil {
 		t.Fatalf("GenerateAuthMethod() = %v, want nil", err)
 	}
@@ -169,7 +169,7 @@ func TestGenerateAuthMethod_MissingAuthFile(t *testing.T) {
 	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Don't create auth.go
-	err = GenerateAuthMethod(tmpDir, "testservice", "TestService", "test", false)
+	err = GenerateAuthMethod(tmpDir, "testservice", "TestService", "test")
 	if err == nil {
 		t.Error("GenerateAuthMethod() = nil, want error for missing file")
 	}
@@ -204,7 +204,7 @@ func (s *Session) GetOtherClient() (*gophercloud.ServiceClient, error) {
 	}
 
 	// Generate new method
-	err = GenerateAuthMethod(tmpDir, "testservice", "TestService", "test", false)
+	err = GenerateAuthMethod(tmpDir, "testservice", "TestService", "test")
 	if err != nil {
 		t.Fatalf("GenerateAuthMethod() = %v, want nil", err)
 	}
@@ -266,7 +266,7 @@ type Session struct {
 	}
 
 	// Generate method
-	err = GenerateAuthMethod(tmpDir, "testservice", "TestService", "test", false)
+	err = GenerateAuthMethod(tmpDir, "testservice", "TestService", "test")
 	if err != nil {
 		t.Fatalf("GenerateAuthMethod() = %v, want nil", err)
 	}

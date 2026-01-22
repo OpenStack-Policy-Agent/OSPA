@@ -27,7 +27,7 @@ func TestGenerateService_NewService_Complete(t *testing.T) {
 	}
 
 	resources := []string{"resource1", "resource2"}
-	err = GenerateService("testservice", "TestService", "test", resources, false)
+	err = GenerateService("testservice", "TestService", "test", resources)
 	if err != nil {
 		t.Fatalf("GenerateService() = %v, want nil", err)
 	}
@@ -184,7 +184,7 @@ func (d *TestServiceResource1Discoverer) ResourceType() string {
 	}
 
 	resources := []string{"resource1", "resource2"}
-	err = GenerateService("testservice", "TestService", "test", resources, false)
+	err = GenerateService("testservice", "TestService", "test", resources)
 	if err != nil {
 		t.Fatalf("GenerateService() = %v, want nil", err)
 	}
@@ -272,7 +272,7 @@ func init() {
 	}
 
 	resources := []string{"resource1", "resource2"}
-	err = GenerateService("testservice", "TestService", "test", resources, false)
+	err = GenerateService("testservice", "TestService", "test", resources)
 	if err != nil {
 		t.Fatalf("GenerateService() = %v, want nil", err)
 	}
@@ -320,7 +320,7 @@ func TestGenerateService_ForceFlag(t *testing.T) {
 
 	// Generate with force
 	resources := []string{"resource1"}
-	err = GenerateService("testservice", "TestService", "test", resources, true)
+	err = GenerateService("testservice", "TestService", "test", resources)
 	if err != nil {
 		t.Fatalf("GenerateService() = %v, want nil", err)
 	}
@@ -385,7 +385,7 @@ func init() {
 	}
 
 	resources := []string{"resource1", "resource2"}
-	err = GenerateService("testservice", "TestService", "test", resources, false)
+	err = GenerateService("testservice", "TestService", "test", resources)
 	if err != nil {
 		t.Fatalf("GenerateService() = %v, want nil", err)
 	}
@@ -437,7 +437,7 @@ func TestGenerateService_FileSystemIsolation(t *testing.T) {
 
 	// Generate service
 	resources := []string{"resource1"}
-	err = GenerateService("testservice", "TestService", "test", resources, false)
+	err = GenerateService("testservice", "TestService", "test", resources)
 	if err != nil {
 		t.Fatalf("GenerateService() = %v, want nil", err)
 	}

@@ -30,7 +30,7 @@ func TestRegression_GeneratedCodeCompiles(t *testing.T) {
 	}
 
 	resources := []string{"resource1"}
-	err = GenerateService("testservice", "TestService", "test", resources, false)
+	err = GenerateService("testservice", "TestService", "test", resources)
 	if err != nil {
 		t.Fatalf("GenerateService() = %v, want nil", err)
 	}
@@ -74,7 +74,7 @@ func TestRegression_GeneratedCodeFormatted(t *testing.T) {
 	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	resources := []string{"resource1"}
-	err = GenerateServiceFile(tmpDir, "testservice", "TestService", "test", resources, false)
+	err = GenerateServiceFile(tmpDir, "testservice", "TestService", "test", resources)
 	if err != nil {
 		t.Fatalf("GenerateServiceFile() = %v, want nil", err)
 	}
@@ -127,7 +127,7 @@ func TestRegression_NoSyntaxErrors(t *testing.T) {
 	}
 
 	resources := []string{"resource1", "resource2"}
-	err = GenerateService("testservice", "TestService", "test", resources, false)
+	err = GenerateService("testservice", "TestService", "test", resources)
 	if err != nil {
 		t.Fatalf("GenerateService() = %v, want nil", err)
 	}
@@ -168,7 +168,7 @@ func TestRegression_ImportsCorrect(t *testing.T) {
 	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	resources := []string{"resource1"}
-	err = GenerateServiceFile(tmpDir, "testservice", "TestService", "test", resources, false)
+	err = GenerateServiceFile(tmpDir, "testservice", "TestService", "test", resources)
 	if err != nil {
 		t.Fatalf("GenerateServiceFile() = %v, want nil", err)
 	}

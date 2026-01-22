@@ -22,7 +22,7 @@ func TestGenerateServiceFile_NewService(t *testing.T) {
 	}
 
 	resources := []string{"resource1", "resource2"}
-	err = GenerateServiceFile(tmpDir, "testservice", "TestService", "test", resources, false)
+	err = GenerateServiceFile(tmpDir, "testservice", "TestService", "test", resources)
 	if err != nil {
 		t.Fatalf("GenerateServiceFile() = %v, want nil", err)
 	}
@@ -152,7 +152,7 @@ func (s *TestServiceService) GetResourceDiscoverer(resourceType string) (discove
 
 	// Try to generate with existing resource and new resource
 	resources := []string{"resource1", "resource2"}
-	err = GenerateServiceFile(tmpDir, "testservice", "TestService", "test", resources, false)
+	err = GenerateServiceFile(tmpDir, "testservice", "TestService", "test", resources)
 	if err != nil {
 		t.Fatalf("GenerateServiceFile() = %v, want nil", err)
 	}
@@ -203,7 +203,7 @@ func TestGenerateServiceFile_ExistingService_Force(t *testing.T) {
 
 	// Generate with force
 	resources := []string{"resource1"}
-	err = GenerateServiceFile(tmpDir, "testservice", "TestService", "test", resources, true)
+	err = GenerateServiceFile(tmpDir, "testservice", "TestService", "test", resources)
 	if err != nil {
 		t.Fatalf("GenerateServiceFile() = %v, want nil", err)
 	}
@@ -232,7 +232,7 @@ func TestGenerateServiceFile_SingleResource(t *testing.T) {
 	}
 
 	resources := []string{"resource1"}
-	err = GenerateServiceFile(tmpDir, "testservice", "TestService", "test", resources, false)
+	err = GenerateServiceFile(tmpDir, "testservice", "TestService", "test", resources)
 	if err != nil {
 		t.Fatalf("GenerateServiceFile() = %v, want nil", err)
 	}
@@ -262,7 +262,7 @@ func TestGenerateServiceFile_MultipleResources(t *testing.T) {
 	}
 
 	resources := []string{"resource1", "resource2", "resource3", "resource4"}
-	err = GenerateServiceFile(tmpDir, "testservice", "TestService", "test", resources, false)
+	err = GenerateServiceFile(tmpDir, "testservice", "TestService", "test", resources)
 	if err != nil {
 		t.Fatalf("GenerateServiceFile() = %v, want nil", err)
 	}
@@ -307,7 +307,7 @@ func TestGenerateServiceFile_TemplateRendering(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.serviceName, func(t *testing.T) {
-			err := GenerateServiceFile(tmpDir, tc.serviceName, tc.displayName, tc.serviceType, tc.resources, false)
+			err := GenerateServiceFile(tmpDir, tc.serviceName, tc.displayName, tc.serviceType, tc.resources)
 			if err != nil {
 				t.Fatalf("GenerateServiceFile() = %v, want nil", err)
 			}
@@ -345,7 +345,7 @@ func TestGenerateServiceFile_GoSyntax(t *testing.T) {
 	}
 
 	resources := []string{"resource1", "resource2"}
-	err = GenerateServiceFile(tmpDir, "testservice", "TestService", "test", resources, false)
+	err = GenerateServiceFile(tmpDir, "testservice", "TestService", "test", resources)
 	if err != nil {
 		t.Fatalf("GenerateServiceFile() = %v, want nil", err)
 	}

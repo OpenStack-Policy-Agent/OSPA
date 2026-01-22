@@ -1,58 +1,21 @@
 package generators
 
 import (
-	"fmt"
-	"os"
 	"path/filepath"
-	"strings"
 	"text/template"
 )
 
 // GenerateDiscoveryFile generates the discovery implementation file.
-func GenerateDiscoveryFile(baseDir, serviceName, displayName string, resources []string, force bool) error {
+func GenerateDiscoveryFile(baseDir, serviceName, displayName string, resources []string) error {
 	specs, err := buildResourceSpecs(serviceName, resources)
 	if err != nil {
 		return err
 	}
-	return generateDiscoveryFileWithSpecs(baseDir, serviceName, displayName, specs, force)
+	return generateDiscoveryFileWithSpecs(baseDir, serviceName, displayName, specs)
 }
 
-func generateDiscoveryFileWithSpecs(baseDir, serviceName, displayName string, resources []ResourceSpec, force bool) error {
+func generateDiscoveryFileWithSpecs(baseDir, serviceName, displayName string, resources []ResourceSpec) error {
 	filePath := filepath.Join(baseDir, "pkg", "discovery", "services", serviceName+".go")
-
-	// If file exists and not forcing, try to update it instead
-	if !force && fileExists(filePath) {
-		// Check which resources already have discoverers
-		content, err := os.ReadFile(filePath)
-		if err != nil {
-			return fmt.Errorf("file %s already exists and could not be read (use --force to overwrite): %w", filePath, err)
-		}
-
-		contentStr := string(content)
-		existingResources := make(map[string]bool)
-		for _, res := range resources {
-			discovererName := displayName + ToPascal(res.Name) + "Discoverer"
-			if strings.Contains(contentStr, "type "+discovererName) {
-				existingResources[res.Name] = true
-			}
-		}
-
-		// Find new resources
-		newResources := []ResourceSpec{}
-		for _, r := range resources {
-			if !existingResources[r.Name] {
-				newResources = append(newResources, r)
-			}
-		}
-
-		if len(newResources) == 0 {
-			// All resources already have discoverers
-			return nil
-		}
-
-		// Update existing file with new discoverers
-		return UpdateDiscoveryFile(baseDir, serviceName, displayName, namesFromSpecs(newResources))
-	}
 
 	tmpl := `package services
 
@@ -61,35 +24,50 @@ import (
 
 	discovery "github.com/OpenStack-Policy-Agent/OSPA/pkg/discovery"
 	"github.com/gophercloud/gophercloud"
+	// TODO: Import the correct gophercloud package for {{.ServiceName}}.
+	// Example for Nova: "github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
+	// See: https://pkg.go.dev/github.com/gophercloud/gophercloud/openstack
 )
 
 {{range .Resources}}
-// {{$.DisplayName}}{{.Name | Pascal}}Discoverer discovers {{$.ServiceName}} resources of type {{.Name}}.
-// Placeholder implementation: returns no jobs. Fill in real OpenStack calls later.
+// {{$.DisplayName}}{{.Name | Pascal}}Discoverer discovers {{$.ServiceName}}/{{.Name}} resources.
 //
-// TODO(OSPA): Implement discovery by listing {{$.ServiceName}} {{.Name}} resources from OpenStack:
-// - Call the appropriate gophercloud API
-// - Handle pagination
-// - Emit discovery.Job{Service, ResourceType, ResourceID, ProjectID, Resource}
-// - Respect allTenants where applicable
-// Discovery traits: pagination={{.Discovery.Pagination}}, all_tenants={{.Discovery.AllTenants}}, regions={{.Discovery.Regions}}
-// TODO(OSPA): Add unit tests in pkg/discovery/services/{{$.ServiceName}}_test.go once implemented.
+// TODO: Implement Discover() using gophercloud to list {{.Name}} resources.
+// Gophercloud docs: https://pkg.go.dev/github.com/gophercloud/gophercloud/openstack
+// OpenStack API: https://docs.openstack.org/api-ref/{{$.ServiceName}}
+//
+// Discovery hints from registry:
+//   pagination: {{.Discovery.Pagination}}
+//   all_tenants: {{.Discovery.AllTenants}}
+//   regions: {{.Discovery.Regions}}
 type {{$.DisplayName}}{{.Name | Pascal}}Discoverer struct{}
 
-// ResourceType returns the resource type this discoverer handles
 func (d *{{$.DisplayName}}{{.Name | Pascal}}Discoverer) ResourceType() string {
 	return "{{.Name}}"
 }
 
-// Discover discovers resources and sends them to the returned channel
 func (d *{{$.DisplayName}}{{.Name | Pascal}}Discoverer) Discover(ctx context.Context, client *gophercloud.ServiceClient, allTenants bool) (<-chan discovery.Job, error) {
-	_ = ctx
-	_ = client
-	_ = allTenants
-
-	// TODO(OSPA): Replace this placeholder with real discovery logic.
 	ch := make(chan discovery.Job)
-	close(ch)
+
+	go func() {
+		defer close(ch)
+
+		// TODO: List {{.Name}} resources using gophercloud and send jobs.
+		// Example pattern:
+		//   pages, err := <resource>.List(client, <opts>).AllPages()
+		//   resources, err := <resource>.ExtractResources(pages)
+		//   for _, r := range resources {
+		//       select {
+		//       case <-ctx.Done():
+		//           return
+		//       case ch <- discovery.Job{Service: "{{$.ServiceName}}", ResourceType: "{{.Name}}", ResourceID: r.ID, ProjectID: r.TenantID, Resource: r}:
+		//       }
+		//   }
+		_ = ctx
+		_ = client
+		_ = allTenants
+	}()
+
 	return ch, nil
 }
 

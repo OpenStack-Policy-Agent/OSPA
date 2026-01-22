@@ -31,7 +31,7 @@ func TestRegression_OriginalScaffoldBehavior(t *testing.T) {
 	}
 
 	resources := []string{"resource1", "resource2"}
-	err = GenerateService("testservice", "TestService", "test", resources, false)
+	err = GenerateService("testservice", "TestService", "test", resources)
 	if err != nil {
 		t.Fatalf("GenerateService() = %v, want nil (original behavior broken)", err)
 	}
@@ -77,7 +77,7 @@ func TestRegression_AllFileTypesGenerated(t *testing.T) {
 	}
 
 	resources := []string{"resource1"}
-	err = GenerateService("testservice", "TestService", "test", resources, false)
+	err = GenerateService("testservice", "TestService", "test", resources)
 	if err != nil {
 		t.Fatalf("GenerateService() = %v, want nil", err)
 	}
@@ -144,7 +144,7 @@ func TestRegression_ForceFlagBehavior(t *testing.T) {
 
 	// Generate with force - should overwrite
 	resources := []string{"resource1"}
-	err = GenerateServiceFile(tmpDir, "testservice", "TestService", "test", resources, true)
+	err = GenerateServiceFile(tmpDir, "testservice", "TestService", "test", resources)
 	if err != nil {
 		t.Fatalf("GenerateServiceFile() = %v, want nil", err)
 	}
@@ -168,7 +168,7 @@ func TestRegression_GeneratedCodeStructure(t *testing.T) {
 	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	resources := []string{"resource1"}
-	err = GenerateServiceFile(tmpDir, "testservice", "TestService", "test", resources, false)
+	err = GenerateServiceFile(tmpDir, "testservice", "TestService", "test", resources)
 	if err != nil {
 		t.Fatalf("GenerateServiceFile() = %v, want nil", err)
 	}
