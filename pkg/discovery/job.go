@@ -8,4 +8,3 @@ type Job struct {
 	Service      string
 	ProjectID    string
 }
-

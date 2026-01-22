@@ -7,14 +7,10 @@ import (
 )
 
 
-// TestCinder_VolumeAudit tests cinder volume auditing
 func TestCinder_VolumeAudit(t *testing.T) {
-	// TODO(OSPA): This is an e2e test. It requires a real OpenStack cloud configuration:
-	// - OS_CLIENT_CONFIG_FILE pointing to clouds.yaml
-	// - OS_CLOUD set to a valid cloud entry
-	// TODO(OSPA): Once cinder/volume discovery + auditing are implemented, tighten assertions:
-	// - expect non-zero discovered resources (where applicable)
-	// - expect zero errors unless intentionally testing error paths
+	// This e2e test requires a real OpenStack cloud:
+	//   OS_CLIENT_CONFIG_FILE pointing to clouds.yaml
+	//   OS_CLOUD set to a valid cloud entry
 	engine := NewTestEngine(t)
 
 	policyYAML := `version: v1
@@ -33,26 +29,19 @@ policies:
 	policy := engine.LoadPolicyFromYAML(t, policyYAML)
 	results := engine.RunAudit(t, policy)
 
-	// Filter for cinder/volume results
 	VolumeResults := results.FilterByService("cinder").FilterByResourceType("volume")
-
 	VolumeResults.LogSummary(t)
 
-	// Basic assertions
 	if VolumeResults.Errors > 0 {
-		t.Logf("Warning: %%d errors encountered during volume audit", VolumeResults.Errors)
+		t.Logf("Warning: %d errors encountered during volume audit", VolumeResults.Errors)
 	}
 }
 
 
-// TestCinder_SnapshotAudit tests cinder snapshot auditing
 func TestCinder_SnapshotAudit(t *testing.T) {
-	// TODO(OSPA): This is an e2e test. It requires a real OpenStack cloud configuration:
-	// - OS_CLIENT_CONFIG_FILE pointing to clouds.yaml
-	// - OS_CLOUD set to a valid cloud entry
-	// TODO(OSPA): Once cinder/snapshot discovery + auditing are implemented, tighten assertions:
-	// - expect non-zero discovered resources (where applicable)
-	// - expect zero errors unless intentionally testing error paths
+	// This e2e test requires a real OpenStack cloud:
+	//   OS_CLIENT_CONFIG_FILE pointing to clouds.yaml
+	//   OS_CLOUD set to a valid cloud entry
 	engine := NewTestEngine(t)
 
 	policyYAML := `version: v1
@@ -71,14 +60,11 @@ policies:
 	policy := engine.LoadPolicyFromYAML(t, policyYAML)
 	results := engine.RunAudit(t, policy)
 
-	// Filter for cinder/snapshot results
 	SnapshotResults := results.FilterByService("cinder").FilterByResourceType("snapshot")
-
 	SnapshotResults.LogSummary(t)
 
-	// Basic assertions
 	if SnapshotResults.Errors > 0 {
-		t.Logf("Warning: %%d errors encountered during snapshot audit", SnapshotResults.Errors)
+		t.Logf("Warning: %d errors encountered during snapshot audit", SnapshotResults.Errors)
 	}
 }
 

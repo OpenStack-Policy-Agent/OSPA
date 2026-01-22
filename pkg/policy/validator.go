@@ -3,7 +3,7 @@ package policy
 import (
 	"fmt"
 	"strings"
-	
+
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/catalog"
 )
 
@@ -18,7 +18,7 @@ func (p *Policy) Validate() error {
 	}
 
 	seenRuleNames := make(map[string]struct{})
-	
+
 	// Dynamically discover supported services and resources from the registry
 	// This allows new services to be added without modifying the validator
 	supportedResources := catalog.GetSupportedResources()
@@ -26,7 +26,7 @@ func (p *Policy) Validate() error {
 	for serviceName := range supportedResources {
 		supportedServices[serviceName] = true
 	}
-	
+
 	// If no services are registered yet, provide a helpful error message
 	if len(supportedServices) == 0 {
 		return fmt.Errorf("no services are registered - ensure service packages are imported")
@@ -95,6 +95,10 @@ func (p *Policy) Validate() error {
 				}
 			}
 
+			if !hasAnyConstraint(&rule.Check) {
+				return fmt.Errorf("rule %q: check must specify at least one condition", ruleName)
+			}
+
 			// Validate check conditions using service-specific validator
 			if err := validateCheckConditions(service, &rule.Check, resource, ruleName); err != nil {
 				return err
@@ -109,7 +113,95 @@ func (p *Policy) Validate() error {
 		}
 	}
 
+	for i, sp := range p.Composites {
+		service := strings.ToLower(sp.Service)
+		if !supportedServices[service] {
+			availableServices := make([]string, 0, len(supportedServices))
+			for svc := range supportedServices {
+				availableServices = append(availableServices, svc)
+			}
+			return fmt.Errorf("composites[%d]: unsupported service %q (available services: %v)", i, sp.Service, availableServices)
+		}
+
+		if len(sp.Rules) == 0 {
+			return fmt.Errorf("composites[%d].%s: must contain at least one rule", i, sp.Service)
+		}
+
+		for j, rule := range sp.Rules {
+			ruleName := rule.Name
+			if ruleName == "" {
+				return fmt.Errorf("composites[%d].%s.rules[%d]: name is required", i, sp.Service, j)
+			}
+			if _, ok := seenRuleNames[ruleName]; ok {
+				return fmt.Errorf("duplicate rule name %q", ruleName)
+			}
+			seenRuleNames[ruleName] = struct{}{}
+
+			if rule.Service != "" && strings.ToLower(rule.Service) != service {
+				return fmt.Errorf("rule %q: service %q does not match parent service %q", ruleName, rule.Service, sp.Service)
+			}
+
+			if len(rule.Resources) < 2 {
+				return fmt.Errorf("rule %q: composite rules must specify at least two resources", ruleName)
+			}
+			for _, res := range rule.Resources {
+				resource := strings.ToLower(strings.TrimSpace(res))
+				if resource == "" {
+					return fmt.Errorf("rule %q: composite resources must not be empty", ruleName)
+				}
+				if !supportedResources[service][resource] {
+					return fmt.Errorf("rule %q: unsupported resource %q for service %q", ruleName, res, sp.Service)
+				}
+			}
+
+			action := strings.ToLower(rule.Action)
+			if action == "" {
+				return fmt.Errorf("rule %q: action is required", ruleName)
+			}
+			if !supportedActions[action] {
+				return fmt.Errorf("rule %q: unsupported action %q (supported: log, delete, tag)", ruleName, rule.Action)
+			}
+			if action == "tag" && rule.TagName == "" {
+				return fmt.Errorf("rule %q: tag_name is required when action is 'tag'", ruleName)
+			}
+
+			if !hasCompositeCheck(rule.Check) {
+				return fmt.Errorf("rule %q: composite check must specify at least one condition", ruleName)
+			}
+		}
+	}
+
 	return nil
+}
+
+func hasAnyConstraint(check *CheckConditions) bool {
+	if check == nil {
+		return false
+	}
+	return check.Direction != "" ||
+		check.Ethertype != "" ||
+		check.Protocol != "" ||
+		check.Port != 0 ||
+		check.RemoteIPPrefix != "" ||
+		check.Status != "" ||
+		check.AgeGT != "" ||
+		check.Unused ||
+		len(check.ImageName) > 0
+}
+
+func hasCompositeCheck(check map[string]interface{}) bool {
+	if len(check) == 0 {
+		return false
+	}
+	for key, value := range check {
+		if strings.TrimSpace(key) == "" {
+			continue
+		}
+		if value != nil {
+			return true
+		}
+	}
+	return false
 }
 
 // validateCheckConditions validates check conditions using service-specific validators
@@ -118,9 +210,8 @@ func validateCheckConditions(serviceName string, check *CheckConditions, resourc
 	if validator, ok := GetValidator(serviceName); ok {
 		return validator.ValidateResource(check, resource, ruleName)
 	}
-	
+
 	// Fallback: if no validator is registered for this service, skip resource-specific validation
 	// This allows services without validators to still work (though not recommended)
 	return nil
 }
-

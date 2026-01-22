@@ -5,62 +5,91 @@ import (
 
 	discovery "github.com/OpenStack-Policy-Agent/OSPA/pkg/discovery"
 	"github.com/gophercloud/gophercloud"
+	// TODO: Import the correct gophercloud package for cinder.
+	// Example for Nova: "github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
+	// See: https://pkg.go.dev/github.com/gophercloud/gophercloud/openstack
 )
 
-
-// CinderVolumeDiscoverer discovers cinder resources of type volume.
-// Placeholder implementation: returns no jobs. Fill in real OpenStack calls later.
+// CinderVolumeDiscoverer discovers cinder/volume resources.
 //
-// TODO(OSPA): Implement discovery by listing cinder volume resources from OpenStack:
-// - Call the appropriate gophercloud API
-// - Handle pagination
-// - Emit discovery.Job{Service, ResourceType, ResourceID, ProjectID, Resource}
-// - Respect allTenants where applicable
+// TODO: Implement Discover() using gophercloud to list volume resources.
+// Gophercloud docs: https://pkg.go.dev/github.com/gophercloud/gophercloud/openstack
+// OpenStack API: https://docs.openstack.org/api-ref/cinder
+//
+// Discovery hints from registry:
+//
+//	pagination: false
+//	all_tenants: false
+//	regions: false
 type CinderVolumeDiscoverer struct{}
 
-// ResourceType returns the resource type this discoverer handles
 func (d *CinderVolumeDiscoverer) ResourceType() string {
 	return "volume"
 }
 
-// Discover discovers resources and sends them to the returned channel
 func (d *CinderVolumeDiscoverer) Discover(ctx context.Context, client *gophercloud.ServiceClient, allTenants bool) (<-chan discovery.Job, error) {
-	_ = ctx
-	_ = client
-	_ = allTenants
-
-	// TODO(OSPA): Replace this placeholder with real discovery logic.
 	ch := make(chan discovery.Job)
-	close(ch)
+
+	go func() {
+		defer close(ch)
+
+		// TODO: List volume resources using gophercloud and send jobs.
+		// Example pattern:
+		//   pages, err := <resource>.List(client, <opts>).AllPages()
+		//   resources, err := <resource>.ExtractResources(pages)
+		//   for _, r := range resources {
+		//       select {
+		//       case <-ctx.Done():
+		//           return
+		//       case ch <- discovery.Job{Service: "cinder", ResourceType: "volume", ResourceID: r.ID, ProjectID: r.TenantID, Resource: r}:
+		//       }
+		//   }
+		_ = ctx
+		_ = client
+		_ = allTenants
+	}()
+
 	return ch, nil
 }
 
-
-// CinderSnapshotDiscoverer discovers cinder resources of type snapshot.
-// Placeholder implementation: returns no jobs. Fill in real OpenStack calls later.
+// CinderSnapshotDiscoverer discovers cinder/snapshot resources.
 //
-// TODO(OSPA): Implement discovery by listing cinder snapshot resources from OpenStack:
-// - Call the appropriate gophercloud API
-// - Handle pagination
-// - Emit discovery.Job{Service, ResourceType, ResourceID, ProjectID, Resource}
-// - Respect allTenants where applicable
+// TODO: Implement Discover() using gophercloud to list snapshot resources.
+// Gophercloud docs: https://pkg.go.dev/github.com/gophercloud/gophercloud/openstack
+// OpenStack API: https://docs.openstack.org/api-ref/cinder
+//
+// Discovery hints from registry:
+//
+//	pagination: false
+//	all_tenants: false
+//	regions: false
 type CinderSnapshotDiscoverer struct{}
 
-// ResourceType returns the resource type this discoverer handles
 func (d *CinderSnapshotDiscoverer) ResourceType() string {
 	return "snapshot"
 }
 
-// Discover discovers resources and sends them to the returned channel
 func (d *CinderSnapshotDiscoverer) Discover(ctx context.Context, client *gophercloud.ServiceClient, allTenants bool) (<-chan discovery.Job, error) {
-	_ = ctx
-	_ = client
-	_ = allTenants
-
-	// TODO(OSPA): Replace this placeholder with real discovery logic.
 	ch := make(chan discovery.Job)
-	close(ch)
+
+	go func() {
+		defer close(ch)
+
+		// TODO: List snapshot resources using gophercloud and send jobs.
+		// Example pattern:
+		//   pages, err := <resource>.List(client, <opts>).AllPages()
+		//   resources, err := <resource>.ExtractResources(pages)
+		//   for _, r := range resources {
+		//       select {
+		//       case <-ctx.Done():
+		//           return
+		//       case ch <- discovery.Job{Service: "cinder", ResourceType: "snapshot", ResourceID: r.ID, ProjectID: r.TenantID, Resource: r}:
+		//       }
+		//   }
+		_ = ctx
+		_ = client
+		_ = allTenants
+	}()
+
 	return ch, nil
 }
-
-

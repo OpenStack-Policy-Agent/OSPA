@@ -11,5 +11,3 @@ func TestSimpleJobCreator_EmptyIDErrors(t *testing.T) {
 		t.Fatalf("expected error for empty resource ID")
 	}
 }
-
-

@@ -4,190 +4,237 @@ The scaffold tool generates boilerplate code for adding new OpenStack services t
 
 ## Usage
 
-**Using Make (recommended):**
 ```bash
-make scaffold SERVICE=<name> RESOURCES=<list> [DISPLAY_NAME=<name>] [TYPE=<type>]
+go run ./cmd/scaffold --service <name> --resources <list>
 ```
 
-**Or directly:**
-```bash
-go run ./cmd/scaffold --service <name> [options]
-```
+Or build and install:
 
-**Or build and install:**
 ```bash
 go build -o ospa-scaffold ./cmd/scaffold
-./ospa-scaffold --service <name> [options]
+./ospa-scaffold --service nova --resources instance,keypair
 ```
 
 ## Options
 
-- `--service` (required): Service name (e.g., `glance`, `keystone`)
-- `--display-name`: Display name for the service (defaults to service display name from registry)
-- `--resources`: Comma-separated list of resource types (e.g., `image,member`)
-- `--type`: OpenStack service type for client creation (defaults to service type from registry)
-- `--force`: Overwrite existing files
-- `--list`: List all available OpenStack services and their resources
+- `--service` (required): Service name (e.g., `nova`, `neutron`, `cinder`)
+- `--resources` (required): Comma-separated list of resource types (e.g., `instance,keypair`)
+- `--list`: List all available OpenStack services and resources
 
 ## Examples
 
-### Generate Glance (Image Service) support
+### Generate Nova (Compute) support
 
 ```bash
-go run ./cmd/scaffold \
-  --service glance \
-  --display-name Glance \
-  --resources image,member \
-  --type image
+go run ./cmd/scaffold --service nova --resources instance,keypair
 ```
 
-This generates:
-- `pkg/services/services/glance.go`
-- `pkg/discovery/services/glance.go`
-- `pkg/audit/glance/image.go`
-- `pkg/audit/glance/member.go`
-- `pkg/auth/auth.go` (client method appended)
-- `pkg/policy/validation/glance.go` (validation file)
-- `pkg/audit/glance/image_test.go`
-- `pkg/audit/glance/member_test.go`
-- `e2e/glance_test.go`
-- `examples/policies/glance-policy-guide.md`
-
-### Generate Keystone (Identity Service) support
+### Generate Neutron (Network) support
 
 ```bash
-go run ./cmd/scaffold \
-  --service keystone \
-  --display-name Keystone \
-  --resources user,role,project \
-  --type identity
+go run ./cmd/scaffold --service neutron --resources security_group,security_group_rule,floating_ip
 ```
 
-### List Available Services
-
-To see all available OpenStack services and their resources:
+### List available services
 
 ```bash
 go run ./cmd/scaffold --list
 ```
-
-This will display all supported OpenStack services (Nova, Neutron, Cinder, Glance, Keystone, etc.) along with their available resource types.
-
-## Validation
-
-The scaffold tool validates that:
-- The service name exists in OpenStack (validated against known OpenStack services)
-- All specified resources exist for the given service
-- Service type matches OpenStack conventions
-
-If validation fails, the tool will:
-- Show an error message with available options
-- Suggest using `--list` to see all available services
-- Display available resources for the specified service if the service is valid but resources are not
 
 ## Generated Files
 
 The tool generates:
 
 1. **Service file** (`pkg/services/services/<servicename>.go`)
-   - Service implementation
-   - Resource registration
-   - Client, auditor, and discoverer methods
+   - Service implementation with resource registration
+   - Client, auditor, and discoverer wiring
 
 2. **Discovery file** (`pkg/discovery/services/<servicename>.go`)
-   - Discoverer implementations for each resource type
-   - Handles pagination and context cancellation
+   - Discoverer stubs for each resource type
+   - TODO comments with gophercloud references
 
 3. **Auditor files** (`pkg/audit/<servicename>/<resource>.go`)
    - Auditor implementation for each resource type
-   - Check() and Fix() methods
+   - TODO comments for Check() and Fix() implementation
 
 4. **Auth client method** (appended to `pkg/auth/auth.go`)
    - `Get<DisplayName>Client()` method for service authentication
 
 5. **Unit test files** (`pkg/audit/<servicename>/<resource>_test.go`)
    - Basic unit tests for each auditor
-   - Tests for ResourceType(), Check(), and Fix() methods
 
 6. **E2E test file** (`e2e/<servicename>_test.go`)
    - End-to-end tests using the e2e engine
-   - Test functions for each resource type
 
 7. **Validation file** (`pkg/policy/validation/<servicename>.go`)
    - Service-specific policy validator
-   - Validates check conditions for each resource type
-   - Auto-registers with the validation registry
-   - Automatically imported in `validator.go`
 
 8. **Policy guide** (`examples/policies/<servicename>-policy-guide.md`)
-   - Comprehensive guide for writing policies for the new service
-   - Examples for each resource type
-   - Check conditions documentation
-   - OpenStack API references
+   - Documentation for writing policies for the new service
 
-## Next Steps
+## Next Steps After Generating
 
-After generating files:
+### 1. Update the registry config with accurate checks
 
-1. **Review generated code**:
-   - Adjust import paths for OpenStack client libraries
-   - Update resource struct names and field names
-   - Customize check conditions based on resource type
-   - Implement validation rules in `pkg/policy/validation/<servicename>.go` (replace TODO comments)
-   - Implement tagging logic if needed
+**Important:** The default checks in the registry config may not match what the OpenStack API actually supports for each resource.
 
-2. **Test**:
-   ```bash
-   go test ./pkg/services/...
-   go test ./pkg/audit/<servicename>/...
-   ```
+Edit `cmd/scaffold/internal/registry/config/<servicename>.yaml` and update the `checks` field for each resource:
 
-3. **Review policy guide**:
-   - Check `examples/policies/<servicename>-policy-guide.md`
-   - Follow the examples to create your first policy
-   - Reference OpenStack API documentation links provided
+```yaml
+resources:
+  instance:
+    description: Server instances
+    checks:
+      - status      # Most resources have status
+      - age_gt      # If the resource has updated_at/created_at
+      - unused      # Only if "unused" detection makes sense for this resource
+      - exempt_names
+    actions:
+      - log
+      - delete
+      - tag         # Only if the OpenStack API supports tagging this resource
+```
 
-4. **Create policy**:
-   ```yaml
-   policies:
-     - <servicename>:
-       - name: my-rule
-         description: Check resource
-         service: <servicename>
-         resource: <resource>
-         check:
-           status: active
-         action: log
-   ```
+**How to determine valid checks:**
+
+- **status**: Check the OpenStack API docs for the resource's status field values
+  - Nova instances: `ACTIVE`, `SHUTOFF`, `ERROR`, etc.
+  - Neutron resources: `ACTIVE`, `DOWN`, `BUILD`, etc.
+- **age_gt**: Only valid if the resource has `updated_at` or `created_at` timestamps
+- **unused**: Only valid if there's a logical way to determine "unused" for this resource type
+  - Floating IPs: unused if not attached to a port
+  - Security groups: unused if not attached to any ports
+  - Keypairs: unused if not referenced by any instances
+- **exempt_names**: Always valid (filters by resource name)
+
+**OpenStack API References:**
+- Nova: https://docs.openstack.org/api-ref/compute/
+- Neutron: https://docs.openstack.org/api-ref/network/
+- Cinder: https://docs.openstack.org/api-ref/block-storage/
+- Glance: https://docs.openstack.org/api-ref/image/
+- Keystone: https://docs.openstack.org/api-ref/identity/
+
+### 2. Implement the discoverers
+
+Edit `pkg/discovery/services/<servicename>.go`:
+
+```go
+func (d *NovaInstanceDiscoverer) Discover(ctx context.Context, client *gophercloud.ServiceClient, allTenants bool) (<-chan discovery.Job, error) {
+    ch := make(chan discovery.Job)
+
+    go func() {
+        defer close(ch)
+
+        // Use gophercloud to list resources
+        opts := servers.ListOpts{AllTenants: allTenants}
+        pages, err := servers.List(client, opts).AllPages()
+        if err != nil {
+            return
+        }
+        instances, _ := servers.ExtractServers(pages)
+
+        for _, instance := range instances {
+            select {
+            case <-ctx.Done():
+                return
+            case ch <- discovery.Job{
+                Service:      "nova",
+                ResourceType: "instance",
+                ResourceID:   instance.ID,
+                ProjectID:    instance.TenantID,
+                Resource:     instance,
+            }:
+            }
+        }
+    }()
+
+    return ch, nil
+}
+```
+
+**Gophercloud docs:** https://pkg.go.dev/github.com/gophercloud/gophercloud/openstack
+
+### 3. Implement the auditors
+
+Edit `pkg/audit/<servicename>/<resource>.go`:
+
+```go
+func (a *InstanceAuditor) Check(ctx context.Context, resource interface{}, rule *policy.Rule) (*audit.Result, error) {
+    // Cast to the correct type
+    instance := resource.(servers.Server)
+
+    result := &audit.Result{
+        RuleID:       rule.Name,
+        ResourceID:   instance.ID,
+        ResourceName: instance.Name,
+        ProjectID:    instance.TenantID,
+        Status:       instance.Status,
+        UpdatedAt:    instance.Updated,
+        Compliant:    true,
+        Rule:         rule,
+    }
+
+    // Implement checks
+    if rule.Check.Status != "" && instance.Status == rule.Check.Status {
+        result.Compliant = false
+        result.Observation = fmt.Sprintf("status is %s", instance.Status)
+    }
+
+    // Age check
+    if rule.Check.AgeGT != "" {
+        age, _ := time.ParseDuration(rule.Check.AgeGT)
+        if time.Since(instance.Updated) > age {
+            result.Compliant = false
+            result.Observation = fmt.Sprintf("resource is older than %s", rule.Check.AgeGT)
+        }
+    }
+
+    return result, nil
+}
+```
+
+### 4. Run tests
+
+```bash
+go test ./pkg/audit/<servicename>/...
+go test ./cmd/scaffold/...
+```
+
+### 5. Run e2e tests (requires OpenStack)
+
+```bash
+OS_CLOUD=mycloud go test -tags=e2e ./e2e/<servicename>_test.go
+```
 
 ## Architecture
 
-The scaffold tool is organized into a modular structure:
-
-- **`cmd/scaffold/main.go`** - CLI entry point with validation
-- **`cmd/scaffold/internal/registry/`** - OpenStack service/resource registry and validation
-  - `registry.go`
-- **`cmd/scaffold/internal/generators/`** - Generation functions organized by step:
-  - `orchestrator.go` - Main orchestration function
-  - `service.go` - Service file generation
-  - `service_updater.go` - Add new resources to existing service files
-  - `discovery.go` - Discovery file generation
-  - `discovery_updater.go` - Add new discoverers to existing discovery files
-  - `auditor.go` - Auditor files generation
-  - `auth.go` - Auth method generation
-  - `validation.go` - Validation file generation
-  - `tests.go` - Unit tests generation
-  - `e2e.go` - E2E tests generation
-  - `policy_guide.go` - Policy guide generation
-  - `utils.go` - Utility functions
+```
+cmd/scaffold/
+├── main.go                     # CLI entry point
+└── internal/
+    ├── registry/
+    │   ├── registry.go         # Service/resource registry
+    │   └── config/             # YAML metadata per service
+    │       ├── nova.yaml
+    │       ├── neutron.yaml
+    │       └── ...
+    └── generators/
+        ├── orchestrator.go     # Main orchestration
+        ├── service.go          # Service file generation
+        ├── discovery.go        # Discovery file generation
+        ├── auditor.go          # Auditor files generation
+        ├── auth.go             # Auth method generation
+        ├── tests.go            # Unit tests generation
+        ├── e2e.go              # E2E tests generation
+        ├── validation.go       # Validation file generation
+        ├── policy_guide.go     # Policy guide generation
+        ├── metadata.go         # ResourceSpec helpers
+        └── utils.go            # Utilities
+```
 
 ## Notes
 
-- Generated code uses common patterns but may need customization
-- Import paths for OpenStack client libraries may need adjustment
-- Resource struct field names (e.g., `TenantID`, `Name`) may vary
-- Some resources may not support all check conditions
-- Tagging implementation depends on resource type capabilities
-- The tool validates services and resources against a registry of known OpenStack services
-- Use `--list` to discover available services and resources before generating code
-
+- Generated code uses placeholder implementations with TODO comments
+- The registry config files (`cmd/scaffold/internal/registry/config/*.yaml`) define valid services, resources, checks, and actions
+- Update the registry config to match OpenStack API capabilities before generating
+- Regenerating overwrites existing files

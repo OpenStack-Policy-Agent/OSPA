@@ -6,12 +6,7 @@ import (
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/policy"
 )
 
-// CinderValidator validates Cinder service policies
-//
-// TODO(OSPA): Tighten validation rules for cinder over time:
-// - Require at least one check condition per rule
-// - Validate supported check fields per resource
-// - Validate allowed enum values (status/protocol/ethertype/etc.)
+// CinderValidator validates Cinder service policies.
 type CinderValidator struct{}
 
 func init() {
@@ -26,16 +21,14 @@ func (v *CinderValidator) ValidateResource(check *policy.CheckConditions, resour
 	switch resourceType {
 
 	case "volume":
-		// Placeholder validation: accept any checks for now.
-		// TODO(OSPA): Add real validation for cinder/volume.
-		_ = check
-
+		if err := validateAllowedChecks(check, []string{"status", "age_gt", "unused", "exempt_names"}); err != nil {
+			return fmt.Errorf("rule %q: %w", ruleName, err)
+		}
 
 	case "snapshot":
-		// Placeholder validation: accept any checks for now.
-		// TODO(OSPA): Add real validation for cinder/snapshot.
-		_ = check
-
+		if err := validateAllowedChecks(check, []string{"status", "age_gt", "unused", "exempt_names"}); err != nil {
+			return fmt.Errorf("rule %q: %w", ruleName, err)
+		}
 
 	default:
 		return fmt.Errorf("rule %q: unsupported resource type %q for cinder service", ruleName, resourceType)

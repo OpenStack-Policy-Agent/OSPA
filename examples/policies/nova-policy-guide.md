@@ -15,10 +15,16 @@ This guide explains how to write policies for Nova resources in OSPA.
 
 **Resource Type:** `instance`
 
+**Allowed Actions:** log, delete, tag
+**Allowed Checks:** status, age_gt, unused, exempt_names
+
 
 ### Keypair
 
 **Resource Type:** `keypair`
+
+**Allowed Actions:** log, delete, tag
+**Allowed Checks:** status, age_gt, unused, exempt_names
 
 
 
@@ -398,7 +404,7 @@ For more information about Nova resources and their properties:
 
 **Policy validation fails:**
 - Ensure service name matches exactly: `nova`
-- Verify resource type is supported: `instance`, `keypair`
+- Verify resource type is supported: `{instance Server instances [status age_gt unused exempt_names] [log delete tag] {false false false}}`, `{keypair SSH keypairs [status age_gt unused exempt_names] [log delete tag] {false false false}}`
 - Check YAML syntax is correct
 
 **No resources found:**

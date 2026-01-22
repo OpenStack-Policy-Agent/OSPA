@@ -2,199 +2,68 @@ package registry
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"sort"
 	"strings"
+	"sync"
+
+	"gopkg.in/yaml.v2"
 )
 
-// OpenStackServiceRegistry contains known OpenStack services and their resources
-// Based on OpenStack official documentation and API references
-var OpenStackServiceRegistry = map[string]ServiceInfo{
-	"nova": {
-		ServiceType: "compute",
-		DisplayName: "Nova",
-		Resources: map[string]ResourceInfo{
-			"instance": {Description: "Server instances"},
-			"keypair":  {Description: "SSH keypairs"},
-			"server":   {Description: "Server instances (alias for instance)"},
-			"flavor":   {Description: "Flavor definitions"},
-			"hypervisor": {Description: "Hypervisor information"},
-		},
-	},
-	"neutron": {
-		ServiceType: "network",
-		DisplayName: "Neutron",
-		Resources: map[string]ResourceInfo{
-			"security_group":      {Description: "Security groups"},
-			"security_group_rule": {Description: "Security group rules"},
-			"floating_ip":         {Description: "Floating IP addresses"},
-			"network":             {Description: "Networks"},
-			"subnet":              {Description: "Subnets"},
-			"port":                {Description: "Ports"},
-			"router":              {Description: "Routers"},
-			"loadbalancer":        {Description: "Load balancers"},
-			"pool":                {Description: "Load balancer pools"},
-			"member":              {Description: "Load balancer pool members"},
-		},
-	},
-	"cinder": {
-		ServiceType: "volumev3",
-		DisplayName: "Cinder",
-		Resources: map[string]ResourceInfo{
-			"volume":   {Description: "Block storage volumes"},
-			"snapshot": {Description: "Volume snapshots"},
-			"backup":   {Description: "Volume backups"},
-			"qos":      {Description: "Quality of service specifications"},
-		},
-	},
-	"glance": {
-		ServiceType: "image",
-		DisplayName: "Glance",
-		Resources: map[string]ResourceInfo{
-			"image":  {Description: "Images"},
-			"member": {Description: "Image members"},
-		},
-	},
-	"keystone": {
-		ServiceType: "identity",
-		DisplayName: "Keystone",
-		Resources: map[string]ResourceInfo{
-			"user":    {Description: "Users"},
-			"role":    {Description: "Roles"},
-			"project": {Description: "Projects"},
-			"domain":  {Description: "Domains"},
-			"group":   {Description: "Groups"},
-			"service": {Description: "Services"},
-		},
-	},
-	"heat": {
-		ServiceType: "orchestration",
-		DisplayName: "Heat",
-		Resources: map[string]ResourceInfo{
-			"stack":        {Description: "Stacks"},
-			"resource":     {Description: "Stack resources"},
-			"template":     {Description: "Templates"},
-			"snapshot":     {Description: "Stack snapshots"},
-		},
-	},
-	"swift": {
-		ServiceType: "object-store",
-		DisplayName: "Swift",
-		Resources: map[string]ResourceInfo{
-			"container": {Description: "Containers"},
-			"object":    {Description: "Objects"},
-			"account":   {Description: "Accounts"},
-		},
-	},
-	"trove": {
-		ServiceType: "database",
-		DisplayName: "Trove",
-		Resources: map[string]ResourceInfo{
-			"instance": {Description: "Database instances"},
-			"cluster":  {Description: "Database clusters"},
-			"backup":   {Description: "Database backups"},
-			"datastore": {Description: "Datastores"},
-		},
-	},
-	"magnum": {
-		ServiceType: "container-infra",
-		DisplayName: "Magnum",
-		Resources: map[string]ResourceInfo{
-			"cluster":      {Description: "Container clusters"},
-			"cluster_template": {Description: "Cluster templates"},
-			"bay":          {Description: "Bays (deprecated)"},
-			"baymodel":     {Description: "Bay models (deprecated)"},
-		},
-	},
-	"barbican": {
-		ServiceType: "key-manager",
-		DisplayName: "Barbican",
-		Resources: map[string]ResourceInfo{
-			"secret":    {Description: "Secrets"},
-			"container": {Description: "Secret containers"},
-			"order":     {Description: "Orders"},
-		},
-	},
-	"manila": {
-		ServiceType: "sharev2",
-		DisplayName: "Manila",
-		Resources: map[string]ResourceInfo{
-			"share":        {Description: "Shared file systems"},
-			"share_snapshot": {Description: "Share snapshots"},
-			"share_network": {Description: "Share networks"},
-			"share_server":  {Description: "Share servers"},
-		},
-	},
-	"ironic": {
-		ServiceType: "baremetal",
-		DisplayName: "Ironic",
-		Resources: map[string]ResourceInfo{
-			"node":    {Description: "Bare metal nodes"},
-			"port":    {Description: "Node ports"},
-			"driver":  {Description: "Drivers"},
-			"chassis": {Description: "Chassis"},
-		},
-	},
-	"designate": {
-		ServiceType: "dns",
-		DisplayName: "Designate",
-		Resources: map[string]ResourceInfo{
-			"zone":    {Description: "DNS zones"},
-			"recordset": {Description: "DNS recordsets"},
-			"record":  {Description: "DNS records"},
-		},
-	},
-	"octavia": {
-		ServiceType: "load-balancer",
-		DisplayName: "Octavia",
-		Resources: map[string]ResourceInfo{
-			"loadbalancer": {Description: "Load balancers"},
-			"listener":     {Description: "Listeners"},
-			"pool":         {Description: "Pools"},
-			"member":       {Description: "Pool members"},
-			"healthmonitor": {Description: "Health monitors"},
-		},
-	},
-	"senlin": {
-		ServiceType: "clustering",
-		DisplayName: "Senlin",
-		Resources: map[string]ResourceInfo{
-			"cluster":  {Description: "Clusters"},
-			"profile":  {Description: "Profiles"},
-			"node":     {Description: "Nodes"},
-			"policy":   {Description: "Policies"},
-		},
-	},
-	"zaqar": {
-		ServiceType: "messaging",
-		DisplayName: "Zaqar",
-		Resources: map[string]ResourceInfo{
-			"queue":    {Description: "Message queues"},
-			"message":  {Description: "Messages"},
-			"subscription": {Description: "Subscriptions"},
-		},
-	},
+var (
+	registryOnce sync.Once
+	registryErr  error
+	registryData map[string]ServiceInfo
+)
+
+// ServiceDefaults defines default actions/checks for a service.
+type ServiceDefaults struct {
+	Actions []string `yaml:"actions"`
+	Checks  []string `yaml:"checks"`
+}
+
+// DiscoveryMetadata captures discovery characteristics for a resource.
+type DiscoveryMetadata struct {
+	Pagination bool `yaml:"pagination"`
+	AllTenants bool `yaml:"all_tenants"`
+	Regions    bool `yaml:"regions"`
 }
 
 // ServiceInfo contains information about an OpenStack service
 type ServiceInfo struct {
 	ServiceType string
 	DisplayName string
+	Defaults    ServiceDefaults
 	Resources   map[string]ResourceInfo
 }
 
 // ResourceInfo contains information about a resource type
 type ResourceInfo struct {
 	Description string
+	Checks      []string
+	Actions     []string
+	Discovery   DiscoveryMetadata
+}
+
+// ServiceMetadata represents the YAML format for service registry files.
+type ServiceMetadata struct {
+	Name        string                  `yaml:"name"`
+	DisplayName string                  `yaml:"display_name"`
+	ServiceType string                  `yaml:"service_type"`
+	Defaults    ServiceDefaults         `yaml:"defaults"`
+	Resources   map[string]ResourceInfo `yaml:"resources"`
 }
 
 // ValidateService checks if a service exists in OpenStack
 func ValidateService(serviceName string) error {
 	serviceName = strings.ToLower(serviceName)
-	_, exists := OpenStackServiceRegistry[serviceName]
+	if err := ensureLoaded(); err != nil {
+		return err
+	}
+	_, exists := registryData[serviceName]
 	if !exists {
-		available := make([]string, 0, len(OpenStackServiceRegistry))
-		for name := range OpenStackServiceRegistry {
-			available = append(available, name)
-		}
+		available := ListServices()
 		return fmt.Errorf("service %q is not a known OpenStack service. Available services: %v", serviceName, available)
 	}
 	return nil
@@ -203,7 +72,10 @@ func ValidateService(serviceName string) error {
 // ValidateResources checks if resources exist for a given service
 func ValidateResources(serviceName string, resources []string) error {
 	serviceName = strings.ToLower(serviceName)
-	serviceInfo, exists := OpenStackServiceRegistry[serviceName]
+	if err := ensureLoaded(); err != nil {
+		return err
+	}
+	serviceInfo, exists := registryData[serviceName]
 	if !exists {
 		return ValidateService(serviceName)
 	}
@@ -221,7 +93,8 @@ func ValidateResources(serviceName string, resources []string) error {
 		for name := range serviceInfo.Resources {
 			available = append(available, name)
 		}
-		return fmt.Errorf("invalid resources for service %q: %v. Available resources: %v", 
+		sort.Strings(available)
+		return fmt.Errorf("invalid resources for service %q: %v. Available resources: %v",
 			serviceName, invalidResources, available)
 	}
 
@@ -231,7 +104,10 @@ func ValidateResources(serviceName string, resources []string) error {
 // GetServiceInfo returns information about a service
 func GetServiceInfo(serviceName string) (ServiceInfo, error) {
 	serviceName = strings.ToLower(serviceName)
-	info, exists := OpenStackServiceRegistry[serviceName]
+	if err := ensureLoaded(); err != nil {
+		return ServiceInfo{}, err
+	}
+	info, exists := registryData[serviceName]
 	if !exists {
 		return ServiceInfo{}, fmt.Errorf("service %q not found", serviceName)
 	}
@@ -258,25 +134,144 @@ func GetDisplayName(serviceName string) (string, error) {
 
 // ListServices returns all available OpenStack services
 func ListServices() []string {
-	services := make([]string, 0, len(OpenStackServiceRegistry))
-	for name := range OpenStackServiceRegistry {
+	if err := ensureLoaded(); err != nil {
+		return nil
+	}
+	services := make([]string, 0, len(registryData))
+	for name := range registryData {
 		services = append(services, name)
 	}
+	sort.Strings(services)
 	return services
 }
 
 // ListResources returns all available resources for a service
 func ListResources(serviceName string) ([]string, error) {
 	serviceName = strings.ToLower(serviceName)
-	serviceInfo, exists := OpenStackServiceRegistry[serviceName]
+	if err := ensureLoaded(); err != nil {
+		return nil, err
+	}
+	serviceInfo, exists := registryData[serviceName]
 	if !exists {
 		return nil, fmt.Errorf("service %q not found", serviceName)
 	}
-	
+
 	resources := make([]string, 0, len(serviceInfo.Resources))
 	for name := range serviceInfo.Resources {
 		resources = append(resources, name)
 	}
+	sort.Strings(resources)
 	return resources, nil
 }
 
+func ensureLoaded() error {
+	registryOnce.Do(func() {
+		registryData, registryErr = loadRegistry()
+	})
+	return registryErr
+}
+
+func loadRegistry() (map[string]ServiceInfo, error) {
+	dir, err := findRegistryDir()
+	if err != nil {
+		return nil, err
+	}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, fmt.Errorf("reading registry dir: %w", err)
+	}
+
+	registry := make(map[string]ServiceInfo)
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		if !strings.HasSuffix(name, ".yaml") && !strings.HasSuffix(name, ".yml") {
+			continue
+		}
+
+		path := filepath.Join(dir, name)
+		content, err := os.ReadFile(path)
+		if err != nil {
+			return nil, fmt.Errorf("reading registry file %q: %w", name, err)
+		}
+
+		var meta ServiceMetadata
+		if err := yaml.Unmarshal(content, &meta); err != nil {
+			return nil, fmt.Errorf("parsing registry file %q: %w", name, err)
+		}
+
+		if meta.Name == "" {
+			meta.Name = strings.TrimSuffix(name, filepath.Ext(name))
+		}
+		meta.Name = strings.ToLower(strings.TrimSpace(meta.Name))
+		if meta.Name == "" {
+			return nil, fmt.Errorf("registry file %q missing service name", name)
+		}
+		if meta.DisplayName == "" || meta.ServiceType == "" {
+			return nil, fmt.Errorf("registry file %q missing display_name or service_type", name)
+		}
+		if len(meta.Resources) == 0 {
+			return nil, fmt.Errorf("registry file %q has no resources", name)
+		}
+
+		for resName, resInfo := range meta.Resources {
+			if resName == "" {
+				return nil, fmt.Errorf("registry file %q has empty resource name", name)
+			}
+			if resInfo.Description == "" {
+				return nil, fmt.Errorf("registry file %q resource %q missing description", name, resName)
+			}
+			if len(resInfo.Actions) == 0 && len(meta.Defaults.Actions) > 0 {
+				resInfo.Actions = append([]string{}, meta.Defaults.Actions...)
+			}
+			if len(resInfo.Checks) == 0 && len(meta.Defaults.Checks) > 0 {
+				resInfo.Checks = append([]string{}, meta.Defaults.Checks...)
+			}
+			meta.Resources[resName] = resInfo
+		}
+
+		registry[meta.Name] = ServiceInfo{
+			ServiceType: meta.ServiceType,
+			DisplayName: meta.DisplayName,
+			Defaults:    meta.Defaults,
+			Resources:   meta.Resources,
+		}
+	}
+
+	if len(registry) == 0 {
+		return nil, fmt.Errorf("no registry files found in %s", dir)
+	}
+	return registry, nil
+}
+
+func findRegistryDir() (string, error) {
+	if env := strings.TrimSpace(os.Getenv("OSPA_SCAFFOLD_REGISTRY_PATH")); env != "" {
+		if info, err := os.Stat(env); err == nil && info.IsDir() {
+			return env, nil
+		}
+		return "", fmt.Errorf("registry path %q is not a directory", env)
+	}
+
+	wd, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("get working directory: %w", err)
+	}
+
+	dir := wd
+	for i := 0; i < 6; i++ {
+		candidate := filepath.Join(dir, "cmd", "scaffold", "internal", "registry", "config")
+		if info, err := os.Stat(candidate); err == nil && info.IsDir() {
+			return candidate, nil
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
+	}
+
+	return "", fmt.Errorf("unable to locate scaffold registry directory (set OSPA_SCAFFOLD_REGISTRY_PATH)")
+}

@@ -6,12 +6,7 @@ import (
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/policy"
 )
 
-// NovaValidator validates Nova service policies
-//
-// TODO(OSPA): Tighten validation rules for nova over time:
-// - Require at least one check condition per rule
-// - Validate supported check fields per resource
-// - Validate allowed enum values (status/protocol/ethertype/etc.)
+// NovaValidator validates Nova service policies.
 type NovaValidator struct{}
 
 func init() {
@@ -26,16 +21,14 @@ func (v *NovaValidator) ValidateResource(check *policy.CheckConditions, resource
 	switch resourceType {
 
 	case "instance":
-		// Placeholder validation: accept any checks for now.
-		// TODO(OSPA): Add real validation for nova/instance.
-		_ = check
-
+		if err := validateAllowedChecks(check, []string{"status", "age_gt", "unused", "exempt_names", "image_name"}); err != nil {
+			return fmt.Errorf("rule %q: %w", ruleName, err)
+		}
 
 	case "keypair":
-		// Placeholder validation: accept any checks for now.
-		// TODO(OSPA): Add real validation for nova/keypair.
-		_ = check
-
+		if err := validateAllowedChecks(check, []string{"age_gt", "unused", "exempt_names"}); err != nil {
+			return fmt.Errorf("rule %q: %w", ruleName, err)
+		}
 
 	default:
 		return fmt.Errorf("rule %q: unsupported resource type %q for nova service", ruleName, resourceType)

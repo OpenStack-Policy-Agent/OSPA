@@ -44,27 +44,27 @@ type Finding struct {
 	Action            string `json:"action,omitempty"`
 	Error             string `json:"error,omitempty"`
 
-	RemediationAttempted bool   `json:"remediation_attempted,omitempty"`
-	Remediated           bool   `json:"remediated,omitempty"`
-	RemediationError     string `json:"remediation_error,omitempty"`
-	RemediationErrorKind string `json:"remediation_error_kind,omitempty"`
-	RemediationSkipped   bool   `json:"remediation_skipped,omitempty"`
+	RemediationAttempted  bool   `json:"remediation_attempted,omitempty"`
+	Remediated            bool   `json:"remediated,omitempty"`
+	RemediationError      string `json:"remediation_error,omitempty"`
+	RemediationErrorKind  string `json:"remediation_error_kind,omitempty"`
+	RemediationSkipped    bool   `json:"remediation_skipped,omitempty"`
 	RemediationSkipReason string `json:"remediation_skip_reason,omitempty"`
 }
 
 func (w *JSONLWriter) WriteResult(r *audit.Result) error {
 	f := Finding{
-		RuleID:            r.RuleID,
-		ResourceID:        r.ResourceID,
-		ResourceName:      r.ResourceName,
-		ProjectID:         r.ProjectID,
-		Status:            r.Status,
-		Compliant:         r.Compliant,
-		Observation:       r.Observation,
-		RemediationSkipped: r.RemediationSkipped,
+		RuleID:                r.RuleID,
+		ResourceID:            r.ResourceID,
+		ResourceName:          r.ResourceName,
+		ProjectID:             r.ProjectID,
+		Status:                r.Status,
+		Compliant:             r.Compliant,
+		Observation:           r.Observation,
+		RemediationSkipped:    r.RemediationSkipped,
 		RemediationSkipReason: r.RemediationSkipReason,
-		RemediationAttempted: r.RemediationAttempted,
-		Remediated:           r.Remediated,
+		RemediationAttempted:  r.RemediationAttempted,
+		Remediated:            r.Remediated,
 	}
 
 	if r.Rule != nil {

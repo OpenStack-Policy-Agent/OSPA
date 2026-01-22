@@ -14,4 +14,3 @@ type Discoverer interface {
 	// ResourceType returns the resource type this discoverer handles
 	ResourceType() string
 }
-

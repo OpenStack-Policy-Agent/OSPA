@@ -15,5 +15,3 @@ func TestValidatorRegistry_HasBuiltins(t *testing.T) {
 		}
 	}
 }
-
-

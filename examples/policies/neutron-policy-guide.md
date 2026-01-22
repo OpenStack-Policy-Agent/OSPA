@@ -11,19 +11,28 @@ This guide explains how to write policies for Neutron resources in OSPA.
 ## Supported Resources
 
 
-### Security_group_rule
+### SecurityGroup
+
+**Resource Type:** `security_group`
+
+**Allowed Actions:** log, delete, tag
+**Allowed Checks:** status, age_gt, unused, exempt_names
+
+
+### SecurityGroupRule
 
 **Resource Type:** `security_group_rule`
 
+**Allowed Actions:** log, delete, tag
+**Allowed Checks:** status, age_gt, unused, exempt_names
 
-### Floating_ip
+
+### FloatingIp
 
 **Resource Type:** `floating_ip`
 
-
-### Security_group
-
-**Resource Type:** `security_group`
+**Allowed Actions:** log, delete, tag
+**Allowed Checks:** status, age_gt, unused, exempt_names
 
 
 
@@ -211,119 +220,9 @@ action_tag_name: "Display Name for Tag"
 ## Resource-Specific Examples
 
 
-### Security_group_rule Examples
+### SecurityGroup Examples
 
-#### Example 1: Find Inactive Security_group_rule Resources
-
-```yaml
-- name: find-inactive-security_group_rule
-  description: Find inactive security_group_rule resources
-  service: neutron
-  resource: security_group_rule
-  check:
-    status: inactive
-  action: log
-```
-
-#### Example 2: Find Old Security_group_rule Resources
-
-```yaml
-- name: find-old-security_group_rule
-  description: Find security_group_rule resources older than 30 days
-  service: neutron
-  resource: security_group_rule
-  check:
-    age_gt: 30d
-  action: log
-```
-
-#### Example 3: Cleanup Unused Security_group_rule Resources
-
-```yaml
-- name: cleanup-unused-security_group_rule
-  description: Delete unused security_group_rule resources
-  service: neutron
-  resource: security_group_rule
-  check:
-    unused: true
-    exempt_names:
-      - default
-  action: delete
-```
-
-#### Example 4: Tag Old Security_group_rule Resources
-
-```yaml
-- name: tag-old-security_group_rule
-  description: Tag security_group_rule resources older than 7 days
-  service: neutron
-  resource: security_group_rule
-  check:
-    age_gt: 7d
-  action: tag
-  tag_name: audit-old-security_group_rule
-  action_tag_name: "Old Security_group_rule"
-```
-
-
-### Floating_ip Examples
-
-#### Example 1: Find Inactive Floating_ip Resources
-
-```yaml
-- name: find-inactive-floating_ip
-  description: Find inactive floating_ip resources
-  service: neutron
-  resource: floating_ip
-  check:
-    status: inactive
-  action: log
-```
-
-#### Example 2: Find Old Floating_ip Resources
-
-```yaml
-- name: find-old-floating_ip
-  description: Find floating_ip resources older than 30 days
-  service: neutron
-  resource: floating_ip
-  check:
-    age_gt: 30d
-  action: log
-```
-
-#### Example 3: Cleanup Unused Floating_ip Resources
-
-```yaml
-- name: cleanup-unused-floating_ip
-  description: Delete unused floating_ip resources
-  service: neutron
-  resource: floating_ip
-  check:
-    unused: true
-    exempt_names:
-      - default
-  action: delete
-```
-
-#### Example 4: Tag Old Floating_ip Resources
-
-```yaml
-- name: tag-old-floating_ip
-  description: Tag floating_ip resources older than 7 days
-  service: neutron
-  resource: floating_ip
-  check:
-    age_gt: 7d
-  action: tag
-  tag_name: audit-old-floating_ip
-  action_tag_name: "Old Floating_ip"
-```
-
-
-### Security_group Examples
-
-#### Example 1: Find Inactive Security_group Resources
+#### Example 1: Find Inactive SecurityGroup Resources
 
 ```yaml
 - name: find-inactive-security_group
@@ -335,7 +234,7 @@ action_tag_name: "Display Name for Tag"
   action: log
 ```
 
-#### Example 2: Find Old Security_group Resources
+#### Example 2: Find Old SecurityGroup Resources
 
 ```yaml
 - name: find-old-security_group
@@ -347,7 +246,7 @@ action_tag_name: "Display Name for Tag"
   action: log
 ```
 
-#### Example 3: Cleanup Unused Security_group Resources
+#### Example 3: Cleanup Unused SecurityGroup Resources
 
 ```yaml
 - name: cleanup-unused-security_group
@@ -361,7 +260,7 @@ action_tag_name: "Display Name for Tag"
   action: delete
 ```
 
-#### Example 4: Tag Old Security_group Resources
+#### Example 4: Tag Old SecurityGroup Resources
 
 ```yaml
 - name: tag-old-security_group
@@ -372,7 +271,117 @@ action_tag_name: "Display Name for Tag"
     age_gt: 7d
   action: tag
   tag_name: audit-old-security_group
-  action_tag_name: "Old Security_group"
+  action_tag_name: "Old SecurityGroup"
+```
+
+
+### SecurityGroupRule Examples
+
+#### Example 1: Find Inactive SecurityGroupRule Resources
+
+```yaml
+- name: find-inactive-security_group_rule
+  description: Find inactive security_group_rule resources
+  service: neutron
+  resource: security_group_rule
+  check:
+    status: inactive
+  action: log
+```
+
+#### Example 2: Find Old SecurityGroupRule Resources
+
+```yaml
+- name: find-old-security_group_rule
+  description: Find security_group_rule resources older than 30 days
+  service: neutron
+  resource: security_group_rule
+  check:
+    age_gt: 30d
+  action: log
+```
+
+#### Example 3: Cleanup Unused SecurityGroupRule Resources
+
+```yaml
+- name: cleanup-unused-security_group_rule
+  description: Delete unused security_group_rule resources
+  service: neutron
+  resource: security_group_rule
+  check:
+    unused: true
+    exempt_names:
+      - default
+  action: delete
+```
+
+#### Example 4: Tag Old SecurityGroupRule Resources
+
+```yaml
+- name: tag-old-security_group_rule
+  description: Tag security_group_rule resources older than 7 days
+  service: neutron
+  resource: security_group_rule
+  check:
+    age_gt: 7d
+  action: tag
+  tag_name: audit-old-security_group_rule
+  action_tag_name: "Old SecurityGroupRule"
+```
+
+
+### FloatingIp Examples
+
+#### Example 1: Find Inactive FloatingIp Resources
+
+```yaml
+- name: find-inactive-floating_ip
+  description: Find inactive floating_ip resources
+  service: neutron
+  resource: floating_ip
+  check:
+    status: inactive
+  action: log
+```
+
+#### Example 2: Find Old FloatingIp Resources
+
+```yaml
+- name: find-old-floating_ip
+  description: Find floating_ip resources older than 30 days
+  service: neutron
+  resource: floating_ip
+  check:
+    age_gt: 30d
+  action: log
+```
+
+#### Example 3: Cleanup Unused FloatingIp Resources
+
+```yaml
+- name: cleanup-unused-floating_ip
+  description: Delete unused floating_ip resources
+  service: neutron
+  resource: floating_ip
+  check:
+    unused: true
+    exempt_names:
+      - default
+  action: delete
+```
+
+#### Example 4: Tag Old FloatingIp Resources
+
+```yaml
+- name: tag-old-floating_ip
+  description: Tag floating_ip resources older than 7 days
+  service: neutron
+  resource: floating_ip
+  check:
+    age_gt: 7d
+  action: tag
+  tag_name: audit-old-floating_ip
+  action_tag_name: "Old FloatingIp"
 ```
 
 
@@ -388,6 +397,22 @@ defaults:
   output: findings.jsonl
 policies:
   - neutron:
+    - name: audit-security_group
+      description: Audit security_group resources
+      service: neutron
+      resource: security_group
+      check:
+        status: active
+      action: log
+    - name: cleanup-old-security_group
+      description: Find security_group resources older than 90 days
+      service: neutron
+      resource: security_group
+      check:
+        age_gt: 90d
+        exempt_names:
+          - default
+      action: log
     - name: audit-security_group_rule
       description: Audit security_group_rule resources
       service: neutron
@@ -415,22 +440,6 @@ policies:
       description: Find floating_ip resources older than 90 days
       service: neutron
       resource: floating_ip
-      check:
-        age_gt: 90d
-        exempt_names:
-          - default
-      action: log
-    - name: audit-security_group
-      description: Audit security_group resources
-      service: neutron
-      resource: security_group
-      check:
-        status: active
-      action: log
-    - name: cleanup-old-security_group
-      description: Find security_group resources older than 90 days
-      service: neutron
-      resource: security_group
       check:
         age_gt: 90d
         exempt_names:
@@ -474,7 +483,7 @@ For more information about Neutron resources and their properties:
 
 **Policy validation fails:**
 - Ensure service name matches exactly: `neutron`
-- Verify resource type is supported: `security_group_rule`, `floating_ip`, `security_group`
+- Verify resource type is supported: `{security_group Security groups [status age_gt unused exempt_names] [log delete tag] {false false false}}`, `{security_group_rule Security group rules [status age_gt unused exempt_names] [log delete tag] {false false false}}`, `{floating_ip Floating IP addresses [status age_gt unused exempt_names] [log delete tag] {false false false}}`
 - Check YAML syntax is correct
 
 **No resources found:**

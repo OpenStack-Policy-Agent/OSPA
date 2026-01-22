@@ -64,10 +64,46 @@ func Load(path string) (*Policy, error) {
 		}
 	}
 
+	// Handle the service-keyed structure in composites
+	// The YAML has composites as an array of maps where each map has one service key
+	if compositesRaw, ok := raw["composites"].([]interface{}); ok {
+		var compositePolicies []CompositeServicePolicy
+		for _, compositeRaw := range compositesRaw {
+			if compositeMap, ok := compositeRaw.(map[interface{}]interface{}); ok {
+				for serviceName, rulesRaw := range compositeMap {
+					serviceStr := fmt.Sprintf("%v", serviceName)
+					if rulesList, ok := rulesRaw.([]interface{}); ok {
+						var rules []CompositeRule
+						for _, ruleRaw := range rulesList {
+							ruleBytes, err := yaml.Marshal(ruleRaw)
+							if err != nil {
+								continue
+							}
+							var rule CompositeRule
+							if err := yaml.Unmarshal(ruleBytes, &rule); err != nil {
+								continue
+							}
+							if rule.Service == "" {
+								rule.Service = serviceStr
+							}
+							rules = append(rules, rule)
+						}
+						compositePolicies = append(compositePolicies, CompositeServicePolicy{
+							Service: serviceStr,
+							Rules:   rules,
+						})
+					}
+				}
+			}
+		}
+		if len(compositePolicies) > 0 {
+			p.Composites = compositePolicies
+		}
+	}
+
 	if err := p.Validate(); err != nil {
 		return nil, err
 	}
 
 	return &p, nil
 }
-

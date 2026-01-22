@@ -5,90 +5,133 @@ import (
 
 	discovery "github.com/OpenStack-Policy-Agent/OSPA/pkg/discovery"
 	"github.com/gophercloud/gophercloud"
+	// TODO: Import the correct gophercloud package for neutron.
+	// Example for Nova: "github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
+	// See: https://pkg.go.dev/github.com/gophercloud/gophercloud/openstack
 )
 
-
-// NeutronSecurityGroupRuleDiscoverer discovers neutron resources of type security_group_rule.
-// Placeholder implementation: returns no jobs. Fill in real OpenStack calls later.
+// NeutronSecurityGroupDiscoverer discovers neutron/security_group resources.
 //
-// TODO(OSPA): Implement discovery by listing neutron security_group_rule resources from OpenStack:
-// - Call the appropriate gophercloud API
-// - Handle pagination
-// - Emit discovery.Job{Service, ResourceType, ResourceID, ProjectID, Resource}
-// - Respect allTenants where applicable
-type NeutronSecurityGroupRuleDiscoverer struct{}
-
-// ResourceType returns the resource type this discoverer handles
-func (d *NeutronSecurityGroupRuleDiscoverer) ResourceType() string {
-	return "security_group_rule"
-}
-
-// Discover discovers resources and sends them to the returned channel
-func (d *NeutronSecurityGroupRuleDiscoverer) Discover(ctx context.Context, client *gophercloud.ServiceClient, allTenants bool) (<-chan discovery.Job, error) {
-	_ = ctx
-	_ = client
-	_ = allTenants
-
-	// TODO(OSPA): Replace this placeholder with real discovery logic.
-	ch := make(chan discovery.Job)
-	close(ch)
-	return ch, nil
-}
-
-
-// NeutronFloatingIpDiscoverer discovers neutron resources of type floating_ip.
-// Placeholder implementation: returns no jobs. Fill in real OpenStack calls later.
+// TODO: Implement Discover() using gophercloud to list security_group resources.
+// Gophercloud docs: https://pkg.go.dev/github.com/gophercloud/gophercloud/openstack
+// OpenStack API: https://docs.openstack.org/api-ref/neutron
 //
-// TODO(OSPA): Implement discovery by listing neutron floating_ip resources from OpenStack:
-// - Call the appropriate gophercloud API
-// - Handle pagination
-// - Emit discovery.Job{Service, ResourceType, ResourceID, ProjectID, Resource}
-// - Respect allTenants where applicable
-type NeutronFloatingIpDiscoverer struct{}
-
-// ResourceType returns the resource type this discoverer handles
-func (d *NeutronFloatingIpDiscoverer) ResourceType() string {
-	return "floating_ip"
-}
-
-// Discover discovers resources and sends them to the returned channel
-func (d *NeutronFloatingIpDiscoverer) Discover(ctx context.Context, client *gophercloud.ServiceClient, allTenants bool) (<-chan discovery.Job, error) {
-	_ = ctx
-	_ = client
-	_ = allTenants
-
-	// TODO(OSPA): Replace this placeholder with real discovery logic.
-	ch := make(chan discovery.Job)
-	close(ch)
-	return ch, nil
-}
-
-
-// NeutronSecurityGroupDiscoverer discovers neutron resources of type security_group.
-// Placeholder implementation: returns no jobs. Fill in real OpenStack calls later.
+// Discovery hints from registry:
 //
-// TODO(OSPA): Implement discovery by listing neutron security_group resources from OpenStack:
-// - Call the appropriate gophercloud API
-// - Handle pagination
-// - Emit discovery.Job{Service, ResourceType, ResourceID, ProjectID, Resource}
-// - Respect allTenants where applicable
+//	pagination: false
+//	all_tenants: false
+//	regions: false
 type NeutronSecurityGroupDiscoverer struct{}
 
-// ResourceType returns the resource type this discoverer handles
 func (d *NeutronSecurityGroupDiscoverer) ResourceType() string {
 	return "security_group"
 }
 
-// Discover discovers resources and sends them to the returned channel
 func (d *NeutronSecurityGroupDiscoverer) Discover(ctx context.Context, client *gophercloud.ServiceClient, allTenants bool) (<-chan discovery.Job, error) {
-	_ = ctx
-	_ = client
-	_ = allTenants
-
-	// TODO(OSPA): Replace this placeholder with real discovery logic.
 	ch := make(chan discovery.Job)
-	close(ch)
+
+	go func() {
+		defer close(ch)
+
+		// TODO: List security_group resources using gophercloud and send jobs.
+		// Example pattern:
+		//   pages, err := <resource>.List(client, <opts>).AllPages()
+		//   resources, err := <resource>.ExtractResources(pages)
+		//   for _, r := range resources {
+		//       select {
+		//       case <-ctx.Done():
+		//           return
+		//       case ch <- discovery.Job{Service: "neutron", ResourceType: "security_group", ResourceID: r.ID, ProjectID: r.TenantID, Resource: r}:
+		//       }
+		//   }
+		_ = ctx
+		_ = client
+		_ = allTenants
+	}()
+
 	return ch, nil
 }
 
+// NeutronSecurityGroupRuleDiscoverer discovers neutron/security_group_rule resources.
+//
+// TODO: Implement Discover() using gophercloud to list security_group_rule resources.
+// Gophercloud docs: https://pkg.go.dev/github.com/gophercloud/gophercloud/openstack
+// OpenStack API: https://docs.openstack.org/api-ref/neutron
+//
+// Discovery hints from registry:
+//
+//	pagination: false
+//	all_tenants: false
+//	regions: false
+type NeutronSecurityGroupRuleDiscoverer struct{}
 
+func (d *NeutronSecurityGroupRuleDiscoverer) ResourceType() string {
+	return "security_group_rule"
+}
+
+func (d *NeutronSecurityGroupRuleDiscoverer) Discover(ctx context.Context, client *gophercloud.ServiceClient, allTenants bool) (<-chan discovery.Job, error) {
+	ch := make(chan discovery.Job)
+
+	go func() {
+		defer close(ch)
+
+		// TODO: List security_group_rule resources using gophercloud and send jobs.
+		// Example pattern:
+		//   pages, err := <resource>.List(client, <opts>).AllPages()
+		//   resources, err := <resource>.ExtractResources(pages)
+		//   for _, r := range resources {
+		//       select {
+		//       case <-ctx.Done():
+		//           return
+		//       case ch <- discovery.Job{Service: "neutron", ResourceType: "security_group_rule", ResourceID: r.ID, ProjectID: r.TenantID, Resource: r}:
+		//       }
+		//   }
+		_ = ctx
+		_ = client
+		_ = allTenants
+	}()
+
+	return ch, nil
+}
+
+// NeutronFloatingIpDiscoverer discovers neutron/floating_ip resources.
+//
+// TODO: Implement Discover() using gophercloud to list floating_ip resources.
+// Gophercloud docs: https://pkg.go.dev/github.com/gophercloud/gophercloud/openstack
+// OpenStack API: https://docs.openstack.org/api-ref/neutron
+//
+// Discovery hints from registry:
+//
+//	pagination: false
+//	all_tenants: false
+//	regions: false
+type NeutronFloatingIpDiscoverer struct{}
+
+func (d *NeutronFloatingIpDiscoverer) ResourceType() string {
+	return "floating_ip"
+}
+
+func (d *NeutronFloatingIpDiscoverer) Discover(ctx context.Context, client *gophercloud.ServiceClient, allTenants bool) (<-chan discovery.Job, error) {
+	ch := make(chan discovery.Job)
+
+	go func() {
+		defer close(ch)
+
+		// TODO: List floating_ip resources using gophercloud and send jobs.
+		// Example pattern:
+		//   pages, err := <resource>.List(client, <opts>).AllPages()
+		//   resources, err := <resource>.ExtractResources(pages)
+		//   for _, r := range resources {
+		//       select {
+		//       case <-ctx.Done():
+		//           return
+		//       case ch <- discovery.Job{Service: "neutron", ResourceType: "floating_ip", ResourceID: r.ID, ProjectID: r.TenantID, Resource: r}:
+		//       }
+		//   }
+		_ = ctx
+		_ = client
+		_ = allTenants
+	}()
+
+	return ch, nil
+}

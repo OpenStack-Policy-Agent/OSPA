@@ -21,4 +21,3 @@ type Service interface {
 	// GetResourceDiscoverer returns a discoverer for the given resource type
 	GetResourceDiscoverer(resourceType string) (discovery.Discoverer, error)
 }
-

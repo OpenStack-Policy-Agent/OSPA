@@ -60,3 +60,10 @@ func ToPascal(s string) string {
 	return strings.Join(parts, "")
 }
 
+// JoinOrNone returns a comma-separated string or "none" when empty.
+func JoinOrNone(values []string) string {
+	if len(values) == 0 {
+		return "none"
+	}
+	return strings.Join(values, ", ")
+}

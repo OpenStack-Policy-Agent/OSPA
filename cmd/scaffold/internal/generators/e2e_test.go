@@ -22,7 +22,7 @@ func TestGenerateE2ETest_NewFile(t *testing.T) {
 	}
 
 	resources := []string{"resource1", "resource2"}
-	err = GenerateE2ETest(tmpDir, "testservice", "TestService", resources, false)
+	err = GenerateE2ETest(tmpDir, "testservice", "TestService", resources)
 	if err != nil {
 		t.Fatalf("GenerateE2ETest() = %v, want nil", err)
 	}
@@ -113,7 +113,7 @@ func TestTestService_Resource1Audit(t *testing.T) {
 
 	// Try to generate with existing resource and new resource
 	resources := []string{"resource1", "resource2"}
-	err = GenerateE2ETest(tmpDir, "testservice", "TestService", resources, false)
+	err = GenerateE2ETest(tmpDir, "testservice", "TestService", resources)
 	if err != nil {
 		t.Fatalf("GenerateE2ETest() = %v, want nil", err)
 	}
@@ -158,7 +158,7 @@ func TestGenerateE2ETest_ExistingFile_Force(t *testing.T) {
 
 	// Generate with force
 	resources := []string{"resource1"}
-	err = GenerateE2ETest(tmpDir, "testservice", "TestService", resources, true)
+	err = GenerateE2ETest(tmpDir, "testservice", "TestService", resources)
 	if err != nil {
 		t.Fatalf("GenerateE2ETest() = %v, want nil", err)
 	}
@@ -206,7 +206,7 @@ func TestTestService_Resource1Audit(t *testing.T) {
 
 	// Try to generate with only resource1 (already exists)
 	resources := []string{"resource1"}
-	err = GenerateE2ETest(tmpDir, "testservice", "TestService", resources, false)
+	err = GenerateE2ETest(tmpDir, "testservice", "TestService", resources)
 	if err != nil {
 		t.Fatalf("GenerateE2ETest() = %v, want nil", err)
 	}
@@ -237,7 +237,7 @@ func TestGenerateE2ETest_MultipleResources(t *testing.T) {
 	}
 
 	resources := []string{"resource1", "resource2", "resource3"}
-	err = GenerateE2ETest(tmpDir, "testservice", "TestService", resources, false)
+	err = GenerateE2ETest(tmpDir, "testservice", "TestService", resources)
 	if err != nil {
 		t.Fatalf("GenerateE2ETest() = %v, want nil", err)
 	}
@@ -270,7 +270,7 @@ func TestGenerateE2ETest_GoSyntax(t *testing.T) {
 	}
 
 	resources := []string{"resource1", "resource2"}
-	err = GenerateE2ETest(tmpDir, "testservice", "TestService", resources, false)
+	err = GenerateE2ETest(tmpDir, "testservice", "TestService", resources)
 	if err != nil {
 		t.Fatalf("GenerateE2ETest() = %v, want nil", err)
 	}
@@ -288,4 +288,3 @@ func TestGenerateE2ETest_GoSyntax(t *testing.T) {
 		t.Errorf("Generated file has invalid Go syntax: %v", err)
 	}
 }
-

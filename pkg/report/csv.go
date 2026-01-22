@@ -10,7 +10,7 @@ import (
 
 // CSVWriter writes CSV findings for non-compliant resources and errors.
 type CSVWriter struct {
-	writer     *csv.Writer
+	writer      *csv.Writer
 	wroteHeader bool
 }
 
@@ -117,4 +117,3 @@ func boolToString(v bool) string {
 	}
 	return "false"
 }
-

@@ -150,4 +150,3 @@ func StartServer(addr string) error {
 	mux.Handle("/metrics", promhttp.Handler())
 	return http.ListenAndServe(addr, mux)
 }
-

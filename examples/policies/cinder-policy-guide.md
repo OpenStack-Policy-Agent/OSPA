@@ -15,10 +15,16 @@ This guide explains how to write policies for Cinder resources in OSPA.
 
 **Resource Type:** `volume`
 
+**Allowed Actions:** log, delete, tag
+**Allowed Checks:** status, age_gt, unused, exempt_names
+
 
 ### Snapshot
 
 **Resource Type:** `snapshot`
+
+**Allowed Actions:** log, delete, tag
+**Allowed Checks:** status, age_gt, unused, exempt_names
 
 
 
@@ -398,7 +404,7 @@ For more information about Cinder resources and their properties:
 
 **Policy validation fails:**
 - Ensure service name matches exactly: `cinder`
-- Verify resource type is supported: `volume`, `snapshot`
+- Verify resource type is supported: `{volume Block storage volumes [status age_gt unused exempt_names] [log delete tag] {false false false}}`, `{snapshot Volume snapshots [status age_gt unused exempt_names] [log delete tag] {false false false}}`
 - Check YAML syntax is correct
 
 **No resources found:**

@@ -11,11 +11,8 @@ import (
 )
 
 var (
-	serviceName = flag.String("service", "", "Service name (e.g., glance, keystone)")
-	displayName = flag.String("display-name", "", "Display name for the service (e.g., Glance, Keystone)")
-	resources   = flag.String("resources", "", "Comma-separated list of resource types (e.g., image,member)")
-	serviceType = flag.String("type", "", "OpenStack service type for client (e.g., image, identity)")
-	force       = flag.Bool("force", false, "Overwrite existing files")
+	serviceName = flag.String("service", "", "Service name (e.g., nova, neutron, cinder)")
+	resources   = flag.String("resources", "", "Comma-separated list of resource types (e.g., instance,keypair)")
 	list        = flag.Bool("list", false, "List all available OpenStack services and resources")
 )
 
@@ -30,11 +27,11 @@ func main() {
 
 	if *serviceName == "" {
 		fmt.Fprintf(os.Stderr, "Error: --service is required\n")
-		fmt.Fprintf(os.Stderr, "Usage: %s --service <name> [options]\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage: %s --service <name> --resources <list>\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "\nOptions:\n")
 		flag.PrintDefaults()
 		fmt.Fprintf(os.Stderr, "\nExample:\n")
-		fmt.Fprintf(os.Stderr, "  %s --service glance --display-name Glance --resources image,member --type image\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  %s --service nova --resources instance,keypair\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "\nList available services:\n")
 		fmt.Fprintf(os.Stderr, "  %s --list\n", os.Args[0])
 		os.Exit(1)
@@ -43,26 +40,18 @@ func main() {
 	// Normalize service name
 	serviceNameLower := strings.ToLower(*serviceName)
 
-	// Validate service exists in OpenStack
+	// Validate service exists in registry
 	if err := registry.ValidateService(serviceNameLower); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		fmt.Fprintf(os.Stderr, "\nUse --list to see all available services\n")
 		os.Exit(1)
 	}
 
-	// Get service info for defaults
+	// Get service info from registry (provides display name, service type, etc.)
 	serviceInfo, err := registry.GetServiceInfo(serviceNameLower)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
-	}
-
-	// Set defaults from registry if not provided
-	if *displayName == "" {
-		*displayName = serviceInfo.DisplayName
-	}
-	if *serviceType == "" {
-		*serviceType = serviceInfo.ServiceType
 	}
 
 	// Parse resources
@@ -89,38 +78,29 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Analyze existing service
-	analysis, err := generators.AnalyzeService(".", serviceNameLower, resourceList)
-	if err == nil && analysis.ServiceExists {
-		// Service exists - show what will be updated
-		if len(analysis.MissingResources) > 0 {
-			fmt.Printf("Service '%s' already exists. Adding new resources: %v\n", serviceNameLower, analysis.MissingResources)
-			if len(analysis.ExistingResources) > 0 {
-				fmt.Printf("Existing resources: %v\n", analysis.ExistingResources)
-			}
-		} else {
-			fmt.Printf("Service '%s' already exists with all requested resources.\n", serviceNameLower)
-			if len(analysis.MissingFiles) > 0 {
-				fmt.Printf("Generating missing files: %v\n", analysis.MissingFiles)
-			} else {
-				fmt.Println("All files already exist. Use --force to overwrite.")
-				return
-			}
-		}
-	}
-
-	// Generate files
-	if err := generators.GenerateService(serviceNameLower, *displayName, *serviceType, resourceList, *force); err != nil {
+	// Generate files (always overwrites existing files)
+	if err := generators.GenerateService(serviceNameLower, serviceInfo.DisplayName, serviceInfo.ServiceType, resourceList); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 
-	fmt.Printf("✓ Successfully generated/updated files for service '%s'\n", serviceNameLower)
-	fmt.Printf("\nNext steps:\n")
-	fmt.Printf("1. Review and customize the generated files\n")
-	fmt.Printf("2. Test with: go test ./pkg/audit/%s/...\n", serviceNameLower)
-	fmt.Printf("3. Run e2e tests: go test -tags=e2e ./e2e/%s_test.go\n", serviceNameLower)
-	fmt.Printf("4. Review policy guide: examples/policies/%s-policy-guide.md\n", serviceNameLower)
+	fmt.Printf("✓ Successfully generated files for service '%s'\n", serviceNameLower)
+	fmt.Println()
+	fmt.Println("Next steps:")
+	fmt.Println("───────────────────────────────────────────────────────────────────────")
+	fmt.Printf("1. Update checks in cmd/scaffold/internal/registry/config/%s.yaml\n", serviceNameLower)
+	fmt.Println("   to match what the OpenStack API actually supports for each resource.")
+	fmt.Println()
+	fmt.Println("2. Implement the generated discoverers in:")
+	fmt.Printf("   pkg/discovery/services/%s.go\n", serviceNameLower)
+	fmt.Println("   using gophercloud. See: https://pkg.go.dev/github.com/gophercloud/gophercloud")
+	fmt.Println()
+	fmt.Println("3. Implement the generated auditors in:")
+	fmt.Printf("   pkg/audit/%s/\n", serviceNameLower)
+	fmt.Println("   with real field extraction and check logic.")
+	fmt.Println()
+	fmt.Printf("4. Run tests: go test ./pkg/audit/%s/...\n", serviceNameLower)
+	fmt.Printf("5. Review policy guide: examples/policies/%s-policy-guide.md\n", serviceNameLower)
 }
 
 // listServices prints all available OpenStack services and their resources
@@ -133,23 +113,23 @@ func listServices() {
 
 	fmt.Println("Available OpenStack Services:")
 	fmt.Println("==============================")
-	
+
 	for _, svcName := range services {
 		info, err := registry.GetServiceInfo(svcName)
 		if err != nil {
 			continue
 		}
-		
+
 		fmt.Printf("\n%s (%s)\n", info.DisplayName, svcName)
 		fmt.Printf("  Service Type: %s\n", info.ServiceType)
 		fmt.Printf("  Resources: ")
-		
+
 		resList, err := registry.ListResources(svcName)
 		if err != nil {
 			fmt.Println("(error listing resources)")
 			continue
 		}
-		
+
 		for i, res := range resList {
 			if i > 0 {
 				fmt.Print(", ")
@@ -158,7 +138,8 @@ func listServices() {
 		}
 		fmt.Println()
 	}
-	
-	fmt.Printf("\nExample usage:\n")
-	fmt.Printf("  %s --service glance --resources image,member --type image\n", os.Args[0])
+
+	fmt.Println()
+	fmt.Println("Example usage:")
+	fmt.Printf("  %s --service nova --resources instance,keypair\n", os.Args[0])
 }

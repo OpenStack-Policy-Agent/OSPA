@@ -5,62 +5,91 @@ import (
 
 	discovery "github.com/OpenStack-Policy-Agent/OSPA/pkg/discovery"
 	"github.com/gophercloud/gophercloud"
+	// TODO: Import the correct gophercloud package for nova.
+	// Example for Nova: "github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
+	// See: https://pkg.go.dev/github.com/gophercloud/gophercloud/openstack
 )
 
-
-// NovaInstanceDiscoverer discovers nova resources of type instance.
-// Placeholder implementation: returns no jobs. Fill in real OpenStack calls later.
+// NovaInstanceDiscoverer discovers nova/instance resources.
 //
-// TODO(OSPA): Implement discovery by listing nova instance resources from OpenStack:
-// - Call the appropriate gophercloud API
-// - Handle pagination
-// - Emit discovery.Job{Service, ResourceType, ResourceID, ProjectID, Resource}
-// - Respect allTenants where applicable
+// TODO: Implement Discover() using gophercloud to list instance resources.
+// Gophercloud docs: https://pkg.go.dev/github.com/gophercloud/gophercloud/openstack
+// OpenStack API: https://docs.openstack.org/api-ref/nova
+//
+// Discovery hints from registry:
+//
+//	pagination: false
+//	all_tenants: false
+//	regions: false
 type NovaInstanceDiscoverer struct{}
 
-// ResourceType returns the resource type this discoverer handles
 func (d *NovaInstanceDiscoverer) ResourceType() string {
 	return "instance"
 }
 
-// Discover discovers resources and sends them to the returned channel
 func (d *NovaInstanceDiscoverer) Discover(ctx context.Context, client *gophercloud.ServiceClient, allTenants bool) (<-chan discovery.Job, error) {
-	_ = ctx
-	_ = client
-	_ = allTenants
-
-	// TODO(OSPA): Replace this placeholder with real discovery logic.
 	ch := make(chan discovery.Job)
-	close(ch)
+
+	go func() {
+		defer close(ch)
+
+		// TODO: List instance resources using gophercloud and send jobs.
+		// Example pattern:
+		//   pages, err := <resource>.List(client, <opts>).AllPages()
+		//   resources, err := <resource>.ExtractResources(pages)
+		//   for _, r := range resources {
+		//       select {
+		//       case <-ctx.Done():
+		//           return
+		//       case ch <- discovery.Job{Service: "nova", ResourceType: "instance", ResourceID: r.ID, ProjectID: r.TenantID, Resource: r}:
+		//       }
+		//   }
+		_ = ctx
+		_ = client
+		_ = allTenants
+	}()
+
 	return ch, nil
 }
 
-
-// NovaKeypairDiscoverer discovers nova resources of type keypair.
-// Placeholder implementation: returns no jobs. Fill in real OpenStack calls later.
+// NovaKeypairDiscoverer discovers nova/keypair resources.
 //
-// TODO(OSPA): Implement discovery by listing nova keypair resources from OpenStack:
-// - Call the appropriate gophercloud API
-// - Handle pagination
-// - Emit discovery.Job{Service, ResourceType, ResourceID, ProjectID, Resource}
-// - Respect allTenants where applicable
+// TODO: Implement Discover() using gophercloud to list keypair resources.
+// Gophercloud docs: https://pkg.go.dev/github.com/gophercloud/gophercloud/openstack
+// OpenStack API: https://docs.openstack.org/api-ref/nova
+//
+// Discovery hints from registry:
+//
+//	pagination: false
+//	all_tenants: false
+//	regions: false
 type NovaKeypairDiscoverer struct{}
 
-// ResourceType returns the resource type this discoverer handles
 func (d *NovaKeypairDiscoverer) ResourceType() string {
 	return "keypair"
 }
 
-// Discover discovers resources and sends them to the returned channel
 func (d *NovaKeypairDiscoverer) Discover(ctx context.Context, client *gophercloud.ServiceClient, allTenants bool) (<-chan discovery.Job, error) {
-	_ = ctx
-	_ = client
-	_ = allTenants
-
-	// TODO(OSPA): Replace this placeholder with real discovery logic.
 	ch := make(chan discovery.Job)
-	close(ch)
+
+	go func() {
+		defer close(ch)
+
+		// TODO: List keypair resources using gophercloud and send jobs.
+		// Example pattern:
+		//   pages, err := <resource>.List(client, <opts>).AllPages()
+		//   resources, err := <resource>.ExtractResources(pages)
+		//   for _, r := range resources {
+		//       select {
+		//       case <-ctx.Done():
+		//           return
+		//       case ch <- discovery.Job{Service: "nova", ResourceType: "keypair", ResourceID: r.ID, ProjectID: r.TenantID, Resource: r}:
+		//       }
+		//   }
+		_ = ctx
+		_ = client
+		_ = allTenants
+	}()
+
 	return ch, nil
 }
-
-

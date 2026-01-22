@@ -51,4 +51,3 @@ func createTempAuthFile(baseDir, content string) (string, error) {
 
 	return filePath, nil
 }
-

@@ -18,4 +18,3 @@ func IsResourceSupported(serviceName, resourceType string) bool {
 func GetServiceResources(serviceName string) []string {
 	return catalog.GetServiceResources(serviceName)
 }
-

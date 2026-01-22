@@ -17,4 +17,3 @@ type Auditor interface {
 	// ResourceType returns the resource type this auditor handles
 	ResourceType() string
 }
-
