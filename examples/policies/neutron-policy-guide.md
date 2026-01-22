@@ -11,6 +11,14 @@ This guide explains how to write policies for Neutron resources in OSPA.
 ## Supported Resources
 
 
+### Network
+
+**Resource Type:** `network`
+
+**Allowed Actions:** log, delete, tag
+**Allowed Checks:** status, age_gt, unused, exempt_names
+
+
 ### SecurityGroup
 
 **Resource Type:** `security_group`
@@ -220,6 +228,61 @@ action_tag_name: "Display Name for Tag"
 ## Resource-Specific Examples
 
 
+### Network Examples
+
+#### Example 1: Find Inactive Network Resources
+
+```yaml
+- name: find-inactive-network
+  description: Find inactive network resources
+  service: neutron
+  resource: network
+  check:
+    status: inactive
+  action: log
+```
+
+#### Example 2: Find Old Network Resources
+
+```yaml
+- name: find-old-network
+  description: Find network resources older than 30 days
+  service: neutron
+  resource: network
+  check:
+    age_gt: 30d
+  action: log
+```
+
+#### Example 3: Cleanup Unused Network Resources
+
+```yaml
+- name: cleanup-unused-network
+  description: Delete unused network resources
+  service: neutron
+  resource: network
+  check:
+    unused: true
+    exempt_names:
+      - default
+  action: delete
+```
+
+#### Example 4: Tag Old Network Resources
+
+```yaml
+- name: tag-old-network
+  description: Tag network resources older than 7 days
+  service: neutron
+  resource: network
+  check:
+    age_gt: 7d
+  action: tag
+  tag_name: audit-old-network
+  action_tag_name: "Old Network"
+```
+
+
 ### SecurityGroup Examples
 
 #### Example 1: Find Inactive SecurityGroup Resources
@@ -397,6 +460,22 @@ defaults:
   output: findings.jsonl
 policies:
   - neutron:
+    - name: audit-network
+      description: Audit network resources
+      service: neutron
+      resource: network
+      check:
+        status: active
+      action: log
+    - name: cleanup-old-network
+      description: Find network resources older than 90 days
+      service: neutron
+      resource: network
+      check:
+        age_gt: 90d
+        exempt_names:
+          - default
+      action: log
     - name: audit-security_group
       description: Audit security_group resources
       service: neutron
@@ -483,7 +562,7 @@ For more information about Neutron resources and their properties:
 
 **Policy validation fails:**
 - Ensure service name matches exactly: `neutron`
-- Verify resource type is supported: `{security_group Security groups [status age_gt unused exempt_names] [log delete tag] {false false false}}`, `{security_group_rule Security group rules [status age_gt unused exempt_names] [log delete tag] {false false false}}`, `{floating_ip Floating IP addresses [status age_gt unused exempt_names] [log delete tag] {false false false}}`
+- Verify resource type is supported: `{network Networks [status age_gt unused exempt_names] [log delete tag] {false false false}}`, `{security_group Security groups [status age_gt unused exempt_names] [log delete tag] {false false false}}`, `{security_group_rule Security group rules [status age_gt unused exempt_names] [log delete tag] {false false false}}`, `{floating_ip Floating IP addresses [status age_gt unused exempt_names] [log delete tag] {false false false}}`
 - Check YAML syntax is correct
 
 **No resources found:**

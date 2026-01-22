@@ -7,6 +7,37 @@ import (
 )
 
 
+func TestNeutron_NetworkAudit(t *testing.T) {
+	// This e2e test requires a real OpenStack cloud:
+	//   OS_CLIENT_CONFIG_FILE pointing to clouds.yaml
+	//   OS_CLOUD set to a valid cloud entry
+	engine := NewTestEngine(t)
+
+	policyYAML := `version: v1
+defaults:
+  workers: 2
+policies:
+  - neutron:
+    - name: test-network-check
+      description: Test network check
+      service: neutron
+      resource: network
+      check:
+        status: active
+      action: log`
+
+	policy := engine.LoadPolicyFromYAML(t, policyYAML)
+	results := engine.RunAudit(t, policy)
+
+	NetworkResults := results.FilterByService("neutron").FilterByResourceType("network")
+	NetworkResults.LogSummary(t)
+
+	if NetworkResults.Errors > 0 {
+		t.Logf("Warning: %d errors encountered during network audit", NetworkResults.Errors)
+	}
+}
+
+
 func TestNeutron_SecurityGroupAudit(t *testing.T) {
 	// This e2e test requires a real OpenStack cloud:
 	//   OS_CLIENT_CONFIG_FILE pointing to clouds.yaml

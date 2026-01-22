@@ -78,7 +78,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Generate files (always overwrites existing files)
+	// Generate files (preserves existing resources, adds new ones)
 	if err := generators.GenerateService(serviceNameLower, serviceInfo.DisplayName, serviceInfo.ServiceType, resourceList); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
