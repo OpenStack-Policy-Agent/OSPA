@@ -70,11 +70,3 @@ func fallbackResourceSpec(resource string) ResourceSpec {
 		Description: desc,
 	}
 }
-
-func namesFromSpecs(specs []ResourceSpec) []string {
-	names := make([]string, 0, len(specs))
-	for _, spec := range specs {
-		names = append(names, spec.Name)
-	}
-	return names
-}

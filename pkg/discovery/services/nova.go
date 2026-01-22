@@ -10,7 +10,6 @@ import (
 	// See: https://pkg.go.dev/github.com/gophercloud/gophercloud/openstack
 )
 
-
 // NovaInstanceDiscoverer discovers nova/instance resources.
 //
 // TODO: Implement Discover() using gophercloud to list instance resources.
@@ -18,9 +17,10 @@ import (
 // OpenStack API: https://docs.openstack.org/api-ref/nova
 //
 // Discovery hints from registry:
-//   pagination: false
-//   all_tenants: false
-//   regions: false
+//
+//	pagination: false
+//	all_tenants: false
+//	regions: false
 type NovaInstanceDiscoverer struct{}
 
 func (d *NovaInstanceDiscoverer) ResourceType() string {
@@ -52,7 +52,6 @@ func (d *NovaInstanceDiscoverer) Discover(ctx context.Context, client *gopherclo
 	return ch, nil
 }
 
-
 // NovaKeypairDiscoverer discovers nova/keypair resources.
 //
 // TODO: Implement Discover() using gophercloud to list keypair resources.
@@ -60,9 +59,10 @@ func (d *NovaInstanceDiscoverer) Discover(ctx context.Context, client *gopherclo
 // OpenStack API: https://docs.openstack.org/api-ref/nova
 //
 // Discovery hints from registry:
-//   pagination: false
-//   all_tenants: false
-//   regions: false
+//
+//	pagination: false
+//	all_tenants: false
+//	regions: false
 type NovaKeypairDiscoverer struct{}
 
 func (d *NovaKeypairDiscoverer) ResourceType() string {
@@ -93,5 +93,3 @@ func (d *NovaKeypairDiscoverer) Discover(ctx context.Context, client *gopherclou
 
 	return ch, nil
 }
-
-

@@ -10,7 +10,6 @@ import (
 	// See: https://pkg.go.dev/github.com/gophercloud/gophercloud/openstack
 )
 
-
 // CinderVolumeDiscoverer discovers cinder/volume resources.
 //
 // TODO: Implement Discover() using gophercloud to list volume resources.
@@ -18,9 +17,10 @@ import (
 // OpenStack API: https://docs.openstack.org/api-ref/cinder
 //
 // Discovery hints from registry:
-//   pagination: false
-//   all_tenants: false
-//   regions: false
+//
+//	pagination: false
+//	all_tenants: false
+//	regions: false
 type CinderVolumeDiscoverer struct{}
 
 func (d *CinderVolumeDiscoverer) ResourceType() string {
@@ -52,7 +52,6 @@ func (d *CinderVolumeDiscoverer) Discover(ctx context.Context, client *gopherclo
 	return ch, nil
 }
 
-
 // CinderSnapshotDiscoverer discovers cinder/snapshot resources.
 //
 // TODO: Implement Discover() using gophercloud to list snapshot resources.
@@ -60,9 +59,10 @@ func (d *CinderVolumeDiscoverer) Discover(ctx context.Context, client *gopherclo
 // OpenStack API: https://docs.openstack.org/api-ref/cinder
 //
 // Discovery hints from registry:
-//   pagination: false
-//   all_tenants: false
-//   regions: false
+//
+//	pagination: false
+//	all_tenants: false
+//	regions: false
 type CinderSnapshotDiscoverer struct{}
 
 func (d *CinderSnapshotDiscoverer) ResourceType() string {
@@ -93,5 +93,3 @@ func (d *CinderSnapshotDiscoverer) Discover(ctx context.Context, client *gopherc
 
 	return ch, nil
 }
-
-
