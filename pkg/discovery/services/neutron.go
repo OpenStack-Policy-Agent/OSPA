@@ -5,22 +5,10 @@ import (
 
 	discovery "github.com/OpenStack-Policy-Agent/OSPA/pkg/discovery"
 	"github.com/gophercloud/gophercloud"
-	// TODO: Import the correct gophercloud package for neutron.
-	// Example for Nova: "github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
-	// See: https://pkg.go.dev/github.com/gophercloud/gophercloud/openstack
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
 )
 
-
 // NeutronNetworkDiscoverer discovers neutron/network resources.
-//
-// TODO: Implement Discover() using gophercloud to list network resources.
-// Gophercloud docs: https://pkg.go.dev/github.com/gophercloud/gophercloud/openstack
-// OpenStack API: https://docs.openstack.org/api-ref/neutron
-//
-// Discovery hints from registry:
-//   pagination: false
-//   all_tenants: false
-//   regions: false
 type NeutronNetworkDiscoverer struct{}
 
 func (d *NeutronNetworkDiscoverer) ResourceType() string {
@@ -33,20 +21,30 @@ func (d *NeutronNetworkDiscoverer) Discover(ctx context.Context, client *gopherc
 	go func() {
 		defer close(ch)
 
-		// TODO: List network resources using gophercloud and send jobs.
-		// Example pattern:
-		//   pages, err := <resource>.List(client, <opts>).AllPages()
-		//   resources, err := <resource>.ExtractResources(pages)
-		//   for _, r := range resources {
-		//       select {
-		//       case <-ctx.Done():
-		//           return
-		//       case ch <- discovery.Job{Service: "neutron", ResourceType: "network", ResourceID: r.ID, ProjectID: r.TenantID, Resource: r}:
-		//       }
-		//   }
-		_ = ctx
-		_ = client
-		_ = allTenants
+		opts := networks.ListOpts{}
+		pages, err := networks.List(client, opts).AllPages()
+		if err != nil {
+			return
+		}
+
+		networkList, err := networks.ExtractNetworks(pages)
+		if err != nil {
+			return
+		}
+
+		for _, network := range networkList {
+			select {
+			case <-ctx.Done():
+				return
+			case ch <- discovery.Job{
+				Service:      "neutron",
+				ResourceType: "network",
+				ResourceID:   network.ID,
+				ProjectID:    network.TenantID,
+				Resource:     network,
+			}:
+			}
+		}
 	}()
 
 	return ch, nil
