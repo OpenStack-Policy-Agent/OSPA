@@ -9,8 +9,8 @@ import (
 // NewWriter creates a result writer for the requested format.
 func NewWriter(format string, w io.Writer) (ResultWriter, error) {
 	switch strings.ToLower(strings.TrimSpace(format)) {
-	case "", "jsonl":
-		return NewJSONLWriter(w), nil
+	case "", "json":
+		return NewJSONWriter(w), nil
 	case "csv":
 		return NewCSVWriter(w), nil
 	default:

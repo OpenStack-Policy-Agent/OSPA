@@ -24,13 +24,13 @@ This directory contains reusable policy packs and service-specific guides.
 ### Audit Mode (Safe - No Changes)
 
 ```bash
-go run ./cmd/agent --cloud "$OS_CLOUD" --policy ./examples/policies/baseline-security.yaml --out findings.jsonl
+go run ./cmd/agent --cloud "$OS_CLOUD" --policy ./examples/policies/baseline-security.yaml --out findings.json
 ```
 
 ### Remediation Mode (Makes Changes)
 
 ```bash
-go run ./cmd/agent --cloud "$OS_CLOUD" --policy ./examples/policies/baseline-security.yaml --out findings.jsonl --fix
+go run ./cmd/agent --cloud "$OS_CLOUD" --policy ./examples/policies/baseline-security.yaml --out findings.json --fix
 ```
 
 ## Security Group Rule Checks

@@ -1,7 +1,7 @@
 version: v1
 defaults:
   workers: 10
-  output: findings.jsonl
+  output: findings.json
 policies:
   - nova:
     - name: nova-instance-active

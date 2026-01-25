@@ -17,12 +17,12 @@ func GeneratePolicyGuide(baseDir, serviceName, displayName, serviceType string, 
 }
 
 func generatePolicyGuideWithSpecs(baseDir, serviceName, displayName, serviceType string, resources []ResourceSpec) error {
-	examplesDir := filepath.Join(baseDir, "examples", "policies")
-	if err := os.MkdirAll(examplesDir, 0755); err != nil {
-		return fmt.Errorf("creating examples/policies directory: %w", err)
+	docsServicesDir := filepath.Join(baseDir, "docs", "reference", "services")
+	if err := os.MkdirAll(docsServicesDir, 0755); err != nil {
+		return fmt.Errorf("creating docs/reference/services directory: %w", err)
 	}
 
-	guideFile := filepath.Join(examplesDir, serviceName+"-policy-guide.md")
+	guideFile := filepath.Join(docsServicesDir, serviceName+".md")
 
 	tmpl := `# Policy Guide: {{.DisplayName}} ({{.ServiceName}})
 
@@ -54,7 +54,7 @@ All policies for {{.DisplayName}} follow this structure:
 version: v1
 defaults:
   workers: 50
-  output: findings.jsonl
+  output: findings.json
 policies:
   - {{.ServiceName}}:
     - name: rule-name
@@ -294,7 +294,7 @@ Here's a complete policy file example for {{.DisplayName}}:
 version: v1
 defaults:
   workers: 50
-  output: findings.jsonl
+  output: findings.json
 policies:
   - {{.ServiceName}}:{{range .Resources}}
     - name: audit-{{.Name}}
@@ -331,12 +331,12 @@ For more information about {{.DisplayName}} resources and their properties:
 
 2. **Run in audit mode (safe):**
    {{printf "%c%c%c" 96 96 96}}bash
-   go run ./cmd/agent --cloud "$OS_CLOUD" --policy your-policy.yaml --out findings.jsonl
+   go run ./cmd/agent --cloud "$OS_CLOUD" --policy your-policy.yaml --out findings.json
    {{printf "%c%c%c" 96 96 96}}
 
 3. **Apply remediations (use with caution):**
    {{printf "%c%c%c" 96 96 96}}bash
-   go run ./cmd/agent --cloud "$OS_CLOUD" --policy your-policy.yaml --out findings.jsonl --fix
+   go run ./cmd/agent --cloud "$OS_CLOUD" --policy your-policy.yaml --out findings.json --fix
    {{printf "%c%c%c" 96 96 96}}
 
 ## Notes
@@ -366,9 +366,9 @@ For more information about {{.DisplayName}} resources and their properties:
 
 ## See Also
 
-- [OSPA Development Guide](../../docs/DEVELOPMENT.md)
-- [OSPA Architecture Guide](../../docs/ARCHITECTURE.md)
-- [Example Policies](../policies.yaml)
+- [OSPA Development Guide](../../developer-guide/index.md)
+- [OSPA Architecture Guide](../../developer-guide/architecture.md)
+- [Example Policies](https://github.com/OpenStack-Policy-Agent/OSPA/blob/main/examples/policies.yaml)
 `
 
 	data := struct {

@@ -67,7 +67,7 @@ func TestLoad_RejectsDuplicateRuleNames(t *testing.T) {
 version: v1
 defaults:
   workers: 1
-  output: out.jsonl
+  output: out.json
 policies:
   - nova:
     - name: dup

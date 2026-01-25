@@ -23,7 +23,7 @@ func main() {
 	cloudName := flag.String("cloud", "", "The name of the cloud in clouds.yaml")
 	policyPath := flag.String("policy", "", "Path to policies.yaml")
 	outPath := flag.String("out", "", "Write findings to this file (default: policy defaults.output if set)")
-	outFormat := flag.String("out-format", "jsonl", "Output format: jsonl, csv")
+	outFormat := flag.String("out-format", "json", "Output format: json, csv")
 	workers := flag.Int("workers", runtime.NumCPU()*8, "Number of concurrent workers")
 	fix := flag.Bool("fix", false, "Apply remediations for enforce-mode rules (default: false, dry-run)")
 	allTenants := flag.Bool("all-tenants", false, "Scan all tenants/projects (requires admin). Default: false")

@@ -48,7 +48,7 @@ func TestRegression_OriginalScaffoldBehavior(t *testing.T) {
 		"e2e/testservice/resource_creator.go",
 		"e2e/testservice/resource1_test.go",
 		"e2e/testservice/resource2_test.go",
-		"examples/policies/testservice-policy-guide.md",
+		"docs/reference/services/testservice.md",
 	}
 
 	for _, relPath := range expectedFiles {
@@ -93,7 +93,7 @@ func TestRegression_AllFileTypesGenerated(t *testing.T) {
 		"validation":        "pkg/policy/validation/testservice.go",
 		"e2e_creator":       "e2e/testservice/resource_creator.go",
 		"e2e_resource_test": "e2e/testservice/resource1_test.go",
-		"policy_guide":      "examples/policies/testservice-policy-guide.md",
+		"policy_guide":      "docs/reference/services/testservice.md",
 	}
 
 	for fileType, relPath := range fileTypes {

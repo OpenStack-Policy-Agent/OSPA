@@ -108,5 +108,6 @@ openrc
 tmp/
 temp/
 
-
+# --- Documentation build output ---
+site/
 

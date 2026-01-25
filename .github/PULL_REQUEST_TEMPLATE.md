@@ -1,14 +1,28 @@
-## Summary
+## Description
+Brief description of what this PR does.
 
-## Changes
+## Related Issue
+Fixes #123
+
+## Type of Change
+- [ ] Bug fix
+- [ ] New feature
+- [ ] Breaking change
+- [ ] Documentation update
+
+## Changes Made
+- Added X
+- Modified Y
+- Fixed Z
 
 ## Testing
-
-- [ ] `go test ./...`
-- [ ] `go test ./pkg/... -count=1`
+- [ ] Unit tests pass
+- [ ] E2E tests pass (if applicable)
+- [ ] Manual testing completed
 
 ## Checklist
-
-- [ ] Docs updated (if needed)
-- [ ] New tests added (if needed)
-
+- [ ] Code follows project style
+- [ ] Self-reviewed the code
+- [ ] Added tests for new functionality
+- [ ] Updated documentation
+- [ ] No breaking changes (or documented)

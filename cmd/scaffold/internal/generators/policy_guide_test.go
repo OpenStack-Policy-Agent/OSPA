@@ -20,7 +20,7 @@ func TestGeneratePolicyGuide_NewFile(t *testing.T) {
 		t.Fatalf("GeneratePolicyGuide() = %v, want nil", err)
 	}
 
-	guideFile := filepath.Join(tmpDir, "examples", "policies", "testservice-policy-guide.md")
+	guideFile := filepath.Join(tmpDir, "docs", "reference", "services", "testservice.md")
 	if !fileExists(guideFile) {
 		t.Fatal("Policy guide was not created")
 	}
@@ -53,12 +53,12 @@ func TestGeneratePolicyGuide_Overwrite(t *testing.T) {
 	}
 	defer func() { _ = os.RemoveAll(tmpDir) }()
 
-	examplesDir := filepath.Join(tmpDir, "examples", "policies")
-	if err := os.MkdirAll(examplesDir, 0755); err != nil {
-		t.Fatalf("Failed to create examples dir: %v", err)
+	docsServicesDir := filepath.Join(tmpDir, "docs", "reference", "services")
+	if err := os.MkdirAll(docsServicesDir, 0755); err != nil {
+		t.Fatalf("Failed to create docs/reference/services dir: %v", err)
 	}
 
-	existingFile := filepath.Join(examplesDir, "testservice-policy-guide.md")
+	existingFile := filepath.Join(docsServicesDir, "testservice.md")
 	existingContent := "# Old content\n"
 	if err := os.WriteFile(existingFile, []byte(existingContent), 0644); err != nil {
 		t.Fatalf("Failed to write existing file: %v", err)
@@ -93,7 +93,7 @@ func TestGeneratePolicyGuide_ContainsExamples(t *testing.T) {
 		t.Fatalf("GeneratePolicyGuide() = %v, want nil", err)
 	}
 
-	guideFile := filepath.Join(tmpDir, "examples", "policies", "testservice-policy-guide.md")
+	guideFile := filepath.Join(tmpDir, "docs", "reference", "services", "testservice.md")
 	content, err := os.ReadFile(guideFile)
 	if err != nil {
 		t.Fatalf("Failed to read file: %v", err)
