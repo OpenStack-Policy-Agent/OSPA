@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gophercloud/gophercloud"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
 )
@@ -117,6 +118,38 @@ func generateCIDR() string {
 // CLEANUP HELPER
 // =============================================================================
 
+
+
+// CreateSecurityGroup creates a test security_group and returns:
+//   - resourceID: The ID of the created resource (for filtering audit results)
+//   - cleanup: A function to delete the resource and its dependencies
+func CreateSecurityGroup(t *testing.T, client *gophercloud.ServiceClient) (resourceID string, cleanup func()) {
+	t.Helper()
+
+	name := fmt.Sprintf("%ssecurity-group-%d", testPrefix, time.Now().UnixNano())
+
+	createOpts := groups.CreateOpts{
+		Name:        name,
+		Description: "OSPA e2e test security group - safe to delete",
+	}
+
+	sg, err := groups.Create(client, createOpts).Extract()
+	if err != nil {
+		t.Fatalf("Failed to create test security group: %v", err)
+	}
+
+	t.Logf("Created test security group: %s (%s)", sg.Name, sg.ID)
+
+	cleanup = func() {
+		t.Logf("Cleaning up test security group: %s", sg.ID)
+		if err := groups.Delete(client, sg.ID).ExtractErr(); err != nil {
+			t.Logf("Warning: failed to delete test security group %s: %v", sg.ID, err)
+		}
+	}
+
+	return sg.ID, cleanup
+}
+
 // CleanupOrphans deletes any leaked test resources (those with testPrefix).
 // Run this manually if tests fail and leave resources behind:
 //
@@ -124,11 +157,36 @@ func generateCIDR() string {
 func CleanupOrphans(t *testing.T, client *gophercloud.ServiceClient) {
 	t.Helper()
 
-	t.Log("Searching for orphaned test networks...")
 	ctx := context.Background()
 	_ = ctx // For future use with context-aware operations
 
-	// List all networks
+	// Clean up orphaned security groups first (before networks, as SGs may be attached to ports)
+	t.Log("Searching for orphaned test security groups...")
+	sgPages, err := groups.List(client, groups.ListOpts{}).AllPages()
+	if err != nil {
+		t.Logf("Warning: failed to list security groups: %v", err)
+	} else {
+		allSGs, err := groups.ExtractGroups(sgPages)
+		if err != nil {
+			t.Logf("Warning: failed to extract security groups: %v", err)
+		} else {
+			var sgDeleted int
+			for _, sg := range allSGs {
+				if strings.HasPrefix(sg.Name, testPrefix) {
+					t.Logf("Found orphaned security group: %s (%s)", sg.Name, sg.ID)
+					if err := groups.Delete(client, sg.ID).ExtractErr(); err != nil {
+						t.Logf("  Warning: failed to delete security group %s: %v", sg.ID, err)
+					} else {
+						sgDeleted++
+					}
+				}
+			}
+			t.Logf("Cleanup complete: deleted %d orphaned security groups", sgDeleted)
+		}
+	}
+
+	// Clean up orphaned networks
+	t.Log("Searching for orphaned test networks...")
 	allPages, err := networks.List(client, networks.ListOpts{}).AllPages()
 	if err != nil {
 		t.Fatalf("Failed to list networks: %v", err)
