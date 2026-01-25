@@ -28,6 +28,14 @@ import (
 )
 
 // {{.DisplayName}}Validator validates {{.DisplayName}} service policies.
+//
+// TODO: Review and update the allowed checks for each resource type.
+// The checks listed below are defaults from the registry. You may need to:
+//   - Add resource-specific checks (e.g., direction, protocol for security rules)
+//   - Remove checks that don't apply to this resource
+//   - Update the CheckConditions struct in pkg/policy/types.go if adding new check types
+//
+// See pkg/policy/validation/helpers.go for the validateAllowedChecks implementation.
 type {{.DisplayName}}Validator struct{}
 
 func init() {
@@ -42,6 +50,7 @@ func (v *{{.DisplayName}}Validator) ValidateResource(check *policy.CheckConditio
 	switch resourceType {
 {{range .Resources}}
 	case "{{.Name}}":
+		// TODO: Update allowed checks to match the auditor implementation in pkg/audit/{{$.ServiceName}}/{{.Name}}.go
 		if err := validateAllowedChecks(check, []string{ {{range $i, $c := .Checks}}{{if $i}}, {{end}}"{{$c}}"{{end}} }); err != nil {
 			return fmt.Errorf("rule %q: %w", ruleName, err)
 		}
