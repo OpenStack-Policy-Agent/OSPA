@@ -21,28 +21,24 @@ func (v *NeutronValidator) ValidateResource(check *policy.CheckConditions, resou
 	switch resourceType {
 
 	case "network":
-		if err := validateAllowedChecks(check, []string{ "status", "age_gt", "unused", "exempt_names" }); err != nil {
+		if err := validateAllowedChecks(check, []string{"status", "age_gt", "unused", "exempt_names"}); err != nil {
 			return fmt.Errorf("rule %q: %w", ruleName, err)
 		}
-
 
 	case "security_group":
-		if err := validateAllowedChecks(check, []string{ "status", "age_gt", "unused", "exempt_names" }); err != nil {
+		if err := validateAllowedChecks(check, []string{"status", "age_gt", "unused", "exempt_names"}); err != nil {
 			return fmt.Errorf("rule %q: %w", ruleName, err)
 		}
-
 
 	case "security_group_rule":
-		if err := validateAllowedChecks(check, []string{ "status", "age_gt", "unused", "exempt_names" }); err != nil {
+		if err := validateAllowedChecks(check, []string{"status", "age_gt", "unused", "exempt_names"}); err != nil {
 			return fmt.Errorf("rule %q: %w", ruleName, err)
 		}
-
 
 	case "floating_ip":
-		if err := validateAllowedChecks(check, []string{ "status", "age_gt", "unused", "exempt_names" }); err != nil {
+		if err := validateAllowedChecks(check, []string{"status", "age_gt", "unused", "exempt_names"}); err != nil {
 			return fmt.Errorf("rule %q: %w", ruleName, err)
 		}
-
 
 	default:
 		return fmt.Errorf("rule %q: unsupported resource type %q for neutron service", ruleName, resourceType)

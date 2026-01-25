@@ -427,9 +427,6 @@ func (e *TestEngine) Get` + clientMethodName + `Client(t *testing.T) *gopherclou
 	}
 
 	if insertPoint == -1 {
-		// Fallback: append before the last closing newlines
-		insertPoint = len(contentStr)
-		// Trim trailing whitespace and add back
 		contentStr = trimRight(contentStr, "\n\t ") + "\n"
 		insertPoint = len(contentStr)
 	}
@@ -584,4 +581,3 @@ func Create{{.Name | Pascal}}(t *testing.T, client *gophercloud.ServiceClient) (
 
 	return os.WriteFile(filePath, []byte(finalContent), 0644)
 }
-

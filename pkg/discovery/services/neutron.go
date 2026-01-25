@@ -50,7 +50,6 @@ func (d *NeutronNetworkDiscoverer) Discover(ctx context.Context, client *gopherc
 	return ch, nil
 }
 
-
 // NeutronSecurityGroupDiscoverer discovers neutron/security_group resources.
 //
 // TODO: Implement Discover() using gophercloud to list security_group resources.
@@ -58,9 +57,10 @@ func (d *NeutronNetworkDiscoverer) Discover(ctx context.Context, client *gopherc
 // OpenStack API: https://docs.openstack.org/api-ref/neutron
 //
 // Discovery hints from registry:
-//   pagination: false
-//   all_tenants: false
-//   regions: false
+//
+//	pagination: false
+//	all_tenants: false
+//	regions: false
 type NeutronSecurityGroupDiscoverer struct{}
 
 func (d *NeutronSecurityGroupDiscoverer) ResourceType() string {
@@ -92,7 +92,6 @@ func (d *NeutronSecurityGroupDiscoverer) Discover(ctx context.Context, client *g
 	return ch, nil
 }
 
-
 // NeutronSecurityGroupRuleDiscoverer discovers neutron/security_group_rule resources.
 //
 // TODO: Implement Discover() using gophercloud to list security_group_rule resources.
@@ -100,9 +99,10 @@ func (d *NeutronSecurityGroupDiscoverer) Discover(ctx context.Context, client *g
 // OpenStack API: https://docs.openstack.org/api-ref/neutron
 //
 // Discovery hints from registry:
-//   pagination: false
-//   all_tenants: false
-//   regions: false
+//
+//	pagination: false
+//	all_tenants: false
+//	regions: false
 type NeutronSecurityGroupRuleDiscoverer struct{}
 
 func (d *NeutronSecurityGroupRuleDiscoverer) ResourceType() string {
@@ -134,7 +134,6 @@ func (d *NeutronSecurityGroupRuleDiscoverer) Discover(ctx context.Context, clien
 	return ch, nil
 }
 
-
 // NeutronFloatingIpDiscoverer discovers neutron/floating_ip resources.
 //
 // TODO: Implement Discover() using gophercloud to list floating_ip resources.
@@ -142,9 +141,10 @@ func (d *NeutronSecurityGroupRuleDiscoverer) Discover(ctx context.Context, clien
 // OpenStack API: https://docs.openstack.org/api-ref/neutron
 //
 // Discovery hints from registry:
-//   pagination: false
-//   all_tenants: false
-//   regions: false
+//
+//	pagination: false
+//	all_tenants: false
+//	regions: false
 type NeutronFloatingIpDiscoverer struct{}
 
 func (d *NeutronFloatingIpDiscoverer) ResourceType() string {
@@ -175,5 +175,3 @@ func (d *NeutronFloatingIpDiscoverer) Discover(ctx context.Context, client *goph
 
 	return ch, nil
 }
-
-

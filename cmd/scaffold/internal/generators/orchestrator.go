@@ -53,7 +53,6 @@ func GenerateService(serviceName, displayName, serviceType string, resources []s
 		}
 	}
 
-
 	if err := GenerateE2ETest(baseDir, serviceName, displayName, resources); err != nil {
 		return fmt.Errorf("generating e2e test: %w", err)
 	}
