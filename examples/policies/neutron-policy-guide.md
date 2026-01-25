@@ -26,13 +26,28 @@ This guide explains how to write policies for Neutron resources in OSPA.
 **Allowed Actions:** log, delete, tag
 **Allowed Checks:** status, age_gt, unused, exempt_names
 
+**Implementation Status:** ✅ Fully implemented
+
+Security groups can be audited for:
+- Unused security groups (not attached to any ports)
+- Age-based checks
+- Name-based exemptions (e.g., exempt the `default` security group)
+
 
 ### SecurityGroupRule
 
 **Resource Type:** `security_group_rule`
 
-**Allowed Actions:** log, delete, tag
-**Allowed Checks:** status, age_gt, unused, exempt_names
+**Allowed Actions:** log, delete
+**Allowed Checks:** direction, ethertype, protocol, port, remote_ip_prefix, exempt_names
+
+**Implementation Status:** ✅ Fully implemented
+
+Security group rules are primarily audited for **dangerous configurations** such as:
+- SSH (port 22) open to the world (0.0.0.0/0)
+- RDP (port 3389) open to the world
+- All ports open to the world
+- Insecure protocols exposed publicly
 
 
 ### FloatingIp
@@ -65,6 +80,75 @@ policies:
 ```
 
 ## Check Conditions
+
+### Security Group Rule Specific Checks
+
+Security group rules support specialized checks for detecting dangerous firewall configurations:
+
+#### Direction Check
+
+Filter rules by traffic direction:
+
+```yaml
+check:
+  direction: ingress  # or egress
+```
+
+#### Ethertype Check
+
+Filter rules by IP version:
+
+```yaml
+check:
+  ethertype: IPv4  # or IPv6
+```
+
+#### Protocol Check
+
+Filter rules by protocol:
+
+```yaml
+check:
+  protocol: tcp  # or udp, icmp, etc.
+```
+
+#### Port Check
+
+Find rules that allow a specific port (matches if the port falls within the rule's port range):
+
+```yaml
+check:
+  port: 22  # SSH port
+```
+
+#### Remote IP Prefix Check
+
+Find rules open to specific CIDR ranges (commonly used to detect "open to world" rules):
+
+```yaml
+check:
+  remote_ip_prefix: 0.0.0.0/0  # Open to the entire internet
+```
+
+#### Combined Security Group Rule Example
+
+Find SSH rules open to the world:
+
+```yaml
+- name: critical-ssh-open-to-world
+  description: Find SSH (port 22) ingress rules open to 0.0.0.0/0
+  service: neutron
+  resource: security_group_rule
+  check:
+    direction: ingress
+    ethertype: IPv4
+    protocol: tcp
+    port: 22
+    remote_ip_prefix: 0.0.0.0/0
+  action: log
+```
+
+**Note:** All specified check conditions must match for a rule to be flagged. This allows precise targeting of dangerous configurations.
 
 ### Common Check Conditions
 
@@ -285,35 +369,56 @@ action_tag_name: "Display Name for Tag"
 
 ### SecurityGroup Examples
 
-#### Example 1: Find Inactive SecurityGroup Resources
+#### Example 1: Find Unused Security Groups
+
+A security group is considered unused if it's not attached to any ports:
 
 ```yaml
-- name: find-inactive-security_group
-  description: Find inactive security_group resources
+- name: cleanup-unused-security-groups
+  description: Find security groups not attached to any ports
   service: neutron
   resource: security_group
   check:
-    status: inactive
+    unused: true
+    exempt_names:
+      - default
   action: log
 ```
 
-#### Example 2: Find Old SecurityGroup Resources
+#### Example 2: Find Old Security Groups
 
 ```yaml
-- name: find-old-security_group
-  description: Find security_group resources older than 30 days
+- name: find-old-security-groups
+  description: Find security groups older than 90 days
   service: neutron
   resource: security_group
   check:
-    age_gt: 30d
+    age_gt: 90d
+    exempt_names:
+      - default
   action: log
 ```
 
-#### Example 3: Cleanup Unused SecurityGroup Resources
+#### Example 3: Tag Unused Security Groups
 
 ```yaml
-- name: cleanup-unused-security_group
-  description: Delete unused security_group resources
+- name: tag-unused-security-groups
+  description: Tag security groups not attached to any ports
+  service: neutron
+  resource: security_group
+  check:
+    unused: true
+    exempt_names:
+      - default
+  action: tag
+  tag_name: ospa-unused
+```
+
+#### Example 4: Delete Unused Security Groups (Remediation)
+
+```yaml
+- name: delete-unused-security-groups
+  description: Delete security groups not attached to any ports
   service: neutron
   resource: security_group
   check:
@@ -323,74 +428,89 @@ action_tag_name: "Display Name for Tag"
   action: delete
 ```
 
-#### Example 4: Tag Old SecurityGroup Resources
-
-```yaml
-- name: tag-old-security_group
-  description: Tag security_group resources older than 7 days
-  service: neutron
-  resource: security_group
-  check:
-    age_gt: 7d
-  action: tag
-  tag_name: audit-old-security_group
-  action_tag_name: "Old SecurityGroup"
-```
+**Warning:** The delete action will remove matching security groups. The auditor checks if a security group is in use before deletion.
 
 
 ### SecurityGroupRule Examples
 
-#### Example 1: Find Inactive SecurityGroupRule Resources
+Security group rules are primarily audited for dangerous configurations. Here are common security-focused examples:
+
+#### Example 1: Find SSH Open to World (Critical)
 
 ```yaml
-- name: find-inactive-security_group_rule
-  description: Find inactive security_group_rule resources
+- name: critical-ssh-open-to-world
+  description: Find SSH (port 22) rules open to 0.0.0.0/0
   service: neutron
   resource: security_group_rule
   check:
-    status: inactive
+    direction: ingress
+    ethertype: IPv4
+    protocol: tcp
+    port: 22
+    remote_ip_prefix: 0.0.0.0/0
   action: log
 ```
 
-#### Example 2: Find Old SecurityGroupRule Resources
+#### Example 2: Find RDP Open to World (Critical)
 
 ```yaml
-- name: find-old-security_group_rule
-  description: Find security_group_rule resources older than 30 days
+- name: critical-rdp-open-to-world
+  description: Find RDP (port 3389) rules open to 0.0.0.0/0
   service: neutron
   resource: security_group_rule
   check:
-    age_gt: 30d
+    direction: ingress
+    ethertype: IPv4
+    protocol: tcp
+    port: 3389
+    remote_ip_prefix: 0.0.0.0/0
   action: log
 ```
 
-#### Example 3: Cleanup Unused SecurityGroupRule Resources
+#### Example 3: Find ICMP Open to World (Warning)
 
 ```yaml
-- name: cleanup-unused-security_group_rule
-  description: Delete unused security_group_rule resources
+- name: warning-icmp-open-to-world
+  description: Find ICMP (ping) rules open to 0.0.0.0/0
   service: neutron
   resource: security_group_rule
   check:
-    unused: true
-    exempt_names:
-      - default
+    direction: ingress
+    ethertype: IPv4
+    protocol: icmp
+    remote_ip_prefix: 0.0.0.0/0
+  action: log
+```
+
+#### Example 4: Find All Ingress Open to World
+
+```yaml
+- name: warning-ingress-open-to-world
+  description: Find any ingress rules open to 0.0.0.0/0
+  service: neutron
+  resource: security_group_rule
+  check:
+    direction: ingress
+    remote_ip_prefix: 0.0.0.0/0
+  action: log
+```
+
+#### Example 5: Delete Dangerous SSH Rules (Remediation)
+
+```yaml
+- name: remediate-ssh-open-to-world
+  description: Delete SSH rules open to 0.0.0.0/0
+  service: neutron
+  resource: security_group_rule
+  check:
+    direction: ingress
+    protocol: tcp
+    port: 22
+    remote_ip_prefix: 0.0.0.0/0
   action: delete
 ```
 
-#### Example 4: Tag Old SecurityGroupRule Resources
-
-```yaml
-- name: tag-old-security_group_rule
-  description: Tag security_group_rule resources older than 7 days
-  service: neutron
-  resource: security_group_rule
-  check:
-    age_gt: 7d
-  action: tag
-  tag_name: audit-old-security_group_rule
-  action_tag_name: "Old SecurityGroupRule"
-```
+**Warning:** The delete action will remove matching rules. Use with caution and always test in audit mode first.
 
 
 ### FloatingIp Examples
@@ -451,7 +571,7 @@ action_tag_name: "Display Name for Tag"
 
 ## Complete Policy Example
 
-Here's a complete policy file example for Neutron:
+Here's a complete policy file example for Neutron with security-focused rules:
 
 ```yaml
 version: v1
@@ -460,69 +580,89 @@ defaults:
   output: findings.jsonl
 policies:
   - neutron:
-    - name: audit-network
-      description: Audit network resources
-      service: neutron
-      resource: network
-      check:
-        status: active
-      action: log
-    - name: cleanup-old-network
-      description: Find network resources older than 90 days
-      service: neutron
-      resource: network
-      check:
-        age_gt: 90d
-        exempt_names:
-          - default
-      action: log
-    - name: audit-security_group
-      description: Audit security_group resources
-      service: neutron
-      resource: security_group
-      check:
-        status: active
-      action: log
-    - name: cleanup-old-security_group
-      description: Find security_group resources older than 90 days
-      service: neutron
-      resource: security_group
-      check:
-        age_gt: 90d
-        exempt_names:
-          - default
-      action: log
-    - name: audit-security_group_rule
-      description: Audit security_group_rule resources
+    # ===========================================
+    # Security Group Rule Checks (Security Focus)
+    # ===========================================
+    
+    # Critical: SSH open to the world
+    - name: critical-ssh-open-to-world
+      description: Find SSH (port 22) rules open to 0.0.0.0/0
       service: neutron
       resource: security_group_rule
       check:
-        status: active
+        direction: ingress
+        ethertype: IPv4
+        protocol: tcp
+        port: 22
+        remote_ip_prefix: 0.0.0.0/0
       action: log
-    - name: cleanup-old-security_group_rule
-      description: Find security_group_rule resources older than 90 days
+    
+    # Critical: RDP open to the world
+    - name: critical-rdp-open-to-world
+      description: Find RDP (port 3389) rules open to 0.0.0.0/0
       service: neutron
       resource: security_group_rule
       check:
-        age_gt: 90d
+        direction: ingress
+        ethertype: IPv4
+        protocol: tcp
+        port: 3389
+        remote_ip_prefix: 0.0.0.0/0
+      action: log
+    
+    # Warning: ICMP open to the world
+    - name: warning-icmp-open-to-world
+      description: Find ICMP rules open to 0.0.0.0/0
+      service: neutron
+      resource: security_group_rule
+      check:
+        direction: ingress
+        ethertype: IPv4
+        protocol: icmp
+        remote_ip_prefix: 0.0.0.0/0
+      action: log
+    
+    # ===========================================
+    # Security Group Checks (Cleanup Focus)
+    # ===========================================
+    
+    # Find unused security groups
+    - name: cleanup-unused-security-groups
+      description: Find security groups not attached to any ports
+      service: neutron
+      resource: security_group
+      check:
+        unused: true
         exempt_names:
           - default
       action: log
-    - name: audit-floating_ip
-      description: Audit floating_ip resources
+    
+    # ===========================================
+    # Network Checks (Cleanup Focus)
+    # ===========================================
+    
+    # Find unused networks
+    - name: cleanup-unused-networks
+      description: Find networks with no subnets
       service: neutron
-      resource: floating_ip
+      resource: network
       check:
-        status: active
+        unused: true
+        exempt_names:
+          - external
+          - public
       action: log
-    - name: cleanup-old-floating_ip
-      description: Find floating_ip resources older than 90 days
+    
+    # Find old networks
+    - name: cleanup-old-networks
+      description: Find networks older than 90 days
       service: neutron
-      resource: floating_ip
+      resource: network
       check:
         age_gt: 90d
         exempt_names:
-          - default
+          - external
+          - public
       action: log
 ```
 

@@ -6,6 +6,7 @@ import (
 	discovery "github.com/OpenStack-Policy-Agent/OSPA/pkg/discovery"
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
 )
 
@@ -127,19 +128,30 @@ func (d *NeutronSecurityGroupRuleDiscoverer) Discover(ctx context.Context, clien
 	go func() {
 		defer close(ch)
 
-		// TODO: List security_group_rule resources using gophercloud and send jobs.
-		// Example pattern:
-		//   pages, err := <resource>.List(client, <opts>).AllPages()
-		//   resources, err := <resource>.ExtractResources(pages)
-		//   for _, r := range resources {
-		//       select {
-		//       case <-ctx.Done():
-		//           return
-		//       case ch <- discovery.Job{Service: "neutron", ResourceType: "security_group_rule", ResourceID: r.ID, ProjectID: r.TenantID, Resource: r}:
-		//       }
-		//   }
-		_ = ctx
-		_ = client
+		opts := rules.ListOpts{}
+		pages, err := rules.List(client, opts).AllPages()
+		if err != nil {
+			return
+		}
+
+		ruleList, err := rules.ExtractRules(pages)
+		if err != nil {
+			return
+		}
+
+		for _, rule := range ruleList {
+			select {
+			case <-ctx.Done():
+				return
+			case ch <- discovery.Job{
+				Service:      "neutron",
+				ResourceType: "security_group_rule",
+				ResourceID:   rule.ID,
+				ProjectID:    rule.TenantID,
+				Resource:     rule,
+			}:
+			}
+		}
 		_ = allTenants
 	}()
 
