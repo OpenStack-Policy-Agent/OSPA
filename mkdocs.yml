@@ -71,7 +71,7 @@ extra:
       link: https://github.com/OpenStack-Policy-Agent/OSPA
   generator: false
 
-copyright: Copyright &copy; 2024-2026 OpenStack Policy Agent Contributors
+copyright: Copyright &copy; 2026 OpenStack Policy Agent Contributors
 
 nav:
   - Home: index.md
