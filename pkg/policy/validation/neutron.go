@@ -31,7 +31,8 @@ func (v *NeutronValidator) ValidateResource(check *policy.CheckConditions, resou
 		}
 
 	case "security_group_rule":
-		if err := validateAllowedChecks(check, []string{"status", "age_gt", "unused", "exempt_names"}); err != nil {
+		// Security group rules have specific checks for matching dangerous patterns
+		if err := validateAllowedChecks(check, []string{"direction", "ethertype", "protocol", "port", "remote_ip_prefix", "exempt_names"}); err != nil {
 			return fmt.Errorf("rule %q: %w", ruleName, err)
 		}
 
