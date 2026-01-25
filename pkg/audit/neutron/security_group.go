@@ -3,21 +3,20 @@ package neutron
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/audit"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/policy"
-	// TODO: Import the gophercloud resource type for security_group.
-	// Example: "github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
+	"github.com/gophercloud/gophercloud"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/attributestags"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 )
 
 // SecurityGroupAuditor audits neutron/security_group resources.
 //
 // Allowed checks: status, age_gt, unused, exempt_names
 // Allowed actions: log, delete, tag
-//
-// TODO: Cast 'resource' to the correct gophercloud type and implement checks.
-// Gophercloud docs: https://pkg.go.dev/github.com/gophercloud/gophercloud/openstack
-// OpenStack API: https://docs.openstack.org/api-ref/neutron
 type SecurityGroupAuditor struct{}
 
 func (a *SecurityGroupAuditor) ResourceType() string {
@@ -27,54 +26,157 @@ func (a *SecurityGroupAuditor) ResourceType() string {
 func (a *SecurityGroupAuditor) Check(ctx context.Context, resource interface{}, rule *policy.Rule) (*audit.Result, error) {
 	_ = ctx
 
-	// TODO: Cast resource to the correct type.
-	// Example: r := resource.(servers.Server)
-	//
-	// Then populate the result:
-	//   result.ResourceID = r.ID
-	//   result.ResourceName = r.Name
-	//   result.ProjectID = r.TenantID
-	//   result.Status = r.Status
-	//   result.UpdatedAt = r.Updated
-	//
-	// Implement checks based on rule.Check fields:
-	//   - Status: compare r.Status with rule.Check.Status
-	//   - AgeGT: compare time.Since(r.Updated) with rule.Check.AgeGT
-	//   - Unused: implement resource-specific unused detection
-	//   - ExemptNames: skip if r.Name matches any exempt pattern
+	sg, ok := resource.(groups.SecGroup)
+	if !ok {
+		return nil, fmt.Errorf("expected groups.SecGroup, got %T", resource)
+	}
 
 	result := &audit.Result{
 		RuleID:       rule.Name,
-		ResourceID:   "unknown",
-		ResourceName: "unknown",
-		ProjectID:    "",
+		ResourceID:   sg.ID,
+		ResourceName: sg.Name,
+		ProjectID:    sg.TenantID,
+		Status:       "ACTIVE", // Security groups don't have a status field; they're always active
+		UpdatedAt:    sg.UpdatedAt,
 		Compliant:    true,
 		Rule:         rule,
-		Status:       "",
 	}
 
-	_ = resource
+	// Check exemptions first
+	if isExemptByName(sg.Name, rule.Check.ExemptNames) {
+		result.Compliant = true
+		result.Observation = "exempt by name"
+		return result, nil
+	}
+
+	// Status check - security groups are always "ACTIVE" if they exist
+	if rule.Check.Status != "" {
+		if rule.Check.Status == "ACTIVE" {
+			result.Compliant = false
+			result.Observation = "security group is active"
+		}
+	}
+
+	// Age check
+	if rule.Check.AgeGT != "" {
+		age, err := rule.Check.ParseAgeGT()
+		if err != nil {
+			return nil, fmt.Errorf("parsing age_gt: %w", err)
+		}
+
+		resourceTime := sg.UpdatedAt
+		if resourceTime.IsZero() {
+			resourceTime = sg.CreatedAt
+		}
+
+		if !resourceTime.IsZero() && time.Since(resourceTime) > age {
+			result.Compliant = false
+			result.Observation = fmt.Sprintf("security group is older than %s (last updated: %s)", rule.Check.AgeGT, resourceTime.Format(time.RFC3339))
+		}
+	}
+
+	// Unused check - will be evaluated later with client context if needed
+	// A security group is unused if it's not attached to any ports
+	// This is marked here but actual check requires API access
+	if rule.Check.Unused {
+		// The unused flag is set; the actual check will be done in the orchestrator
+		// or via enrichment. For now, we mark it as needing evaluation.
+		result.Observation = "unused check pending - requires port enumeration"
+	}
+
 	return result, nil
 }
 
 func (a *SecurityGroupAuditor) Fix(ctx context.Context, client interface{}, resource interface{}, rule *policy.Rule) error {
 	_ = ctx
-	_ = client
-	_ = resource
 
-	// TODO: Implement remediation actions.
-	// Cast client to *gophercloud.ServiceClient.
-	// Allowed actions: log, delete, tag
-	//
-	// Example for delete:
-	//   c := client.(*gophercloud.ServiceClient)
-	//   r := resource.(servers.Server)
-	//   return servers.Delete(c, r.ID).ExtractErr()
+	// Log action doesn't require client or resource validation
+	if rule.Action == "log" {
+		return nil
+	}
+
+	c, ok := client.(*gophercloud.ServiceClient)
+	if !ok {
+		return fmt.Errorf("expected *gophercloud.ServiceClient, got %T", client)
+	}
+
+	sg, ok := resource.(groups.SecGroup)
+	if !ok {
+		return fmt.Errorf("expected groups.SecGroup, got %T", resource)
+	}
 
 	switch rule.Action {
-	case "log":
+	case "delete":
+		// Check if the security group is in use by any ports
+		portPages, err := ports.List(c, ports.ListOpts{}).AllPages()
+		if err != nil {
+			return fmt.Errorf("listing ports: %w", err)
+		}
+		portList, err := ports.ExtractPorts(portPages)
+		if err != nil {
+			return fmt.Errorf("extracting ports: %w", err)
+		}
+
+		// Check if any port references this security group
+		for _, port := range portList {
+			for _, sgID := range port.SecurityGroups {
+				if sgID == sg.ID {
+					return fmt.Errorf("cannot delete security group %s: in use by port %s", sg.ID, port.ID)
+				}
+			}
+		}
+
+		// Delete the security group
+		if err := groups.Delete(c, sg.ID).ExtractErr(); err != nil {
+			return fmt.Errorf("deleting security group %s: %w", sg.ID, err)
+		}
 		return nil
+
+	case "tag":
+		// Neutron security groups support tags via the standard-attr-tag extension
+		tagName := rule.TagName
+		if tagName == "" {
+			tagName = rule.ActionTagName
+		}
+		if tagName == "" {
+			return fmt.Errorf("neutron/security_group: tag action requires tag_name")
+		}
+
+		// Add the tag to the security group
+		// The resource type for security groups in the tagging API is "security-groups"
+		err := attributestags.Add(c, "security-groups", sg.ID, tagName).ExtractErr()
+		if err != nil {
+			return fmt.Errorf("tagging security group %s with %q: %w", sg.ID, tagName, err)
+		}
+		return nil
+
 	default:
-		return fmt.Errorf("%s/%s: action %q not implemented", "neutron", "security_group", rule.Action)
+		return fmt.Errorf("neutron/security_group: action %q not implemented", rule.Action)
 	}
+}
+
+// CheckUnused checks if a security group is unused (not attached to any ports).
+// This is a helper function that can be called when port information is available.
+func (a *SecurityGroupAuditor) CheckUnused(ctx context.Context, client *gophercloud.ServiceClient, sg groups.SecGroup) (bool, error) {
+	_ = ctx
+
+	portPages, err := ports.List(client, ports.ListOpts{}).AllPages()
+	if err != nil {
+		return false, fmt.Errorf("listing ports: %w", err)
+	}
+	portList, err := ports.ExtractPorts(portPages)
+	if err != nil {
+		return false, fmt.Errorf("extracting ports: %w", err)
+	}
+
+	// Check if any port references this security group
+	for _, port := range portList {
+		for _, sgID := range port.SecurityGroups {
+			if sgID == sg.ID {
+				return false, nil // In use
+			}
+		}
+	}
+
+	return true, nil // Unused
 }
