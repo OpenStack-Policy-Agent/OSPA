@@ -113,6 +113,12 @@ func (a *{{.ResourceTitle}}Auditor) Fix(ctx context.Context, client interface{},
 	for _, resource := range resources {
 		filePath := filepath.Join(auditDir, resource.Name+".go")
 
+		// Check if file exists and has a real implementation
+		if hasAuditorImplementation(filePath, resource.Name) {
+			fmt.Printf("Info: %sAuditor already has an implementation, skipping\n", ToPascal(resource.Name))
+			continue
+		}
+
 		data := struct {
 			ServiceName   string
 			DisplayName   string
@@ -142,4 +148,11 @@ func (a *{{.ResourceTitle}}Auditor) Fix(ctx context.Context, client interface{},
 	}
 
 	return nil
+}
+
+// hasAuditorImplementation checks if an auditor file already exists.
+// Returns true if the file exists (regardless of whether it's a placeholder or real).
+func hasAuditorImplementation(filePath, resourceName string) bool {
+	_, err := os.Stat(filePath)
+	return err == nil // File exists
 }

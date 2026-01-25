@@ -29,8 +29,8 @@ func GenerateService(serviceName, displayName, serviceType string, resources []s
 		return fmt.Errorf("generating service file: %w", err)
 	}
 
-	// Generate discovery file with ALL resources
-	if err := GenerateDiscoveryFile(baseDir, serviceName, displayName, allResources); err != nil {
+	// Generate discovery file only for REQUESTED resources (skip existing)
+	if err := GenerateDiscoveryFile(baseDir, serviceName, displayName, resources); err != nil {
 		return fmt.Errorf("generating discovery file: %w", err)
 	}
 
@@ -53,8 +53,8 @@ func GenerateService(serviceName, displayName, serviceType string, resources []s
 		}
 	}
 
-	// Generate e2e test file with ALL resources
-	if err := GenerateE2ETest(baseDir, serviceName, displayName, allResources); err != nil {
+
+	if err := GenerateE2ETest(baseDir, serviceName, displayName, resources); err != nil {
 		return fmt.Errorf("generating e2e test: %w", err)
 	}
 

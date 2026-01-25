@@ -41,7 +41,9 @@ func TestGenerateService_NewService_Complete(t *testing.T) {
 		"pkg/audit/testservice/resource1_test.go",
 		"pkg/audit/testservice/resource2_test.go",
 		"pkg/policy/validation/testservice.go",
-		"e2e/testservice_test.go",
+		"e2e/testservice/resource_creator.go",
+		"e2e/testservice/resource1_test.go",
+		"e2e/testservice/resource2_test.go",
 		"examples/policies/testservice-policy-guide.md",
 	}
 

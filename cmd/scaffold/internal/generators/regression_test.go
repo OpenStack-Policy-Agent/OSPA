@@ -45,7 +45,9 @@ func TestRegression_OriginalScaffoldBehavior(t *testing.T) {
 		"pkg/audit/testservice/resource1_test.go",
 		"pkg/audit/testservice/resource2_test.go",
 		"pkg/policy/validation/testservice.go",
-		"e2e/testservice_test.go",
+		"e2e/testservice/resource_creator.go",
+		"e2e/testservice/resource1_test.go",
+		"e2e/testservice/resource2_test.go",
 		"examples/policies/testservice-policy-guide.md",
 	}
 
@@ -84,13 +86,14 @@ func TestRegression_AllFileTypesGenerated(t *testing.T) {
 
 	// Verify all file types are still generated
 	fileTypes := map[string]string{
-		"service":      "pkg/services/services/testservice.go",
-		"discovery":    "pkg/discovery/services/testservice.go",
-		"auditor":      "pkg/audit/testservice/resource1.go",
-		"test":         "pkg/audit/testservice/resource1_test.go",
-		"validation":   "pkg/policy/validation/testservice.go",
-		"e2e":          "e2e/testservice_test.go",
-		"policy_guide": "examples/policies/testservice-policy-guide.md",
+		"service":          "pkg/services/services/testservice.go",
+		"discovery":        "pkg/discovery/services/testservice.go",
+		"auditor":          "pkg/audit/testservice/resource1.go",
+		"test":             "pkg/audit/testservice/resource1_test.go",
+		"validation":       "pkg/policy/validation/testservice.go",
+		"e2e_creator":      "e2e/testservice/resource_creator.go",
+		"e2e_resource_test": "e2e/testservice/resource1_test.go",
+		"policy_guide":     "examples/policies/testservice-policy-guide.md",
 	}
 
 	for fileType, relPath := range fileTypes {

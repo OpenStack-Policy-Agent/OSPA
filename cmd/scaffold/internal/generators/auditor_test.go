@@ -64,7 +64,7 @@ func TestGenerateAuditorFiles_NewFiles(t *testing.T) {
 	}
 }
 
-func TestGenerateAuditorFiles_Overwrite(t *testing.T) {
+func TestGenerateAuditorFiles_SkipsExisting(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "test_auditor_gen_*")
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
@@ -77,7 +77,7 @@ func TestGenerateAuditorFiles_Overwrite(t *testing.T) {
 	}
 
 	existingFile := filepath.Join(auditDir, "resource1.go")
-	existingContent := "package testservice\n// old content\n"
+	existingContent := "package testservice\n// existing implementation - should not be overwritten\n"
 	if err := os.WriteFile(existingFile, []byte(existingContent), 0644); err != nil {
 		t.Fatalf("Failed to write existing file: %v", err)
 	}
@@ -93,8 +93,9 @@ func TestGenerateAuditorFiles_Overwrite(t *testing.T) {
 		t.Fatalf("Failed to read file: %v", err)
 	}
 
-	if strings.Contains(string(content), "old content") {
-		t.Error("File was not overwritten")
+	// Existing files should be preserved, not overwritten
+	if !strings.Contains(string(content), "existing implementation") {
+		t.Error("Existing file was overwritten when it should have been skipped")
 	}
 }
 

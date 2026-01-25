@@ -63,8 +63,10 @@ The tool generates:
 5. **Unit test files** (`pkg/audit/<servicename>/<resource>_test.go`)
    - Basic unit tests for each auditor
 
-6. **E2E test file** (`e2e/<servicename>_test.go`)
-   - End-to-end tests using the e2e engine
+6. **E2E test directory** (`e2e/<servicename>/`)
+   - `resource_creator.go` - Helper functions to create test resources and dependencies
+   - `<resource>_test.go` - Individual test files for each resource with coverage checklist
+   - Also adds `Get<Service>Client()` method to `e2e/engine.go` if not already present
 
 7. **Validation file** (`pkg/policy/validation/<servicename>.go`)
    - Service-specific policy validator
@@ -193,17 +195,73 @@ func (a *InstanceAuditor) Check(ctx context.Context, resource interface{}, rule 
 }
 ```
 
-### 4. Run tests
+### 4. Implement E2E tests
 
-```bash
-go test ./pkg/audit/<servicename>/...
-go test ./cmd/scaffold/...
+E2E tests are organized per service in `e2e/<servicename>/`:
+
+```
+e2e/neutron/
+├── resource_creator.go    # Implement Create<Resource>() functions here
+├── network_test.go        # Tests for network resource
+├── port_test.go           # Tests for port resource (uses network as dependency)
+└── ...
 ```
 
-### 5. Run e2e tests (requires OpenStack)
+**Step 1: Implement resource creators in `resource_creator.go`**
+
+Each `Create<Resource>()` function should:
+1. Create any dependencies (e.g., port needs network+subnet)
+2. Create the test resource
+3. Return the resource ID and a cleanup function
+
+```go
+func CreatePort(t *testing.T, client *gophercloud.ServiceClient) (resourceID string, cleanup func()) {
+    // Create network first (dependency)
+    networkID, networkCleanup := CreateNetwork(t, client)
+    
+    // Create port
+    port, err := ports.Create(client, ports.CreateOpts{
+        Name:      fmt.Sprintf("ospa-e2e-port-%d", time.Now().UnixNano()),
+        NetworkID: networkID,
+    }).Extract()
+    if err != nil {
+        networkCleanup()
+        t.Fatalf("Failed to create port: %v", err)
+    }
+    
+    cleanup = func() {
+        ports.Delete(client, port.ID)
+        networkCleanup() // Clean up network after port
+    }
+    
+    return port.ID, cleanup
+}
+```
+
+**Step 2: Use the creators in test files**
+
+The generated test files call your `Create<Resource>()` function:
+
+```go
+func TestNeutron_Port_StatusCheck(t *testing.T) {
+    engine := e2e.NewTestEngine(t)
+    client := engine.GetNetworkClient(t)
+    
+    resourceID, cleanup := CreatePort(t, client)
+    defer cleanup()
+    
+    // Run audit and verify results...
+}
+```
+
+### 5. Run tests
 
 ```bash
-OS_CLOUD=mycloud go test -tags=e2e ./e2e/<servicename>_test.go
+# Unit tests
+go test ./pkg/audit/<servicename>/...
+
+# E2E tests (requires OpenStack)
+OS_CLOUD=mycloud go test -tags=e2e ./e2e/<servicename>/... -v
 ```
 
 ## Architecture
