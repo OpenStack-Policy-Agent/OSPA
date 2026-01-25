@@ -117,6 +117,21 @@ func generateCIDR() string {
 // CLEANUP HELPER
 // =============================================================================
 
+
+
+// CreateSecurityGroup creates a test security_group and returns:
+//   - resourceID: The ID of the created resource (for filtering audit results)
+//   - cleanup: A function to delete the resource and its dependencies
+func CreateSecurityGroup(t *testing.T, client *gophercloud.ServiceClient) (resourceID string, cleanup func()) {
+	t.Helper()
+	
+	// TODO: Implement resource creation
+	// See the example above and the gophercloud documentation
+	
+	t.Skip("CreateSecurityGroup not implemented - implement in resource_creator.go")
+	return "", func() {}
+}
+
 // CleanupOrphans deletes any leaked test resources (those with testPrefix).
 // Run this manually if tests fail and leave resources behind:
 //
