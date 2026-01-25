@@ -46,7 +46,6 @@ graph TB
     Audit --> Remediate
     Audit --> Reporter
     Orchestrator --> Metrics
-</thinking>
 ```
 
 ## Components
