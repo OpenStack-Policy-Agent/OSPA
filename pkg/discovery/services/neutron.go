@@ -5,10 +5,50 @@ import (
 
 	discovery "github.com/OpenStack-Policy-Agent/OSPA/pkg/discovery"
 	"github.com/gophercloud/gophercloud"
-	// TODO: Import the correct gophercloud package for neutron.
-	// Example for Nova: "github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
-	// See: https://pkg.go.dev/github.com/gophercloud/gophercloud/openstack
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
 )
+
+// NeutronNetworkDiscoverer discovers neutron/network resources.
+type NeutronNetworkDiscoverer struct{}
+
+func (d *NeutronNetworkDiscoverer) ResourceType() string {
+	return "network"
+}
+
+func (d *NeutronNetworkDiscoverer) Discover(ctx context.Context, client *gophercloud.ServiceClient, allTenants bool) (<-chan discovery.Job, error) {
+	ch := make(chan discovery.Job)
+
+	go func() {
+		defer close(ch)
+
+		opts := networks.ListOpts{}
+		pages, err := networks.List(client, opts).AllPages()
+		if err != nil {
+			return
+		}
+
+		networkList, err := networks.ExtractNetworks(pages)
+		if err != nil {
+			return
+		}
+
+		for _, network := range networkList {
+			select {
+			case <-ctx.Done():
+				return
+			case ch <- discovery.Job{
+				Service:      "neutron",
+				ResourceType: "network",
+				ResourceID:   network.ID,
+				ProjectID:    network.TenantID,
+				Resource:     network,
+			}:
+			}
+		}
+	}()
+
+	return ch, nil
+}
 
 // NeutronSecurityGroupDiscoverer discovers neutron/security_group resources.
 //

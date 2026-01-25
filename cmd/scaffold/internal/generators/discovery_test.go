@@ -69,7 +69,7 @@ func TestGenerateDiscoveryFile_NewFile(t *testing.T) {
 	}
 }
 
-func TestGenerateDiscoveryFile_Overwrite(t *testing.T) {
+func TestGenerateDiscoveryFile_SkipsExistingDiscoverers(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "test_discovery_gen_*")
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
@@ -81,12 +81,37 @@ func TestGenerateDiscoveryFile_Overwrite(t *testing.T) {
 		t.Fatalf("Failed to create discovery dir: %v", err)
 	}
 
+	// Create an existing file with a discoverer already defined
 	existingFile := filepath.Join(discoveryDir, "testservice.go")
-	existingContent := "package services\n// old content\n"
+	existingContent := `package services
+
+import (
+	"context"
+	discovery "github.com/OpenStack-Policy-Agent/OSPA/pkg/discovery"
+	"github.com/gophercloud/gophercloud"
+)
+
+// TestServiceResource1Discoverer already exists - should not be regenerated
+type TestServiceResource1Discoverer struct{}
+
+func (d *TestServiceResource1Discoverer) ResourceType() string {
+	return "resource1"
+}
+
+func (d *TestServiceResource1Discoverer) Discover(ctx context.Context, client *gophercloud.ServiceClient, allTenants bool) (<-chan discovery.Job, error) {
+	ch := make(chan discovery.Job)
+	go func() {
+		defer close(ch)
+		// Real implementation here
+	}()
+	return ch, nil
+}
+`
 	if err := os.WriteFile(existingFile, []byte(existingContent), 0644); err != nil {
 		t.Fatalf("Failed to write existing file: %v", err)
 	}
 
+	// Try to generate for the same resource - should be skipped
 	resources := []string{"resource1"}
 	err = GenerateDiscoveryFile(tmpDir, "testservice", "TestService", resources)
 	if err != nil {
@@ -98,8 +123,15 @@ func TestGenerateDiscoveryFile_Overwrite(t *testing.T) {
 		t.Fatalf("Failed to read file: %v", err)
 	}
 
-	if strings.Contains(string(content), "old content") {
-		t.Error("File was not overwritten")
+	// Existing discoverer should be preserved
+	if !strings.Contains(string(content), "Real implementation here") {
+		t.Error("Existing discoverer was overwritten when it should have been skipped")
+	}
+
+	// Should not have duplicate type declarations
+	count := strings.Count(string(content), "type TestServiceResource1Discoverer struct{}")
+	if count != 1 {
+		t.Errorf("Expected 1 discoverer declaration, got %d", count)
 	}
 }
 

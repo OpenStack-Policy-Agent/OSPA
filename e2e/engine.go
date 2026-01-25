@@ -9,9 +9,10 @@ import (
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/auth"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/orchestrator"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/policy"
-	_ "github.com/OpenStack-Policy-Agent/OSPA/pkg/services"        // Register services
-	_ "github.com/OpenStack-Policy-Agent/OSPA/pkg/services/services" // Register service implementations
+	"github.com/gophercloud/gophercloud"
 	_ "github.com/OpenStack-Policy-Agent/OSPA/pkg/discovery/services" // Register discoverers
+	_ "github.com/OpenStack-Policy-Agent/OSPA/pkg/services"           // Register services
+	_ "github.com/OpenStack-Policy-Agent/OSPA/pkg/services/services"  // Register service implementations
 )
 
 // TestEngine provides a framework for running e2e tests
@@ -51,6 +52,16 @@ func NewTestEngine(t *testing.T) *TestEngine {
 		Apply:      false,
 		AllTenants: false,
 	}
+}
+
+// GetNetworkClient returns a gophercloud client for the Neutron service.
+func (e *TestEngine) GetNetworkClient(t *testing.T) *gophercloud.ServiceClient {
+	t.Helper()
+	client, err := e.Session.GetNeutronClient()
+	if err != nil {
+		t.Fatalf("Failed to get neutron client: %v", err)
+	}
+	return client
 }
 
 // LoadPolicy loads a policy from the configured path or a custom path
@@ -179,6 +190,31 @@ func (r *AuditResults) FilterByResourceType(resourceType string) *AuditResults {
 
 	for _, result := range r.Results {
 		if result.ResourceType == resourceType {
+			filtered.Results = append(filtered.Results, result)
+			filtered.Scanned++
+			if !result.Compliant {
+				filtered.Violations++
+			}
+			if result.Error != nil {
+				filtered.Errors++
+			}
+		}
+	}
+
+	return filtered
+}
+
+// FilterByResourceID filters results by resource ID
+func (r *AuditResults) FilterByResourceID(resourceID string) *AuditResults {
+	filtered := &AuditResults{
+		Scanned:    0,
+		Violations: 0,
+		Errors:     0,
+		Results:    []*ResultSummary{},
+	}
+
+	for _, result := range r.Results {
+		if result.ResourceID == resourceID {
 			filtered.Results = append(filtered.Results, result)
 			filtered.Scanned++
 			if !result.Compliant {
