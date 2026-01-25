@@ -100,7 +100,7 @@ func main() {
 	fmt.Println("   with real field extraction and check logic.")
 	fmt.Println()
 	fmt.Printf("4. Run tests: go test ./pkg/audit/%s/...\n", serviceNameLower)
-	fmt.Printf("5. Review policy guide: examples/policies/%s-policy-guide.md\n", serviceNameLower)
+	fmt.Printf("5. Review policy guide: docs/reference/services/%s.md\n", serviceNameLower)
 }
 
 // listServices prints all available OpenStack services and their resources

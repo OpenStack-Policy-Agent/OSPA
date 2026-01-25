@@ -16,15 +16,15 @@ type ResultWriter interface {
 	Close() error
 }
 
-// JSONLWriter writes one JSON object per line.
-type JSONLWriter struct {
+// JSONWriter writes one JSON object per line.
+type JSONWriter struct {
 	enc *json.Encoder
 }
 
-func NewJSONLWriter(w io.Writer) *JSONLWriter {
+func NewJSONWriter(w io.Writer) *JSONWriter {
 	enc := json.NewEncoder(w)
 	enc.SetEscapeHTML(false)
-	return &JSONLWriter{enc: enc}
+	return &JSONWriter{enc: enc}
 }
 
 type Finding struct {
@@ -52,7 +52,7 @@ type Finding struct {
 	RemediationSkipReason string `json:"remediation_skip_reason,omitempty"`
 }
 
-func (w *JSONLWriter) WriteResult(r *audit.Result) error {
+func (w *JSONWriter) WriteResult(r *audit.Result) error {
 	f := Finding{
 		RuleID:                r.RuleID,
 		ResourceID:            r.ResourceID,
@@ -91,7 +91,7 @@ func (w *JSONLWriter) WriteResult(r *audit.Result) error {
 	return w.enc.Encode(f)
 }
 
-func (w *JSONLWriter) Close() error {
+func (w *JSONWriter) Close() error {
 	return nil
 }
 

@@ -1,188 +1,109 @@
-## OSPA (OpenStack Policy Agent)
+# OSPA (OpenStack Policy Agent)
 
-OSPA is a policy-driven audit + remediation agent for OpenStack clouds.
+A policy-driven audit and remediation agent for OpenStack clouds.
 
-- **Define**: write policies/rules in YAML.
-- **Discover**: concurrently enumerates OpenStack resources per service/resource.
-- **Audit**: evaluates each discovered resource against rules.
-- **Remediate**: optionally applies actions (log/delete/tag). **Safe by default**.
-- **Extend**: add new services/resources via a scaffolding CLI (with OpenStack service/resource validation).
+**Define** policies in YAML → **Discover** resources → **Audit** against rules → **Remediate** violations.
 
-### Architecture (high level)
+## Features
 
-- **Service plugins**: `pkg/services/services/<service>.go`
-- **Discovery**: `pkg/discovery/services/<service>.go`
-- **Audit**: `pkg/audit/<service>/<resource>.go`
-- **Orchestrator/worker pool**: `pkg/orchestrator/`
-- **Policy validation**: `pkg/policy/validation/<service>.go`
-- **Scaffolding tool**: `cmd/scaffold/`
-- **E2E engine**: `e2e/`
+- **Declarative policies** - Write audit rules in simple YAML
+- **Multi-service support** - Audit resources across OpenStack services
+- **Safe by default** - Read-only mode unless explicitly enabled
+- **Extensible** - Add new services and resources with scaffolding tools
+- **Concurrent** - Parallel discovery and audit for large clouds
 
-See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
-Policy packs: see [`docs/POLICY_PACKS.md`](docs/POLICY_PACKS.md).
-
-### Supported OpenStack resources
-
-Legend:
-- **✔**: implemented end-to-end (real OpenStack API calls + audit/remediation logic)
-- **◐**: placeholder (generated stubs compile, but OpenStack-specific logic is still TODO)
-- **—**: not generated yet (known to the scaffold registry, but no code exists in `pkg/` yet)
-
-
-| **service** | **resource** | **main** |
-|:----------:|:------------:|:--------:|
-| nova | instance | ◐ |
-| nova | keypair | ◐ |
-| nova | server | — |
-| nova | flavor | — |
-| nova | hypervisor | — |
-| neutron | security_group | ◐ |
-| neutron | security_group_rule | ◐ |
-| neutron | floating_ip | ◐ |
-| neutron | network | — |
-| neutron | subnet | — |
-| neutron | port | — |
-| neutron | router | — |
-| neutron | loadbalancer | — |
-| neutron | pool | — |
-| neutron | member | — |
-| cinder | volume | ◐ |
-| cinder | snapshot | ◐ |
-| cinder | backup | — |
-| cinder | qos | — |
-| glance | image | — |
-| glance | member | — |
-| keystone | user | — |
-| keystone | role | — |
-| keystone | project | — |
-| keystone | domain | — |
-| keystone | group | — |
-| keystone | service | — |
-| heat | stack | — |
-| heat | resource | — |
-| heat | template | — |
-| heat | snapshot | — |
-| swift | container | — |
-| swift | object | — |
-| swift | account | — |
-| trove | instance | — |
-| trove | cluster | — |
-| trove | backup | — |
-| trove | datastore | — |
-| magnum | cluster | — |
-| magnum | cluster_template | — |
-| magnum | bay | — |
-| magnum | baymodel | — |
-| barbican | secret | — |
-| barbican | container | — |
-| barbican | order | — |
-| manila | share | — |
-| manila | share_snapshot | — |
-| manila | share_network | — |
-| manila | share_server | — |
-| ironic | node | — |
-| ironic | port | — |
-| ironic | driver | — |
-| ironic | chassis | — |
-| designate | zone | — |
-| designate | recordset | — |
-| designate | record | — |
-| octavia | loadbalancer | — |
-| octavia | listener | — |
-| octavia | pool | — |
-| octavia | member | — |
-| octavia | healthmonitor | — |
-| senlin | cluster | — |
-| senlin | profile | — |
-| senlin | node | — |
-| senlin | policy | — |
-| zaqar | queue | — |
-| zaqar | message | — |
-| zaqar | subscription | — |
-
-### Usage
-
-- **Audit-only (default, safe)**:
+## Quick Start
 
 ```bash
+# Set up credentials
 export OS_CLIENT_CONFIG_FILE=path/to/clouds.yaml
-go run ./cmd/agent --cloud mycloud --policy ./examples/policies.yaml --out findings.jsonl
+
+# Audit only (safe, no changes)
+go run ./cmd/agent --cloud mycloud --policy ./examples/policies.yaml --out findings.json
+
+# Apply remediation (with --fix flag)
+go run ./cmd/agent --cloud mycloud --policy ./examples/policies.yaml --out findings.json --fix
 ```
 
-- **Apply remediation**:
+## Supported Services
 
-```bash
-export OS_CLIENT_CONFIG_FILE=path/to/clouds.yaml
-go run ./cmd/agent --cloud mycloud --policy ./examples/policies.yaml --out findings.jsonl --fix
+| Service | Description | Status |
+|---------|-------------|--------|
+| **Neutron** | Networking | ◐ Partial |
+| **Nova** | Compute | ◐ Partial |
+| **Cinder** | Block Storage | ◐ Partial |
+| **Glance** | Image | — |
+| **Keystone** | Identity | — |
+| **Heat** | Orchestration | — |
+| **Swift** | Object Storage | — |
+| **Octavia** | Load Balancing | — |
+| **Barbican** | Key Manager | — |
+| **Manila** | Shared File Systems | — |
+| **Trove** | Database | — |
+| **Magnum** | Container Infrastructure | — |
+| **Ironic** | Bare Metal | — |
+| **Designate** | DNS | — |
+| **Senlin** | Clustering | — |
+| **Zaqar** | Messaging | — |
+
+**Legend:** ✔ Fully implemented | ◐ Partial (some resources) | — Not yet
+
+See the [full resource catalog](https://openstack-policy-agent.github.io/OSPA/reference/catalog/) for detailed resource support.
+
+## Example Policy
+
+```yaml
+version: v1
+policies:
+  - neutron:
+    - name: unused-security-groups
+      description: Find security groups not attached to any ports
+      resource: security_group
+      check:
+        unused: true
+      action: log
+
+    - name: dangerous-ingress-rules
+      description: Flag rules allowing SSH from anywhere
+      resource: security_group_rule
+      check:
+        direction: ingress
+        protocol: tcp
+        port: 22
+        remote_ip_prefix: "0.0.0.0/0"
+      action: log
 ```
 
-Notes:
-- Use `--all-tenants` only with admin credentials.
-- Policies may set enforce mode, but **nothing changes unless `--fix` is set**.
-- Use `--allow-actions` to restrict remediation actions.
+## Documentation
 
-### Output formats
+- [Getting Started](https://openstack-policy-agent.github.io/OSPA/getting-started/)
+- [User Guide](https://openstack-policy-agent.github.io/OSPA/user-guide/)
+- [Developer Guide](https://openstack-policy-agent.github.io/OSPA/developer-guide/)
+- [Reference](https://openstack-policy-agent.github.io/OSPA/reference/)
 
-- **JSONL (default)**:
-  - `--out findings.jsonl --out-format jsonl`
-- **CSV**:
-  - `--out findings.csv --out-format csv`
-
-### Metrics
-
-Expose Prometheus metrics:
+## Tests
 
 ```bash
-go run ./cmd/agent --cloud mycloud --policy ./examples/policies.yaml --metrics-addr :9090
-```
-
-### Extending OSPA (scaffold)
-
-- **List available OpenStack services/resources**:
-
-```bash
-go run ./cmd/scaffold --list
-```
-
-- **Generate a service/resource skeleton**:
-
-```bash
-go run ./cmd/scaffold --service <name> --resources <r1,r2> --type <serviceType>
-```
-
-See [`docs/scaffold-README.md`](docs/scaffold-README.md).
-
-### Tests
-
-- **All unit tests**:
-
-```bash
+# Unit tests
 go test ./... -count=1
-```
 
-- **pkg-only (fast CI target)**:
-
-```bash
-go test ./pkg/... -count=1
-```
-
-- **pkg coverage helper script**:
-
-```bash
-bash ./scripts/test-pkg.sh
-```
-
-- **Scaffold tool tests**:
-
-```bash
-go test ./cmd/scaffold/... -count=1
-```
-
-- **OpenStack e2e smoke tests** (requires real cloud + `OS_CLOUD`):
-
-```bash
-export OS_CLIENT_CONFIG_FILE=path/to/clouds.yaml OS_CLOUD=mycloud
+# E2E tests (requires OpenStack cloud)
+export OS_CLOUD=mycloud
 go test -tags=e2e ./e2e/... -count=1
 ```
 
+## Extending OSPA
 
+```bash
+# List available services and resources
+go run ./cmd/scaffold --list
+
+# Generate scaffolding for a new service
+go run ./cmd/scaffold --service glance --resources image,member
+```
+
+See the [Developer Guide](https://openstack-policy-agent.github.io/OSPA/developer-guide/) for details.
+
+## License
+
+Apache 2.0

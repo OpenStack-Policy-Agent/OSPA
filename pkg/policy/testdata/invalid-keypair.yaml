@@ -1,7 +1,7 @@
 version: v1
 defaults:
   workers: 1
-  output: out.jsonl
+  output: out.json
 policies:
   - nova:
     - name: kp-unused-missing

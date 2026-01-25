@@ -1,0 +1,114 @@
+site_name: OSPA Documentation
+site_description: OpenStack Policy Agent - Policy-driven audit and remediation for OpenStack clouds
+site_url: https://openstack-policy-agent.github.io/OSPA/
+repo_url: https://github.com/OpenStack-Policy-Agent/OSPA
+repo_name: OpenStack-Policy-Agent/OSPA
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  icon:
+    logo: material/shield-check
+  palette:
+    - scheme: default
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.footer
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+
+plugins:
+  - search
+  - tags
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.mark
+  - pymdownx.keys
+  - tables
+  - attr_list
+  - md_in_html
+  - def_list
+  - toc:
+      permalink: true
+      toc_depth: 3
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/OpenStack-Policy-Agent/OSPA
+  generator: false
+
+copyright: Copyright &copy; 2024-2026 OpenStack Policy Agent Contributors
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Overview: getting-started/index.md
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quickstart.md
+    - Configuration: getting-started/configuration.md
+  - User Guide:
+    - Overview: user-guide/index.md
+    - Writing Policies: user-guide/policies.md
+    - Running the Agent: user-guide/running.md
+    - Output Formats: user-guide/output-formats.md
+  - Contributor Guide:
+    - Overview: contributor-guide/index.md
+    - Contributing: contributor-guide/contributing.md
+    - Code of Conduct: contributor-guide/code-of-conduct.md
+    - Reporting Issues: contributor-guide/issues.md
+    - Pull Requests: contributor-guide/pull-requests.md
+  - Developer Guide:
+    - Overview: developer-guide/index.md
+    - Architecture: developer-guide/architecture.md
+    - Development Setup: developer-guide/setup.md
+    - Scaffold Tool: developer-guide/scaffold.md
+    - Adding Services: developer-guide/adding-services.md
+    - Adding Resources: developer-guide/adding-resources.md
+    - Testing: developer-guide/testing.md
+    - Troubleshooting: developer-guide/troubleshooting.md
+  - Future Plans:
+    - Roadmap: future-plans/index.md
+  - Reference:
+    - Overview: reference/index.md
+    - Service Catalog: reference/catalog.md
+    - CLI Reference: reference/cli.md
+    - Policy Schema: reference/policy-schema.md
+    - Services:
+      - Neutron: reference/services/neutron.md
+      - Nova: reference/services/nova.md
+      - Cinder: reference/services/cinder.md
+

@@ -2,7 +2,7 @@
 version: v1
 defaults:
   workers: 50
-  output: findings.jsonl
+  output: findings.json
 policies:
   - neutron:
     - name: critical-sg-v4-ssh-open-to-world

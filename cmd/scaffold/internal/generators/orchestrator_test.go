@@ -44,7 +44,7 @@ func TestGenerateService_NewService_Complete(t *testing.T) {
 		"e2e/testservice/resource_creator.go",
 		"e2e/testservice/resource1_test.go",
 		"e2e/testservice/resource2_test.go",
-		"examples/policies/testservice-policy-guide.md",
+		"docs/reference/services/testservice.md",
 	}
 
 	for _, relPath := range expectedFiles {
@@ -104,7 +104,7 @@ func TestGenerateService_NewService_Complete(t *testing.T) {
 	}
 
 	// Verify policy guide created
-	guideFile := filepath.Join(tmpDir, "examples/policies/testservice-policy-guide.md")
+	guideFile := filepath.Join(tmpDir, "docs/reference/services/testservice.md")
 	if !fileExists(guideFile) {
 		t.Error("Policy guide was not created")
 	}

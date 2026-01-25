@@ -36,7 +36,7 @@ All policies for Cinder follow this structure:
 version: v1
 defaults:
   workers: 50
-  output: findings.jsonl
+  output: findings.json
 policies:
   - cinder:
     - name: rule-name
@@ -331,7 +331,7 @@ Here's a complete policy file example for Cinder:
 version: v1
 defaults:
   workers: 50
-  output: findings.jsonl
+  output: findings.json
 policies:
   - cinder:
     - name: audit-volume
@@ -384,12 +384,12 @@ For more information about Cinder resources and their properties:
 
 2. **Run in audit mode (safe):**
    ```bash
-   go run ./cmd/agent --cloud "$OS_CLOUD" --policy your-policy.yaml --out findings.jsonl
+   go run ./cmd/agent --cloud "$OS_CLOUD" --policy your-policy.yaml --out findings.json
    ```
 
 3. **Apply remediations (use with caution):**
    ```bash
-   go run ./cmd/agent --cloud "$OS_CLOUD" --policy your-policy.yaml --out findings.jsonl --fix
+   go run ./cmd/agent --cloud "$OS_CLOUD" --policy your-policy.yaml --out findings.json --fix
    ```
 
 ## Notes
@@ -419,6 +419,6 @@ For more information about Cinder resources and their properties:
 
 ## See Also
 
-- [OSPA Development Guide](../../docs/DEVELOPMENT.md)
-- [OSPA Architecture Guide](../../docs/ARCHITECTURE.md)
-- [Example Policies](../policies.yaml)
+- [OSPA Development Guide](../../developer-guide/index.md)
+- [OSPA Architecture Guide](../../developer-guide/architecture.md)
+- [Example Policies](https://github.com/OpenStack-Policy-Agent/OSPA/blob/main/examples/policies.yaml)

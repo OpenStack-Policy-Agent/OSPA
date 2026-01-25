@@ -11,9 +11,9 @@ import (
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/policy"
 )
 
-func TestJSONLWriter_WriteResult_EmitsExpectedFields(t *testing.T) {
+func TestJSONWriter_WriteResult_EmitsExpectedFields(t *testing.T) {
 	var buf bytes.Buffer
-	w := NewJSONLWriter(&buf)
+	w := NewJSONWriter(&buf)
 
 	now := time.Date(2025, 12, 28, 10, 0, 0, 0, time.UTC)
 	r := &audit.Result{
@@ -58,9 +58,9 @@ func TestJSONLWriter_WriteResult_EmitsExpectedFields(t *testing.T) {
 	}
 }
 
-func TestJSONLWriter_WriteResult_IncludesErrors(t *testing.T) {
+func TestJSONWriter_WriteResult_IncludesErrors(t *testing.T) {
 	var buf bytes.Buffer
-	w := NewJSONLWriter(&buf)
+	w := NewJSONWriter(&buf)
 
 	r := &audit.Result{
 		RuleID:               "r1",
