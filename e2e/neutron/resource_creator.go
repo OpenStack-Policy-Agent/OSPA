@@ -12,6 +12,7 @@ import (
 
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
 )
@@ -155,14 +156,105 @@ func CreateSecurityGroup(t *testing.T, client *gophercloud.ServiceClient) (resou
 // CreateSecurityGroupRule creates a test security_group_rule and returns:
 //   - resourceID: The ID of the created resource (for filtering audit results)
 //   - cleanup: A function to delete the resource and its dependencies
+//
+// This creates a security group first, then adds a rule to it.
+// The cleanup function will delete both the rule and the security group.
 func CreateSecurityGroupRule(t *testing.T, client *gophercloud.ServiceClient) (resourceID string, cleanup func()) {
 	t.Helper()
-	
-	// TODO: Implement resource creation
-	// See the example above and the gophercloud documentation
-	
-	t.Skip("CreateSecurityGroupRule not implemented - implement in resource_creator.go")
-	return "", func() {}
+
+	// First create a security group to hold the rule
+	sgName := fmt.Sprintf("%ssg-for-rule-%d", testPrefix, time.Now().UnixNano())
+	sgOpts := groups.CreateOpts{
+		Name:        sgName,
+		Description: "OSPA e2e test security group for rule - safe to delete",
+	}
+
+	sg, err := groups.Create(client, sgOpts).Extract()
+	if err != nil {
+		t.Fatalf("Failed to create test security group for rule: %v", err)
+	}
+	t.Logf("Created test security group for rule: %s (%s)", sg.Name, sg.ID)
+
+	// Create a security group rule - SSH ingress from anywhere (a "dangerous" rule for testing)
+	ruleOpts := rules.CreateOpts{
+		SecGroupID:     sg.ID,
+		Direction:      "ingress",
+		EtherType:      "IPv4",
+		Protocol:       "tcp",
+		PortRangeMin:   22,
+		PortRangeMax:   22,
+		RemoteIPPrefix: "0.0.0.0/0",
+		Description:    "OSPA e2e test rule - SSH from anywhere - safe to delete",
+	}
+
+	rule, err := rules.Create(client, ruleOpts).Extract()
+	if err != nil {
+		// Clean up the security group on failure
+		_ = groups.Delete(client, sg.ID).ExtractErr()
+		t.Fatalf("Failed to create test security group rule: %v", err)
+	}
+	t.Logf("Created test security group rule: %s (direction=%s, protocol=%s, port=%d, remote=%s)",
+		rule.ID, rule.Direction, rule.Protocol, rule.PortRangeMin, rule.RemoteIPPrefix)
+
+	cleanup = func() {
+		// Delete the rule first
+		t.Logf("Cleaning up test security group rule: %s", rule.ID)
+		if err := rules.Delete(client, rule.ID).ExtractErr(); err != nil {
+			t.Logf("Warning: failed to delete test security group rule %s: %v", rule.ID, err)
+		}
+
+		// Then delete the security group
+		t.Logf("Cleaning up test security group: %s", sg.ID)
+		if err := groups.Delete(client, sg.ID).ExtractErr(); err != nil {
+			t.Logf("Warning: failed to delete test security group %s: %v", sg.ID, err)
+		}
+	}
+
+	return rule.ID, cleanup
+}
+
+// CreateSecurityGroupRuleWithOptions creates a security group rule with custom options.
+// This is useful for testing specific rule configurations.
+func CreateSecurityGroupRuleWithOptions(t *testing.T, client *gophercloud.ServiceClient, opts rules.CreateOpts) (ruleID, sgID string, cleanup func()) {
+	t.Helper()
+
+	// If no security group ID is provided, create one
+	if opts.SecGroupID == "" {
+		sgName := fmt.Sprintf("%ssg-for-rule-%d", testPrefix, time.Now().UnixNano())
+		sgOpts := groups.CreateOpts{
+			Name:        sgName,
+			Description: "OSPA e2e test security group for rule - safe to delete",
+		}
+
+		sg, err := groups.Create(client, sgOpts).Extract()
+		if err != nil {
+			t.Fatalf("Failed to create test security group for rule: %v", err)
+		}
+		t.Logf("Created test security group for rule: %s (%s)", sg.Name, sg.ID)
+		opts.SecGroupID = sg.ID
+	}
+
+	rule, err := rules.Create(client, opts).Extract()
+	if err != nil {
+		// Clean up the security group on failure
+		_ = groups.Delete(client, opts.SecGroupID).ExtractErr()
+		t.Fatalf("Failed to create test security group rule: %v", err)
+	}
+	t.Logf("Created test security group rule: %s", rule.ID)
+
+	cleanup = func() {
+		t.Logf("Cleaning up test security group rule: %s", rule.ID)
+		if err := rules.Delete(client, rule.ID).ExtractErr(); err != nil {
+			t.Logf("Warning: failed to delete test security group rule %s: %v", rule.ID, err)
+		}
+
+		t.Logf("Cleaning up test security group: %s", opts.SecGroupID)
+		if err := groups.Delete(client, opts.SecGroupID).ExtractErr(); err != nil {
+			t.Logf("Warning: failed to delete test security group %s: %v", opts.SecGroupID, err)
+		}
+	}
+
+	return rule.ID, opts.SecGroupID, cleanup
 }
 
 // CleanupOrphans deletes any leaked test resources (those with testPrefix).
