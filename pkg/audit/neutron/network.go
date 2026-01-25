@@ -3,6 +3,7 @@ package neutron
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/audit"
@@ -139,9 +140,15 @@ func (a *NetworkAuditor) Fix(ctx context.Context, client interface{}, resource i
 }
 
 // isExemptByName checks if the resource name matches any exempt pattern.
+// Supports glob patterns like "ospa-e2e-*" and "test-*-network".
 func isExemptByName(name string, exemptNames []string) bool {
-	for _, exempt := range exemptNames {
-		if name == exempt {
+	for _, pattern := range exemptNames {
+		// Try exact match first
+		if name == pattern {
+			return true
+		}
+		// Try glob pattern match
+		if matched, _ := filepath.Match(pattern, name); matched {
 			return true
 		}
 	}

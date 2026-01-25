@@ -54,6 +54,16 @@ func NewTestEngine(t *testing.T) *TestEngine {
 	}
 }
 
+// GetNetworkClient returns a gophercloud client for the Neutron service.
+func (e *TestEngine) GetNetworkClient(t *testing.T) *gophercloud.ServiceClient {
+	t.Helper()
+	client, err := e.Session.GetNeutronClient()
+	if err != nil {
+		t.Fatalf("Failed to get neutron client: %v", err)
+	}
+	return client
+}
+
 // LoadPolicy loads a policy from the configured path or a custom path
 func (e *TestEngine) LoadPolicy(t *testing.T, customPath ...string) *policy.Policy {
 	t.Helper()

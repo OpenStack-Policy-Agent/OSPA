@@ -116,6 +116,32 @@ func TestNetworkAuditor_Check_ExemptName(t *testing.T) {
 	}
 }
 
+func TestNetworkAuditor_Check_ExemptNamePattern(t *testing.T) {
+	auditor := &NetworkAuditor{}
+
+	network := networks.Network{
+		ID:     "net-456",
+		Name:   "ospa-e2e-network-12345",
+		Status: "ACTIVE",
+	}
+
+	rule := &policy.Rule{
+		Name:  "find-active-networks",
+		Check: policy.CheckConditions{Status: "ACTIVE", ExemptNames: []string{"ospa-e2e-*"}},
+	}
+
+	result, err := auditor.Check(context.Background(), network, rule)
+	if err != nil {
+		t.Fatalf("Check() error = %v", err)
+	}
+	if !result.Compliant {
+		t.Error("Check() expected compliant for network matching exempt pattern ospa-e2e-*")
+	}
+	if result.Observation != "exempt by name" {
+		t.Errorf("Check() expected observation 'exempt by name', got %q", result.Observation)
+	}
+}
+
 func TestNetworkAuditor_Check_Unused(t *testing.T) {
 	auditor := &NetworkAuditor{}
 
