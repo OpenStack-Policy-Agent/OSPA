@@ -31,8 +31,8 @@ This guide explains how to write policies for Neutron resources in OSPA.
 
 **Resource Type:** `security_group_rule`
 
-**Allowed Actions:** log, delete, tag
-**Allowed Checks:** status, age_gt, unused, exempt_names
+**Allowed Actions:** log, delete
+**Allowed Checks:** direction, ethertype, protocol, port, remote_ip_prefix, port_range_wide, exempt_names
 
 
 ### FloatingIp
@@ -162,6 +162,22 @@ check:
       - default
   action: log
 ```
+
+### Security & Domain-Specific Checks
+
+The following domain-specific checks are available for Neutron resources:
+
+| Check | Resource(s) | Type | Severity | Description |
+|-------|-------------|------|----------|-------------|
+| `direction` | security_group_rule | string | medium | Traffic direction (ingress/egress) |
+| `ethertype` | security_group_rule | string | low | Ethernet type (IPv4/IPv6) |
+| `protocol` | security_group_rule | string | medium | IP protocol (tcp/udp/icmp) |
+| `port` | security_group_rule | int | high | Port number within port range |
+| `remote_ip_prefix` | security_group_rule | cidr | critical | Source/destination CIDR - 0.0.0.0/0 means open to world |
+| `port_range_wide` | security_group_rule | bool | high | Port range spans more than 100 ports |
+| `unassociated` | floating_ip | bool | medium | Floating IP not attached to any port |
+| `shared_network` | network | bool | high | Network is shared across tenants without RBAC |
+| `no_security_group` | port | bool | high | Port has no security groups attached |
 
 ## Actions
 
@@ -367,17 +383,21 @@ action_tag_name: "Display Name for Tag"
   action: delete
 ```
 
-#### Example 4: Tag Old SecurityGroupRule Resources
+#### Example 4: SSH Open to World (Security)
 
 ```yaml
-- name: tag-old-security_group_rule
-  description: Tag security_group_rule resources older than 7 days
+- name: ssh-open-to-world
+  description: Flag SSH rules allowing access from anywhere
   resource: security_group_rule
   check:
-    age_gt: 7d
-  action: tag
-  tag_name: audit-old-security_group_rule
-  action_tag_name: "Old SecurityGroupRule"
+    direction: ingress
+    protocol: tcp
+    port: 22
+    remote_ip_prefix: "0.0.0.0/0"
+  action: log
+  severity: critical
+  category: security
+  guide_ref: "OSSN-0011"
 ```
 
 

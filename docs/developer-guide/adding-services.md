@@ -194,6 +194,10 @@ func (a *ImageAuditor) ResourceType() string {
     return "image"
 }
 
+func (a *ImageAuditor) ImplementedChecks() []string {
+    return []string{"status", "age_gt", "unused", "exempt_names"}
+}
+
 func (a *ImageAuditor) Check(ctx context.Context, resource interface{}, rule *policy.Rule) (*audit.Result, error) {
     _ = ctx
 
@@ -405,6 +409,7 @@ Use this checklist when adding a new service:
 - [ ] Auth client method added to `pkg/auth/auth.go`
 - [ ] Discoverers implemented in `pkg/discovery/services/<service>.go`
 - [ ] Auditors implemented in `pkg/audit/<service>/<resource>.go`
+- [ ] Auditor declares checks via `ImplementedChecks()`
 - [ ] Validator created in `pkg/policy/validation/<service>.go`
 - [ ] Resources registered in `init()` using `rootservices.RegisterResource()`
 - [ ] Unit tests written

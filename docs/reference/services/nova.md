@@ -139,6 +139,15 @@ check:
   action: log
 ```
 
+### Security & Domain-Specific Checks
+
+The following domain-specific checks are available for Nova resources:
+
+| Check | Resource(s) | Type | Severity | Description |
+|-------|-------------|------|----------|-------------|
+| `image_name` | instance | string list | medium | Instance uses a deprecated or banned image |
+| `no_keypair` | instance | bool | medium | Instance has no SSH keypair attached |
+
 ## Actions
 
 ### Log Action
@@ -252,6 +261,34 @@ action_tag_name: "Display Name for Tag"
   action: tag
   tag_name: audit-old-instance
   action_tag_name: "Old Instance"
+```
+
+#### Example 5: Instances Without Keypair (Security)
+
+```yaml
+- name: instances-without-keypair
+  description: Flag instances launched without SSH keypair
+  resource: instance
+  check:
+    no_keypair: true
+  action: log
+  severity: medium
+  category: security
+```
+
+#### Example 6: Banned Images (Compliance)
+
+```yaml
+- name: banned-images
+  description: Flag instances using deprecated images
+  resource: instance
+  check:
+    image_name:
+      - "ubuntu-14*"
+      - "centos-6*"
+  action: log
+  severity: medium
+  category: compliance
 ```
 
 

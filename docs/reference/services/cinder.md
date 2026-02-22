@@ -139,6 +139,16 @@ check:
   action: log
 ```
 
+### Security & Domain-Specific Checks
+
+The following domain-specific checks are available for Cinder resources:
+
+| Check | Resource(s) | Type | Severity | Description |
+|-------|-------------|------|----------|-------------|
+| `encrypted` | volume, snapshot | bool | high | Volume/snapshot is not encrypted |
+| `attached` | volume | bool | medium | Volume is not attached to any instance |
+| `has_backup` | volume | bool | medium | Volume has no backup |
+
 ## Actions
 
 ### Log Action
@@ -252,6 +262,33 @@ action_tag_name: "Display Name for Tag"
   action: tag
   tag_name: audit-old-volume
   action_tag_name: "Old Volume"
+```
+
+#### Example 5: Unencrypted Volumes (Security)
+
+```yaml
+- name: unencrypted-volumes
+  description: Flag volumes that are not encrypted
+  resource: volume
+  check:
+    encrypted: false
+  action: log
+  severity: high
+  category: security
+  guide_ref: "Check-Block-09"
+```
+
+#### Example 6: Volumes Without Backup (Compliance)
+
+```yaml
+- name: volumes-without-backup
+  description: Flag volumes missing backups
+  resource: volume
+  check:
+    has_backup: false
+  action: log
+  severity: medium
+  category: compliance
 ```
 
 
