@@ -30,29 +30,53 @@ type DiscoveryMetadata struct {
 	Regions    bool `yaml:"regions"`
 }
 
+// CheckInfo provides rich metadata for a domain-specific check.
+// Used by documentation generators and policy intelligence tooling.
+type CheckInfo struct {
+	Name        string `yaml:"name"`
+	Type        string `yaml:"type"`
+	Description string `yaml:"description"`
+	Category    string `yaml:"category"`
+	Severity    string `yaml:"severity"`
+	GuideRef    string `yaml:"guide_ref,omitempty"`
+}
+
+// GuideChecklistItem maps an OpenStack Security Guide checklist item
+// that requires manual (config-level) verification rather than API audit.
+type GuideChecklistItem struct {
+	ID          string `yaml:"id"`
+	Description string `yaml:"description"`
+	Service     string `yaml:"service,omitempty"`
+	Section     string `yaml:"section,omitempty"`
+	Manual      bool   `yaml:"manual"`
+}
+
 // ServiceInfo contains information about an OpenStack service
 type ServiceInfo struct {
-	ServiceType string
-	DisplayName string
-	Defaults    ServiceDefaults
-	Resources   map[string]ResourceInfo
+	ServiceType    string
+	DisplayName    string
+	Defaults       ServiceDefaults
+	Resources      map[string]ResourceInfo
+	GuideChecklist []GuideChecklistItem
 }
 
 // ResourceInfo contains information about a resource type
 type ResourceInfo struct {
-	Description string
-	Checks      []string
-	Actions     []string
-	Discovery   DiscoveryMetadata
+	Description string            `yaml:"description"`
+	Checks      []string          `yaml:"checks"`
+	RichChecks  []CheckInfo       `yaml:"rich_checks,omitempty"`
+	Actions     []string          `yaml:"actions"`
+	Discovery   DiscoveryMetadata `yaml:"discovery,omitempty"`
 }
 
 // ServiceMetadata represents the YAML format for service registry files.
 type ServiceMetadata struct {
-	Name        string                  `yaml:"name"`
-	DisplayName string                  `yaml:"display_name"`
-	ServiceType string                  `yaml:"service_type"`
-	Defaults    ServiceDefaults         `yaml:"defaults"`
-	Resources   map[string]ResourceInfo `yaml:"resources"`
+	Name           string                  `yaml:"name"`
+	DisplayName    string                  `yaml:"display_name"`
+	ServiceType    string                  `yaml:"service_type"`
+	Defaults       ServiceDefaults         `yaml:"defaults"`
+	Resources      map[string]ResourceInfo `yaml:"resources"`
+	GuideChecklist []GuideChecklistItem    `yaml:"guide_checklist,omitempty"`
 }
 
 // ValidateService checks if a service exists in OpenStack
@@ -234,10 +258,11 @@ func loadRegistry() (map[string]ServiceInfo, error) {
 		}
 
 		registry[meta.Name] = ServiceInfo{
-			ServiceType: meta.ServiceType,
-			DisplayName: meta.DisplayName,
-			Defaults:    meta.Defaults,
-			Resources:   meta.Resources,
+			ServiceType:    meta.ServiceType,
+			DisplayName:    meta.DisplayName,
+			Defaults:       meta.Defaults,
+			Resources:      meta.Resources,
+			GuideChecklist: meta.GuideChecklist,
 		}
 	}
 

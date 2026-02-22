@@ -1,6 +1,29 @@
 name: nova
 display_name: Nova
 service_type: compute
+
+guide_checklist:
+  - id: Check-Compute-01
+    description: "User/group ownership of config files set to root/nova"
+    section: "compute/checklist"
+    manual: true
+  - id: Check-Compute-02
+    description: "Strict permissions (640) on configuration files"
+    section: "compute/checklist"
+    manual: true
+  - id: Check-Compute-03
+    description: "Keystone used for authentication"
+    section: "compute/checklist"
+    manual: true
+  - id: Check-Compute-04
+    description: "Secure protocol (TLS) for authentication"
+    section: "compute/checklist"
+    manual: true
+  - id: Check-Compute-05
+    description: "Nova communicates with Glance over TLS"
+    section: "compute/checklist"
+    manual: true
+
 defaults:
   actions:
   - log
@@ -11,59 +34,40 @@ defaults:
   - age_gt
   - unused
   - exempt_names
+
 resources:
   instance:
     description: Server instances
-    actions:
-    - log
-    - delete
-    - tag
-    checks:
-    - status
-    - age_gt
-    - unused
-    - exempt_names
+    actions: [log, delete, tag]
+    checks: [status, age_gt, unused, exempt_names, image_name, no_keypair]
+    rich_checks:
+      - name: image_name
+        type: string_list
+        description: "Instance uses a deprecated or banned image"
+        category: compliance
+        severity: medium
+      - name: no_keypair
+        type: bool
+        description: "Instance has no SSH keypair attached"
+        category: security
+        severity: medium
+
   keypair:
     description: SSH keypairs
-    actions:
-    - log
-    - delete
-    - tag
-    checks:
-    - status
-    - age_gt
-    - unused
-    - exempt_names
+    actions: [log, delete, tag]
+    checks: [age_gt, unused, exempt_names]
+
   server:
     description: Server instances (alias for instance)
-    actions:
-    - log
-    - delete
-    - tag
-    checks:
-    - status
-    - age_gt
-    - unused
-    - exempt_names
+    actions: [log, delete, tag]
+    checks: [status, age_gt, unused, exempt_names]
+
   flavor:
     description: Flavor definitions
-    actions:
-    - log
-    - delete
-    - tag
-    checks:
-    - status
-    - age_gt
-    - unused
-    - exempt_names
+    actions: [log, delete, tag]
+    checks: [status, age_gt, unused, exempt_names]
+
   hypervisor:
     description: Hypervisor information
-    actions:
-    - log
-    - delete
-    - tag
-    checks:
-    - status
-    - age_gt
-    - unused
-    - exempt_names
+    actions: [log, delete, tag]
+    checks: [status, age_gt, unused, exempt_names]

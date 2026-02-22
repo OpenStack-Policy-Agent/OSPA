@@ -1,6 +1,37 @@
 name: keystone
 display_name: Keystone
 service_type: identity
+
+guide_checklist:
+  - id: Check-Identity-01
+    description: "User/group ownership of config files set to keystone"
+    section: "identity/checklist"
+    manual: true
+  - id: Check-Identity-02
+    description: "Strict permissions (640) on configuration files"
+    section: "identity/checklist"
+    manual: true
+  - id: Check-Identity-03
+    description: "TLS enabled for Identity"
+    section: "identity/checklist"
+    manual: true
+  - id: Check-Identity-05
+    description: "max_request_body_size set to default (114688)"
+    section: "identity/checklist"
+    manual: true
+  - id: Check-Identity-06
+    description: "Admin token disabled"
+    section: "identity/checklist"
+    manual: true
+  - id: Check-Identity-07
+    description: "insecure_debug set to false"
+    section: "identity/checklist"
+    manual: true
+  - id: Check-Identity-08
+    description: "Fernet token provider used"
+    section: "identity/checklist"
+    manual: true
+
 defaults:
   actions:
   - log
@@ -11,70 +42,55 @@ defaults:
   - age_gt
   - unused
   - exempt_names
+
 resources:
   user:
     description: Users
-    actions:
-    - log
-    - delete
-    - tag
-    checks:
-    - status
-    - age_gt
-    - unused
-    - exempt_names
+    actions: [log, delete, tag]
+    checks: [status, age_gt, unused, exempt_names, password_expired, inactive_days, has_admin_role, mfa_enabled]
+    rich_checks:
+      - name: password_expired
+        type: bool
+        description: "User password has expired"
+        category: security
+        severity: high
+      - name: inactive_days
+        type: int
+        description: "User has not logged in for N days"
+        category: security
+        severity: medium
+      - name: has_admin_role
+        type: bool
+        description: "User has admin role assigned"
+        category: security
+        severity: high
+      - name: mfa_enabled
+        type: bool
+        description: "User does not have MFA enabled"
+        category: security
+        severity: high
+
   role:
     description: Roles
-    actions:
-    - log
-    - delete
-    - tag
-    checks:
-    - status
-    - age_gt
-    - unused
-    - exempt_names
+    actions: [log, delete, tag]
+    checks: [status, age_gt, unused, exempt_names]
+
   project:
     description: Projects
-    actions:
-    - log
-    - delete
-    - tag
-    checks:
-    - status
-    - age_gt
-    - unused
-    - exempt_names
+    actions: [log, delete, tag]
+    checks: [status, age_gt, unused, exempt_names]
+
   domain:
     description: Domains
-    actions:
-    - log
-    - delete
-    - tag
-    checks:
-    - status
-    - age_gt
-    - unused
-    - exempt_names
+    actions: [log, delete, tag]
+    checks: [status, age_gt, unused, exempt_names]
+
   group:
     description: Groups
-    actions:
-    - log
-    - delete
-    - tag
-    checks:
-    - status
-    - age_gt
-    - unused
-    - exempt_names
+    actions: [log, delete, tag]
+    checks: [status, age_gt, unused, exempt_names]
+
   service:
     description: Services
-    actions:
-    - log
-    - delete
-    - tag
-    checks:
-    - status
-    - age_gt
-    - unused
-    - exempt_names
+    actions: [log, delete, tag]
+    checks: [status, age_gt, unused, exempt_names]

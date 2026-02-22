@@ -1,6 +1,29 @@
 name: glance
 display_name: Glance
 service_type: image
+
+guide_checklist:
+  - id: Check-Image-01
+    description: "User/group ownership of config files set to root/glance"
+    section: "image-storage/checklist"
+    manual: true
+  - id: Check-Image-02
+    description: "Strict permissions (640) on configuration files"
+    section: "image-storage/checklist"
+    manual: true
+  - id: Check-Image-03
+    description: "Keystone used for authentication"
+    section: "image-storage/checklist"
+    manual: true
+  - id: Check-Image-04
+    description: "TLS enabled for authentication"
+    section: "image-storage/checklist"
+    manual: true
+  - id: Check-Image-05
+    description: "Masked port scans prevented (copy_from restricted)"
+    section: "image-storage/checklist"
+    manual: true
+
 defaults:
   actions:
   - log
@@ -11,26 +34,20 @@ defaults:
   - age_gt
   - unused
   - exempt_names
+
 resources:
   image:
     description: Images
-    actions:
-    - log
-    - delete
-    - tag
-    checks:
-    - status
-    - age_gt
-    - unused
-    - exempt_names
+    actions: [log, delete, tag]
+    checks: [status, age_gt, unused, exempt_names, visibility]
+    rich_checks:
+      - name: visibility
+        type: string
+        description: "Image visibility (public images may expose sensitive data)"
+        category: security
+        severity: high
+
   member:
     description: Image members
-    actions:
-    - log
-    - delete
-    - tag
-    checks:
-    - status
-    - age_gt
-    - unused
-    - exempt_names
+    actions: [log, delete, tag]
+    checks: [status, age_gt, unused, exempt_names]

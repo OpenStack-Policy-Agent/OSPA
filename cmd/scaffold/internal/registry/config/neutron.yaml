@@ -1,6 +1,29 @@
 name: neutron
 display_name: Neutron
 service_type: network
+
+guide_checklist:
+  - id: Check-Neutron-01
+    description: "User/group ownership of config files set to root/neutron"
+    section: "networking/checklist"
+    manual: true
+  - id: Check-Neutron-02
+    description: "Strict permissions (640) on configuration files"
+    section: "networking/checklist"
+    manual: true
+  - id: Check-Neutron-03
+    description: "Keystone used for authentication"
+    section: "networking/checklist"
+    manual: true
+  - id: Check-Neutron-04
+    description: "Secure protocol (TLS) for authentication"
+    section: "networking/checklist"
+    manual: true
+  - id: Check-Neutron-05
+    description: "TLS enabled on Neutron API server"
+    section: "networking/checklist"
+    manual: true
+
 defaults:
   actions:
   - log
@@ -11,114 +34,109 @@ defaults:
   - age_gt
   - unused
   - exempt_names
+
 resources:
   security_group:
     description: Security groups
-    actions:
-    - log
-    - delete
-    - tag
-    checks:
-    - status
-    - age_gt
-    - unused
-    - exempt_names
+    actions: [log, delete, tag]
+    checks: [status, age_gt, unused, exempt_names]
+
   security_group_rule:
     description: Security group rules
-    actions:
-    - log
-    - delete
-    - tag
-    checks:
-    - status
-    - age_gt
-    - unused
-    - exempt_names
+    actions: [log, delete]
+    checks: [direction, ethertype, protocol, port, remote_ip_prefix, port_range_wide, exempt_names]
+    rich_checks:
+      - name: direction
+        type: string
+        description: "Traffic direction (ingress/egress)"
+        category: security
+        severity: medium
+      - name: ethertype
+        type: string
+        description: "Ethernet type (IPv4/IPv6)"
+        category: security
+        severity: low
+      - name: protocol
+        type: string
+        description: "IP protocol (tcp/udp/icmp)"
+        category: security
+        severity: medium
+      - name: port
+        type: int
+        description: "Port number within port range"
+        category: security
+        severity: high
+      - name: remote_ip_prefix
+        type: cidr
+        description: "Source/destination CIDR - 0.0.0.0/0 means open to world"
+        category: security
+        severity: critical
+        guide_ref: "OSSN-0011"
+      - name: port_range_wide
+        type: bool
+        description: "Port range spans more than 100 ports"
+        category: security
+        severity: high
+      - name: exempt_names
+        type: string_list
+        description: "Exempt by security group ID pattern"
+        category: hygiene
+        severity: low
+
   floating_ip:
     description: Floating IP addresses
-    actions:
-    - log
-    - delete
-    - tag
-    checks:
-    - status
-    - age_gt
-    - unused
-    - exempt_names
+    actions: [log, delete, tag]
+    checks: [status, age_gt, unused, unassociated, exempt_names]
+    rich_checks:
+      - name: unassociated
+        type: bool
+        description: "Floating IP not attached to any port"
+        category: cost
+        severity: medium
+
   network:
     description: Networks
-    actions:
-    - log
-    - delete
-    - tag
-    checks:
-    - status
-    - age_gt
-    - unused
-    - exempt_names
+    actions: [log, delete, tag]
+    checks: [status, age_gt, unused, exempt_names, shared_network]
+    rich_checks:
+      - name: shared_network
+        type: bool
+        description: "Network is shared across tenants without RBAC"
+        category: security
+        severity: high
+
   subnet:
     description: Subnets
-    actions:
-    - log
-    - delete
-    - tag
-    checks:
-    - status
-    - age_gt
-    - unused
-    - exempt_names
+    actions: [log, delete, tag]
+    checks: [status, age_gt, unused, exempt_names]
+
   port:
     description: Ports
-    actions:
-    - log
-    - delete
-    - tag
-    checks:
-    - status
-    - age_gt
-    - unused
-    - exempt_names
+    actions: [log, delete, tag]
+    checks: [status, age_gt, unused, exempt_names, no_security_group]
+    rich_checks:
+      - name: no_security_group
+        type: bool
+        description: "Port has no security groups attached"
+        category: security
+        severity: high
+
   router:
     description: Routers
-    actions:
-    - log
-    - delete
-    - tag
-    checks:
-    - status
-    - age_gt
-    - unused
-    - exempt_names
+    actions: [log, delete, tag]
+    checks: [status, age_gt, unused, exempt_names]
+
   loadbalancer:
     description: Load balancers
-    actions:
-    - log
-    - delete
-    - tag
-    checks:
-    - status
-    - age_gt
-    - unused
-    - exempt_names
+    actions: [log, delete, tag]
+    checks: [status, age_gt, unused, exempt_names]
+
   pool:
     description: Load balancer pools
-    actions:
-    - log
-    - delete
-    - tag
-    checks:
-    - status
-    - age_gt
-    - unused
-    - exempt_names
+    actions: [log, delete, tag]
+    checks: [status, age_gt, unused, exempt_names]
+
   member:
     description: Load balancer pool members
-    actions:
-    - log
-    - delete
-    - tag
-    checks:
-    - status
-    - age_gt
-    - unused
-    - exempt_names
+    actions: [log, delete, tag]
+    checks: [status, age_gt, unused, exempt_names]
