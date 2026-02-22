@@ -16,7 +16,13 @@ This guide explains how to write policies for Neutron resources in OSPA.
 **Resource Type:** `network`
 
 **Allowed Actions:** log, delete, tag
-**Allowed Checks:** status, age_gt, unused, exempt_names
+**Allowed Checks:** status, age_gt, unused, exempt_names, shared_network
+
+#### Security & Domain Checks
+
+| Check | Severity | Category | Type | Description |
+|-------|----------|----------|------|-------------|
+- **`shared_network`** | high | security | bool | Network is shared across tenants without RBAC
 
 
 ### SecurityGroup
@@ -34,13 +40,31 @@ This guide explains how to write policies for Neutron resources in OSPA.
 **Allowed Actions:** log, delete
 **Allowed Checks:** direction, ethertype, protocol, port, remote_ip_prefix, port_range_wide, exempt_names
 
+#### Security & Domain Checks
+
+| Check | Severity | Category | Type | Description |
+|-------|----------|----------|------|-------------|
+- **`direction`** | medium | security | string | Traffic direction (ingress/egress)
+- **`ethertype`** | low | security | string | Ethernet type (IPv4/IPv6)
+- **`protocol`** | medium | security | string | IP protocol (tcp/udp/icmp)
+- **`port`** | high | security | int | Port number within port range
+- **`remote_ip_prefix`** | critical | security | cidr | Source/destination CIDR - 0.0.0.0/0 means open to world _(Ref: OSSN-0011)_
+- **`port_range_wide`** | high | security | bool | Port range spans more than 100 ports
+- **`exempt_names`** | low | hygiene | string_list | Exempt by security group ID pattern
+
 
 ### FloatingIp
 
 **Resource Type:** `floating_ip`
 
 **Allowed Actions:** log, delete, tag
-**Allowed Checks:** status, age_gt, unused, exempt_names
+**Allowed Checks:** status, age_gt, unused, unassociated, exempt_names
+
+#### Security & Domain Checks
+
+| Check | Severity | Category | Type | Description |
+|-------|----------|----------|------|-------------|
+- **`unassociated`** | medium | cost | bool | Floating IP not attached to any port
 
 
 ### Subnet
@@ -49,6 +73,30 @@ This guide explains how to write policies for Neutron resources in OSPA.
 
 **Allowed Actions:** log, delete, tag
 **Allowed Checks:** status, age_gt, unused, exempt_names
+
+
+### Router
+
+**Resource Type:** `router`
+
+**Allowed Actions:** log, delete, tag
+**Allowed Checks:** status, age_gt, unused, exempt_names
+
+
+
+## OpenStack Security Guide Checklist
+
+The following items from the OpenStack Security Guide apply to Neutron.
+These are **configuration-level** checks that require manual verification on
+the control plane (not API-auditable).
+
+| ID | Description | Section | Manual |
+|----|-------------|---------|--------|
+- **Check-Neutron-01** | User/group ownership of config files set to root/neutron | networking/checklist | Yes
+- **Check-Neutron-02** | Strict permissions (640) on configuration files | networking/checklist | Yes
+- **Check-Neutron-03** | Keystone used for authentication | networking/checklist | Yes
+- **Check-Neutron-04** | Secure protocol (TLS) for authentication | networking/checklist | Yes
+- **Check-Neutron-05** | TLS enabled on Neutron API server | networking/checklist | Yes
 
 
 
@@ -66,6 +114,8 @@ policies:
     - name: rule-name
       description: Rule description
       resource: <resource_type>
+      severity: critical|high|medium|low
+      category: security|compliance|cost|hygiene
       check:
         # Check conditions (see below)
       action: log|delete|tag
@@ -163,22 +213,6 @@ check:
   action: log
 ```
 
-### Security & Domain-Specific Checks
-
-The following domain-specific checks are available for Neutron resources:
-
-| Check | Resource(s) | Type | Severity | Description |
-|-------|-------------|------|----------|-------------|
-| `direction` | security_group_rule | string | medium | Traffic direction (ingress/egress) |
-| `ethertype` | security_group_rule | string | low | Ethernet type (IPv4/IPv6) |
-| `protocol` | security_group_rule | string | medium | IP protocol (tcp/udp/icmp) |
-| `port` | security_group_rule | int | high | Port number within port range |
-| `remote_ip_prefix` | security_group_rule | cidr | critical | Source/destination CIDR - 0.0.0.0/0 means open to world |
-| `port_range_wide` | security_group_rule | bool | high | Port range spans more than 100 ports |
-| `unassociated` | floating_ip | bool | medium | Floating IP not attached to any port |
-| `shared_network` | network | bool | high | Network is shared across tenants without RBAC |
-| `no_security_group` | port | bool | high | Port has no security groups attached |
-
 ## Actions
 
 ### Log Action
@@ -246,7 +280,21 @@ action_tag_name: "Display Name for Tag"
 
 ### Network Examples
 
-#### Example 1: Find Inactive Network Resources
+#### Security Check Example
+
+```yaml
+- name: security-check-network-shared_network
+  description: "Network is shared across tenants without RBAC"
+  resource: network
+  severity: high
+  category: security
+  check:
+    shared_network: true
+  action: log
+```
+
+
+#### Find Inactive Network Resources
 
 ```yaml
 - name: find-inactive-network
@@ -257,7 +305,7 @@ action_tag_name: "Display Name for Tag"
   action: log
 ```
 
-#### Example 2: Find Old Network Resources
+#### Find Old Network Resources
 
 ```yaml
 - name: find-old-network
@@ -268,7 +316,7 @@ action_tag_name: "Display Name for Tag"
   action: log
 ```
 
-#### Example 3: Cleanup Unused Network Resources
+#### Cleanup Unused Network Resources
 
 ```yaml
 - name: cleanup-unused-network
@@ -281,23 +329,11 @@ action_tag_name: "Display Name for Tag"
   action: delete
 ```
 
-#### Example 4: Tag Old Network Resources
-
-```yaml
-- name: tag-old-network
-  description: Tag network resources older than 7 days
-  resource: network
-  check:
-    age_gt: 7d
-  action: tag
-  tag_name: audit-old-network
-  action_tag_name: "Old Network"
-```
-
 
 ### SecurityGroup Examples
 
-#### Example 1: Find Inactive SecurityGroup Resources
+
+#### Find Inactive SecurityGroup Resources
 
 ```yaml
 - name: find-inactive-security_group
@@ -308,7 +344,7 @@ action_tag_name: "Display Name for Tag"
   action: log
 ```
 
-#### Example 2: Find Old SecurityGroup Resources
+#### Find Old SecurityGroup Resources
 
 ```yaml
 - name: find-old-security_group
@@ -319,7 +355,7 @@ action_tag_name: "Display Name for Tag"
   action: log
 ```
 
-#### Example 3: Cleanup Unused SecurityGroup Resources
+#### Cleanup Unused SecurityGroup Resources
 
 ```yaml
 - name: cleanup-unused-security_group
@@ -332,23 +368,24 @@ action_tag_name: "Display Name for Tag"
   action: delete
 ```
 
-#### Example 4: Tag Old SecurityGroup Resources
-
-```yaml
-- name: tag-old-security_group
-  description: Tag security_group resources older than 7 days
-  resource: security_group
-  check:
-    age_gt: 7d
-  action: tag
-  tag_name: audit-old-security_group
-  action_tag_name: "Old SecurityGroup"
-```
-
 
 ### SecurityGroupRule Examples
 
-#### Example 1: Find Inactive SecurityGroupRule Resources
+#### Security Check Example
+
+```yaml
+- name: security-check-security_group_rule-direction
+  description: "Traffic direction (ingress/egress)"
+  resource: security_group_rule
+  severity: medium
+  category: security
+  check:
+    direction: "value"
+  action: log
+```
+
+
+#### Find Inactive SecurityGroupRule Resources
 
 ```yaml
 - name: find-inactive-security_group_rule
@@ -359,7 +396,7 @@ action_tag_name: "Display Name for Tag"
   action: log
 ```
 
-#### Example 2: Find Old SecurityGroupRule Resources
+#### Find Old SecurityGroupRule Resources
 
 ```yaml
 - name: find-old-security_group_rule
@@ -370,7 +407,7 @@ action_tag_name: "Display Name for Tag"
   action: log
 ```
 
-#### Example 3: Cleanup Unused SecurityGroupRule Resources
+#### Cleanup Unused SecurityGroupRule Resources
 
 ```yaml
 - name: cleanup-unused-security_group_rule
@@ -383,27 +420,24 @@ action_tag_name: "Display Name for Tag"
   action: delete
 ```
 
-#### Example 4: SSH Open to World (Security)
-
-```yaml
-- name: ssh-open-to-world
-  description: Flag SSH rules allowing access from anywhere
-  resource: security_group_rule
-  check:
-    direction: ingress
-    protocol: tcp
-    port: 22
-    remote_ip_prefix: "0.0.0.0/0"
-  action: log
-  severity: critical
-  category: security
-  guide_ref: "OSSN-0011"
-```
-
 
 ### FloatingIp Examples
 
-#### Example 1: Find Inactive FloatingIp Resources
+#### Security Check Example
+
+```yaml
+- name: security-check-floating_ip-unassociated
+  description: "Floating IP not attached to any port"
+  resource: floating_ip
+  severity: medium
+  category: cost
+  check:
+    unassociated: true
+  action: log
+```
+
+
+#### Find Inactive FloatingIp Resources
 
 ```yaml
 - name: find-inactive-floating_ip
@@ -414,7 +448,7 @@ action_tag_name: "Display Name for Tag"
   action: log
 ```
 
-#### Example 2: Find Old FloatingIp Resources
+#### Find Old FloatingIp Resources
 
 ```yaml
 - name: find-old-floating_ip
@@ -425,7 +459,7 @@ action_tag_name: "Display Name for Tag"
   action: log
 ```
 
-#### Example 3: Cleanup Unused FloatingIp Resources
+#### Cleanup Unused FloatingIp Resources
 
 ```yaml
 - name: cleanup-unused-floating_ip
@@ -438,23 +472,11 @@ action_tag_name: "Display Name for Tag"
   action: delete
 ```
 
-#### Example 4: Tag Old FloatingIp Resources
-
-```yaml
-- name: tag-old-floating_ip
-  description: Tag floating_ip resources older than 7 days
-  resource: floating_ip
-  check:
-    age_gt: 7d
-  action: tag
-  tag_name: audit-old-floating_ip
-  action_tag_name: "Old FloatingIp"
-```
-
 
 ### Subnet Examples
 
-#### Example 1: Find Inactive Subnet Resources
+
+#### Find Inactive Subnet Resources
 
 ```yaml
 - name: find-inactive-subnet
@@ -465,7 +487,7 @@ action_tag_name: "Display Name for Tag"
   action: log
 ```
 
-#### Example 2: Find Old Subnet Resources
+#### Find Old Subnet Resources
 
 ```yaml
 - name: find-old-subnet
@@ -476,7 +498,7 @@ action_tag_name: "Display Name for Tag"
   action: log
 ```
 
-#### Example 3: Cleanup Unused Subnet Resources
+#### Cleanup Unused Subnet Resources
 
 ```yaml
 - name: cleanup-unused-subnet
@@ -489,17 +511,43 @@ action_tag_name: "Display Name for Tag"
   action: delete
 ```
 
-#### Example 4: Tag Old Subnet Resources
+
+### Router Examples
+
+
+#### Find Inactive Router Resources
 
 ```yaml
-- name: tag-old-subnet
-  description: Tag subnet resources older than 7 days
-  resource: subnet
+- name: find-inactive-router
+  description: Find inactive router resources
+  resource: router
   check:
-    age_gt: 7d
-  action: tag
-  tag_name: audit-old-subnet
-  action_tag_name: "Old Subnet"
+    status: inactive
+  action: log
+```
+
+#### Find Old Router Resources
+
+```yaml
+- name: find-old-router
+  description: Find router resources older than 30 days
+  resource: router
+  check:
+    age_gt: 30d
+  action: log
+```
+
+#### Cleanup Unused Router Resources
+
+```yaml
+- name: cleanup-unused-router
+  description: Delete unused router resources
+  resource: router
+  check:
+    unused: true
+    exempt_names:
+      - default
+  action: delete
 ```
 
 
@@ -518,12 +566,16 @@ policies:
     - name: audit-network
       description: Audit network resources
       resource: network
+      severity: medium
+      category: hygiene
       check:
         status: active
       action: log
     - name: cleanup-old-network
       description: Find network resources older than 90 days
       resource: network
+      severity: low
+      category: cost
       check:
         age_gt: 90d
         exempt_names:
@@ -532,12 +584,16 @@ policies:
     - name: audit-security_group
       description: Audit security_group resources
       resource: security_group
+      severity: medium
+      category: hygiene
       check:
         status: active
       action: log
     - name: cleanup-old-security_group
       description: Find security_group resources older than 90 days
       resource: security_group
+      severity: low
+      category: cost
       check:
         age_gt: 90d
         exempt_names:
@@ -546,12 +602,16 @@ policies:
     - name: audit-security_group_rule
       description: Audit security_group_rule resources
       resource: security_group_rule
+      severity: medium
+      category: hygiene
       check:
         status: active
       action: log
     - name: cleanup-old-security_group_rule
       description: Find security_group_rule resources older than 90 days
       resource: security_group_rule
+      severity: low
+      category: cost
       check:
         age_gt: 90d
         exempt_names:
@@ -560,12 +620,16 @@ policies:
     - name: audit-floating_ip
       description: Audit floating_ip resources
       resource: floating_ip
+      severity: medium
+      category: hygiene
       check:
         status: active
       action: log
     - name: cleanup-old-floating_ip
       description: Find floating_ip resources older than 90 days
       resource: floating_ip
+      severity: low
+      category: cost
       check:
         age_gt: 90d
         exempt_names:
@@ -574,12 +638,34 @@ policies:
     - name: audit-subnet
       description: Audit subnet resources
       resource: subnet
+      severity: medium
+      category: hygiene
       check:
         status: active
       action: log
     - name: cleanup-old-subnet
       description: Find subnet resources older than 90 days
       resource: subnet
+      severity: low
+      category: cost
+      check:
+        age_gt: 90d
+        exempt_names:
+          - default
+      action: log
+    - name: audit-router
+      description: Audit router resources
+      resource: router
+      severity: medium
+      category: hygiene
+      check:
+        status: active
+      action: log
+    - name: cleanup-old-router
+      description: Find router resources older than 90 days
+      resource: router
+      severity: low
+      category: cost
       check:
         age_gt: 90d
         exempt_names:
@@ -593,6 +679,7 @@ For more information about Neutron resources and their properties:
 
 - **OpenStack Neutron API Documentation:** https://docs.openstack.org/api-ref/neutron/
 - **Neutron Service Guide:** https://docs.openstack.org/neutron/latest/
+- **OpenStack Security Guide:** https://docs.openstack.org/security-guide/
 
 ## Testing Your Policy
 
@@ -618,12 +705,13 @@ For more information about Neutron resources and their properties:
 - The `exempt_names` list allows you to exclude specific resources by name
 - Age checks use the resource's `UpdatedAt` timestamp, falling back to `CreatedAt` if not available
 - Status values are case-sensitive and should match OpenStack API responses exactly
+- Use `severity` and `category` to classify findings for prioritization
 
 ## Troubleshooting
 
 **Policy validation fails:**
 - Ensure service name matches exactly: `neutron`
-- Verify resource type is supported: `{network Networks [status age_gt unused exempt_names] [log delete tag] {false false false}}`, `{security_group Security groups [status age_gt unused exempt_names] [log delete tag] {false false false}}`, `{security_group_rule Security group rules [status age_gt unused exempt_names] [log delete tag] {false false false}}`, `{floating_ip Floating IP addresses [status age_gt unused exempt_names] [log delete tag] {false false false}}`, `{subnet Subnets [status age_gt unused exempt_names] [log delete tag] {false false false}}`
+- Verify resource type is supported: `{network Networks [status age_gt unused exempt_names shared_network] [{shared_network bool Network is shared across tenants without RBAC security high }] [log delete tag] {false false false}}`, `{security_group Security groups [status age_gt unused exempt_names] [] [log delete tag] {false false false}}`, `{security_group_rule Security group rules [direction ethertype protocol port remote_ip_prefix port_range_wide exempt_names] [{direction string Traffic direction (ingress/egress) security medium } {ethertype string Ethernet type (IPv4/IPv6) security low } {protocol string IP protocol (tcp/udp/icmp) security medium } {port int Port number within port range security high } {remote_ip_prefix cidr Source/destination CIDR - 0.0.0.0/0 means open to world security critical OSSN-0011} {port_range_wide bool Port range spans more than 100 ports security high } {exempt_names string_list Exempt by security group ID pattern hygiene low }] [log delete] {false false false}}`, `{floating_ip Floating IP addresses [status age_gt unused unassociated exempt_names] [{unassociated bool Floating IP not attached to any port cost medium }] [log delete tag] {false false false}}`, `{subnet Subnets [status age_gt unused exempt_names] [] [log delete tag] {false false false}}`, `{router Routers [status age_gt unused exempt_names] [] [log delete tag] {false false false}}`
 - Check YAML syntax is correct
 
 **No resources found:**
