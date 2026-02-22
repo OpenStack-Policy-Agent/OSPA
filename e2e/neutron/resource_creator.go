@@ -259,17 +259,13 @@ func CreateSecurityGroupRuleWithOptions(t *testing.T, client *gophercloud.Servic
 
 
 
-// CreateSubnet creates a test subnet and returns:
-//   - resourceID: The ID of the created resource (for filtering audit results)
-//   - cleanup: A function to delete the resource and its dependencies
+// CreateSubnet creates a test subnet (and its parent network) and returns:
+//   - resourceID: The subnet ID (for filtering audit results)
+//   - cleanup: A function to delete the subnet and its parent network
 func CreateSubnet(t *testing.T, client *gophercloud.ServiceClient) (resourceID string, cleanup func()) {
 	t.Helper()
-	
-	// TODO: Implement resource creation
-	// See the example above and the gophercloud documentation
-	
-	t.Skip("CreateSubnet not implemented - implement in resource_creator.go")
-	return "", func() {}
+	_, subnetID, cleanupAll := CreateNetworkWithSubnet(t, client)
+	return subnetID, cleanupAll
 }
 
 // CleanupOrphans deletes any leaked test resources (those with testPrefix).
