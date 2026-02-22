@@ -4,8 +4,19 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
 )
+
+// checksQuoted formats a string slice as Go quoted literals for a template,
+// e.g. ["status", "age_gt"] => `"status", "age_gt"`.
+func checksQuoted(checks []string) string {
+	quoted := make([]string, len(checks))
+	for i, c := range checks {
+		quoted[i] = fmt.Sprintf("%q", c)
+	}
+	return strings.Join(quoted, ", ")
+}
 
 // GenerateAuditorFiles generates auditor implementation files for each resource.
 func GenerateAuditorFiles(baseDir, serviceName, displayName string, resources []string) error {
@@ -69,6 +80,10 @@ func (a *{{.ResourceTitle}}Auditor) ResourceType() string {
 	return "{{.ResourceName}}"
 }
 
+func (a *{{.ResourceTitle}}Auditor) ImplementedChecks() []string {
+	return []string{ {{ChecksQuoted .Checks}} }
+}
+
 func (a *{{.ResourceTitle}}Auditor) Check(ctx context.Context, resource interface{}, rule *policy.Rule) (*audit.Result, error) {
 	_ = ctx
 
@@ -117,8 +132,9 @@ func (a *{{.ResourceTitle}}Auditor) Fix(ctx context.Context, client interface{},
 `
 
 	funcMap := template.FuncMap{
-		"Pascal":     ToPascal,
-		"JoinOrNone": JoinOrNone,
+		"Pascal":       ToPascal,
+		"JoinOrNone":   JoinOrNone,
+		"ChecksQuoted": checksQuoted,
 	}
 
 	for _, resource := range resources {

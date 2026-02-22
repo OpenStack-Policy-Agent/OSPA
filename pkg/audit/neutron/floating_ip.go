@@ -24,6 +24,10 @@ func (a *FloatingIpAuditor) ResourceType() string {
 	return "floating_ip"
 }
 
+func (a *FloatingIpAuditor) ImplementedChecks() []string {
+	return []string{"status", "age_gt", "unused", "exempt_names"}
+}
+
 func (a *FloatingIpAuditor) Check(ctx context.Context, resource interface{}, rule *policy.Rule) (*audit.Result, error) {
 	_ = ctx
 

@@ -24,6 +24,10 @@ func (a *KeypairAuditor) ResourceType() string {
 	return "keypair"
 }
 
+func (a *KeypairAuditor) ImplementedChecks() []string {
+	return []string{"status", "age_gt", "unused", "exempt_names"}
+}
+
 func (a *KeypairAuditor) Check(ctx context.Context, resource interface{}, rule *policy.Rule) (*audit.Result, error) {
 	_ = ctx
 

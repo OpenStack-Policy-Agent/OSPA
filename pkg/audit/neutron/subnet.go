@@ -37,6 +37,10 @@ func (a *SubnetAuditor) ResourceType() string {
 	return "subnet"
 }
 
+func (a *SubnetAuditor) ImplementedChecks() []string {
+	return []string{"status", "age_gt", "unused", "exempt_names"}
+}
+
 func (a *SubnetAuditor) Check(ctx context.Context, resource interface{}, rule *policy.Rule) (*audit.Result, error) {
 	_ = ctx
 

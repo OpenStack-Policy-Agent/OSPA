@@ -128,6 +128,92 @@ type CheckConditions struct {
 	TokenProvider   string `yaml:"token_provider,omitempty"`
 }
 
+// UsedChecks returns the YAML field names of all non-zero check conditions.
+// The orchestrator compares this against Auditor.ImplementedChecks() to
+// detect policy rules that reference checks no auditor handles.
+func (c *CheckConditions) UsedChecks() []string {
+	if c == nil {
+		return nil
+	}
+	var used []string
+	if c.Status != "" {
+		used = append(used, "status")
+	}
+	if c.AgeGT != "" {
+		used = append(used, "age_gt")
+	}
+	if c.Unused {
+		used = append(used, "unused")
+	}
+	if len(c.ExemptNames) > 0 {
+		used = append(used, "exempt_names")
+	}
+	if c.ExemptMetadata != nil {
+		used = append(used, "exempt_metadata")
+	}
+	if c.Direction != "" {
+		used = append(used, "direction")
+	}
+	if c.Ethertype != "" {
+		used = append(used, "ethertype")
+	}
+	if c.Protocol != "" {
+		used = append(used, "protocol")
+	}
+	if c.Port != 0 {
+		used = append(used, "port")
+	}
+	if c.RemoteIPPrefix != "" {
+		used = append(used, "remote_ip_prefix")
+	}
+	if c.PortRangeWide {
+		used = append(used, "port_range_wide")
+	}
+	if c.Unassociated {
+		used = append(used, "unassociated")
+	}
+	if c.SharedNetwork {
+		used = append(used, "shared_network")
+	}
+	if c.NoSecurityGroup {
+		used = append(used, "no_security_group")
+	}
+	if len(c.ImageName) > 0 {
+		used = append(used, "image_name")
+	}
+	if c.NoKeypair {
+		used = append(used, "no_keypair")
+	}
+	if c.Encrypted != nil {
+		used = append(used, "encrypted")
+	}
+	if c.Attached != nil {
+		used = append(used, "attached")
+	}
+	if c.HasBackup != nil {
+		used = append(used, "has_backup")
+	}
+	if c.Visibility != "" {
+		used = append(used, "visibility")
+	}
+	if c.PasswordExpired {
+		used = append(used, "password_expired")
+	}
+	if c.MFAEnabled != nil {
+		used = append(used, "mfa_enabled")
+	}
+	if c.InactiveDays != 0 {
+		used = append(used, "inactive_days")
+	}
+	if c.HasAdminRole {
+		used = append(used, "has_admin_role")
+	}
+	if c.TokenProvider != "" {
+		used = append(used, "token_provider")
+	}
+	return used
+}
+
 // MetadataMatch represents metadata key-value matching for exemptions
 type MetadataMatch struct {
 	Key   string `yaml:"key"`

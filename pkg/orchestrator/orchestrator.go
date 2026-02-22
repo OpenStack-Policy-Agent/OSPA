@@ -112,6 +112,8 @@ func (o *Orchestrator) Run() (<-chan *audit.Result, error) {
 
 	o.compositeRules = o.buildCompositeRules()
 
+	o.validateCheckCoverage(ruleGroups)
+
 	// Start worker pool
 	var wg sync.WaitGroup
 	jobsChan := make(chan discovery.Job, o.jobsBuffer)
@@ -456,6 +458,44 @@ func (o *Orchestrator) emitCompositeError(rule *policy.CompositeRule, err error)
 	case <-o.ctx.Done():
 		return
 	case o.resultsChan <- result:
+	}
+}
+
+// validateCheckCoverage logs warnings for policy rules that reference check
+// fields not declared in the auditor's ImplementedChecks(). This catches
+// misconfigurations early (e.g., using "encrypted" on a resource whose
+// auditor hasn't implemented that check yet).
+func (o *Orchestrator) validateCheckCoverage(ruleGroups map[string]map[string][]*policy.Rule) {
+	for serviceName, resourceRules := range ruleGroups {
+		service, err := services.Get(serviceName)
+		if err != nil {
+			continue
+		}
+
+		for resourceType, rules := range resourceRules {
+			auditor, err := service.GetResourceAuditor(resourceType)
+			if err != nil {
+				continue
+			}
+
+			implemented := make(map[string]bool)
+			for _, c := range auditor.ImplementedChecks() {
+				implemented[c] = true
+			}
+
+			for _, rule := range rules {
+				for _, used := range rule.Check.UsedChecks() {
+					if !implemented[used] {
+						slog.Warn("policy rule uses check not implemented by auditor",
+							"rule", rule.Name,
+							"service", serviceName,
+							"resource", resourceType,
+							"check", used,
+						)
+					}
+				}
+			}
+		}
 	}
 }
 

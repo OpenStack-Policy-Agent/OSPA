@@ -16,4 +16,9 @@ type Auditor interface {
 
 	// ResourceType returns the resource type this auditor handles
 	ResourceType() string
+
+	// ImplementedChecks returns the list of CheckConditions field names
+	// that this auditor actually evaluates. The orchestrator uses this to
+	// warn when a policy rule references a check that no auditor handles.
+	ImplementedChecks() []string
 }

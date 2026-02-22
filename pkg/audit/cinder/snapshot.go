@@ -24,6 +24,10 @@ func (a *SnapshotAuditor) ResourceType() string {
 	return "snapshot"
 }
 
+func (a *SnapshotAuditor) ImplementedChecks() []string {
+	return []string{"status", "age_gt", "unused", "exempt_names"}
+}
+
 func (a *SnapshotAuditor) Check(ctx context.Context, resource interface{}, rule *policy.Rule) (*audit.Result, error) {
 	_ = ctx
 

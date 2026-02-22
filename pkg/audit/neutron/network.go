@@ -33,6 +33,10 @@ func (a *NetworkAuditor) ResourceType() string {
 	return "network"
 }
 
+func (a *NetworkAuditor) ImplementedChecks() []string {
+	return []string{"status", "age_gt", "unused", "exempt_names"}
+}
+
 func (a *NetworkAuditor) Check(ctx context.Context, resource interface{}, rule *policy.Rule) (*audit.Result, error) {
 	_ = ctx
 

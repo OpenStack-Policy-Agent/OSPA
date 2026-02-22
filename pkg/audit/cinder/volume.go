@@ -24,6 +24,10 @@ func (a *VolumeAuditor) ResourceType() string {
 	return "volume"
 }
 
+func (a *VolumeAuditor) ImplementedChecks() []string {
+	return []string{"status", "age_gt", "unused", "exempt_names"}
+}
+
 func (a *VolumeAuditor) Check(ctx context.Context, resource interface{}, rule *policy.Rule) (*audit.Result, error) {
 	_ = ctx
 

@@ -33,6 +33,10 @@ func (a *SecurityGroupAuditor) ResourceType() string {
 	return "security_group"
 }
 
+func (a *SecurityGroupAuditor) ImplementedChecks() []string {
+	return []string{"status", "age_gt", "unused", "exempt_names"}
+}
+
 func (a *SecurityGroupAuditor) Check(ctx context.Context, resource interface{}, rule *policy.Rule) (*audit.Result, error) {
 	_ = ctx
 
