@@ -199,3 +199,45 @@ func (d *NeutronFloatingIpDiscoverer) Discover(ctx context.Context, client *goph
 
 	return ch, nil
 }
+
+
+// NeutronSubnetDiscoverer discovers neutron/subnet resources.
+//
+// TODO: Implement Discover() using gophercloud to list subnet resources.
+// Gophercloud docs: https://pkg.go.dev/github.com/gophercloud/gophercloud/openstack
+// OpenStack API: https://docs.openstack.org/api-ref/neutron
+//
+// Discovery hints from registry:
+//   pagination: false
+//   all_tenants: false
+//   regions: false
+type NeutronSubnetDiscoverer struct{}
+
+func (d *NeutronSubnetDiscoverer) ResourceType() string {
+	return "subnet"
+}
+
+func (d *NeutronSubnetDiscoverer) Discover(ctx context.Context, client *gophercloud.ServiceClient, allTenants bool) (<-chan discovery.Job, error) {
+	ch := make(chan discovery.Job)
+
+	go func() {
+		defer close(ch)
+
+		// TODO: List subnet resources using gophercloud and send jobs.
+		// Example pattern:
+		//   pages, err := <resource>.List(client, <opts>).AllPages()
+		//   resources, err := <resource>.ExtractResources(pages)
+		//   for _, r := range resources {
+		//       select {
+		//       case <-ctx.Done():
+		//           return
+		//       case ch <- discovery.Job{Service: "neutron", ResourceType: "subnet", ResourceID: r.ID, ProjectID: r.TenantID, Resource: r}:
+		//       }
+		//   }
+		_ = ctx
+		_ = client
+		_ = allTenants
+	}()
+
+	return ch, nil
+}
