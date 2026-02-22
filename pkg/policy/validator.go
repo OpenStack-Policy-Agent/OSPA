@@ -95,14 +95,21 @@ func (p *Policy) Validate() error {
 				}
 			}
 
-			if !hasAnyConstraint(&rule.Check) {
-				return fmt.Errorf("rule %q: check must specify at least one condition", ruleName)
-			}
+		if !hasAnyConstraint(&rule.Check) {
+			return fmt.Errorf("rule %q: check must specify at least one condition", ruleName)
+		}
 
-			// Validate check conditions using service-specific validator
-			if err := validateCheckConditions(service, &rule.Check, resource, ruleName); err != nil {
-				return err
-			}
+		if err := validateSeverity(rule.Severity, ruleName); err != nil {
+			return err
+		}
+		if err := validateCategory(rule.Category, ruleName); err != nil {
+			return err
+		}
+
+		// Validate check conditions using service-specific validator
+		if err := validateCheckConditions(service, &rule.Check, resource, ruleName); err != nil {
+			return err
+		}
 
 			// Validate age_gt format if present
 			if rule.Check.AgeGT != "" {
@@ -178,15 +185,29 @@ func hasAnyConstraint(check *CheckConditions) bool {
 	if check == nil {
 		return false
 	}
-	return check.Direction != "" ||
+	return check.Status != "" ||
+		check.AgeGT != "" ||
+		check.Unused ||
+		check.Direction != "" ||
 		check.Ethertype != "" ||
 		check.Protocol != "" ||
 		check.Port != 0 ||
 		check.RemoteIPPrefix != "" ||
-		check.Status != "" ||
-		check.AgeGT != "" ||
-		check.Unused ||
-		len(check.ImageName) > 0
+		check.PortRangeWide ||
+		check.Unassociated ||
+		check.SharedNetwork ||
+		check.NoSecurityGroup ||
+		len(check.ImageName) > 0 ||
+		check.NoKeypair ||
+		check.Encrypted != nil ||
+		check.Attached != nil ||
+		check.HasBackup != nil ||
+		check.Visibility != "" ||
+		check.PasswordExpired ||
+		check.MFAEnabled != nil ||
+		check.InactiveDays != 0 ||
+		check.HasAdminRole ||
+		check.TokenProvider != ""
 }
 
 func hasCompositeCheck(check map[string]interface{}) bool {
@@ -213,5 +234,35 @@ func validateCheckConditions(serviceName string, check *CheckConditions, resourc
 
 	// Fallback: if no validator is registered for this service, skip resource-specific validation
 	// This allows services without validators to still work (though not recommended)
+	return nil
+}
+
+var validSeverities = map[string]bool{
+	"":               true,
+	SeverityCritical: true,
+	SeverityHigh:     true,
+	SeverityMedium:   true,
+	SeverityLow:      true,
+}
+
+var validCategories = map[string]bool{
+	"":                 true,
+	CategorySecurity:   true,
+	CategoryCompliance: true,
+	CategoryCost:       true,
+	CategoryHygiene:    true,
+}
+
+func validateSeverity(severity, ruleName string) error {
+	if !validSeverities[strings.ToLower(severity)] {
+		return fmt.Errorf("rule %q: unsupported severity %q (supported: critical, high, medium, low)", ruleName, severity)
+	}
+	return nil
+}
+
+func validateCategory(category, ruleName string) error {
+	if !validCategories[strings.ToLower(category)] {
+		return fmt.Errorf("rule %q: unsupported category %q (supported: security, compliance, cost, hygiene)", ruleName, category)
+	}
 	return nil
 }

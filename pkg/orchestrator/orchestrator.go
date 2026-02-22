@@ -243,6 +243,8 @@ func (o *Orchestrator) worker(id int, jobsChan <-chan discovery.Job, wg *sync.Wa
 				}
 			}
 
+			populateClassification(result, rule)
+
 			// Apply remediation if needed
 			if !result.Compliant && result.Error == nil && rule.Action != "log" {
 				if !o.apply {
@@ -406,12 +408,24 @@ func (o *Orchestrator) normalizeCompositeResult(rule *policy.CompositeRule, resu
 			Service:       rule.Service,
 			Resource:      "composite",
 			Action:        rule.Action,
+			Severity:      rule.Severity,
+			Category:      rule.Category,
+			GuideRef:      rule.GuideRef,
 			TagName:       rule.TagName,
 			ActionTagName: rule.ActionTagName,
 		}
 	}
 	if result.ResourceID == "" {
 		result.ResourceID = "composite"
+	}
+	if result.Severity == "" {
+		result.Severity = rule.Severity
+	}
+	if result.Category == "" {
+		result.Category = rule.Category
+	}
+	if result.GuideRef == "" {
+		result.GuideRef = rule.GuideRef
 	}
 }
 
@@ -420,6 +434,9 @@ func (o *Orchestrator) emitCompositeError(rule *policy.CompositeRule, err error)
 		RuleID:     rule.Name,
 		ResourceID: "composite",
 		Compliant:  false,
+		Severity:   rule.Severity,
+		Category:   rule.Category,
+		GuideRef:   rule.GuideRef,
 		Error:      err,
 		ErrorKind:  audit.ErrorKindAudit,
 		Rule: &policy.Rule{
@@ -428,6 +445,9 @@ func (o *Orchestrator) emitCompositeError(rule *policy.CompositeRule, err error)
 			Service:       rule.Service,
 			Resource:      "composite",
 			Action:        rule.Action,
+			Severity:      rule.Severity,
+			Category:      rule.Category,
+			GuideRef:      rule.GuideRef,
 			TagName:       rule.TagName,
 			ActionTagName: rule.ActionTagName,
 		},
@@ -436,5 +456,20 @@ func (o *Orchestrator) emitCompositeError(rule *policy.CompositeRule, err error)
 	case <-o.ctx.Done():
 		return
 	case o.resultsChan <- result:
+	}
+}
+
+func populateClassification(result *audit.Result, rule *policy.Rule) {
+	if rule == nil {
+		return
+	}
+	if result.Severity == "" {
+		result.Severity = rule.Severity
+	}
+	if result.Category == "" {
+		result.Category = rule.Category
+	}
+	if result.GuideRef == "" {
+		result.GuideRef = rule.GuideRef
 	}
 }

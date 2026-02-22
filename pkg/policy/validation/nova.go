@@ -21,7 +21,7 @@ func (v *NovaValidator) ValidateResource(check *policy.CheckConditions, resource
 	switch resourceType {
 
 	case "instance":
-		if err := validateAllowedChecks(check, []string{"status", "age_gt", "unused", "exempt_names", "image_name"}); err != nil {
+		if err := validateAllowedChecks(check, []string{"status", "age_gt", "unused", "exempt_names", "image_name", "no_keypair"}); err != nil {
 			return fmt.Errorf("rule %q: %w", ruleName, err)
 		}
 

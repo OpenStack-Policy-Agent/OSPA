@@ -18,6 +18,11 @@ type Result struct {
 	ErrorKind    ErrorKind
 	Rule         *policy.Rule
 
+	// Classification
+	Severity string
+	Category string
+	GuideRef string
+
 	// Remediation fields
 	RemediationAttempted  bool
 	Remediated            bool
