@@ -8,6 +8,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
 )
 
 // NeutronNetworkDiscoverer discovers neutron/network resources.
@@ -202,15 +203,6 @@ func (d *NeutronFloatingIpDiscoverer) Discover(ctx context.Context, client *goph
 
 
 // NeutronSubnetDiscoverer discovers neutron/subnet resources.
-//
-// TODO: Implement Discover() using gophercloud to list subnet resources.
-// Gophercloud docs: https://pkg.go.dev/github.com/gophercloud/gophercloud/openstack
-// OpenStack API: https://docs.openstack.org/api-ref/neutron
-//
-// Discovery hints from registry:
-//   pagination: false
-//   all_tenants: false
-//   regions: false
 type NeutronSubnetDiscoverer struct{}
 
 func (d *NeutronSubnetDiscoverer) ResourceType() string {
@@ -223,20 +215,30 @@ func (d *NeutronSubnetDiscoverer) Discover(ctx context.Context, client *gophercl
 	go func() {
 		defer close(ch)
 
-		// TODO: List subnet resources using gophercloud and send jobs.
-		// Example pattern:
-		//   pages, err := <resource>.List(client, <opts>).AllPages()
-		//   resources, err := <resource>.ExtractResources(pages)
-		//   for _, r := range resources {
-		//       select {
-		//       case <-ctx.Done():
-		//           return
-		//       case ch <- discovery.Job{Service: "neutron", ResourceType: "subnet", ResourceID: r.ID, ProjectID: r.TenantID, Resource: r}:
-		//       }
-		//   }
-		_ = ctx
-		_ = client
-		_ = allTenants
+		opts := subnets.ListOpts{}
+		pages, err := subnets.List(client, opts).AllPages()
+		if err != nil {
+			return
+		}
+
+		subnetList, err := subnets.ExtractSubnets(pages)
+		if err != nil {
+			return
+		}
+
+		for _, subnet := range subnetList {
+			select {
+			case <-ctx.Done():
+				return
+			case ch <- discovery.Job{
+				Service:      "neutron",
+				ResourceType: "subnet",
+				ResourceID:   subnet.ID,
+				ProjectID:    subnet.TenantID,
+				Resource:     subnet,
+			}:
+			}
+		}
 	}()
 
 	return ch, nil
