@@ -28,19 +28,39 @@ func generateAuditorFilesWithSpecs(baseDir, serviceName, displayName string, res
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/audit"
+	"github.com/OpenStack-Policy-Agent/OSPA/pkg/audit/common"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/policy"
 	// TODO: Import the gophercloud resource type for {{.ResourceName}}.
 	// Example: "github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 )
+
+// TODO: Replace this placeholder adapter with the real gophercloud type fields.
+// Example for servers.Server:
+//
+//	type {{.ResourceName}}Adapter struct{ r servers.Server }
+//	func (a {{.ResourceName}}Adapter) GetID() string           { return a.r.ID }
+//	func (a {{.ResourceName}}Adapter) GetName() string         { return a.r.Name }
+//	func (a {{.ResourceName}}Adapter) GetProjectID() string    { return a.r.TenantID }
+//	func (a {{.ResourceName}}Adapter) GetStatus() string       { return a.r.Status }
+//	func (a {{.ResourceName}}Adapter) GetCreatedAt() time.Time { return a.r.Created }
+//	func (a {{.ResourceName}}Adapter) GetUpdatedAt() time.Time { return a.r.Updated }
+type {{.ResourceName}}Adapter struct{ r interface{} }
+
+func (a {{.ResourceName}}Adapter) GetID() string           { return "unknown" }
+func (a {{.ResourceName}}Adapter) GetName() string         { return "unknown" }
+func (a {{.ResourceName}}Adapter) GetProjectID() string    { return "" }
+func (a {{.ResourceName}}Adapter) GetStatus() string       { return "" }
+func (a {{.ResourceName}}Adapter) GetCreatedAt() time.Time { return time.Time{} }
+func (a {{.ResourceName}}Adapter) GetUpdatedAt() time.Time { return time.Time{} }
 
 // {{.ResourceTitle}}Auditor audits {{.ServiceName}}/{{.ResourceName}} resources.
 //
 // Allowed checks: {{JoinOrNone .Checks}}
 // Allowed actions: {{JoinOrNone .Actions}}
 //
-// TODO: Cast 'resource' to the correct gophercloud type and implement checks.
 // Gophercloud docs: https://pkg.go.dev/github.com/gophercloud/gophercloud/openstack
 // OpenStack API: https://docs.openstack.org/api-ref/{{.ServiceName}}
 type {{.ResourceTitle}}Auditor struct{}
@@ -52,33 +72,24 @@ func (a *{{.ResourceTitle}}Auditor) ResourceType() string {
 func (a *{{.ResourceTitle}}Auditor) Check(ctx context.Context, resource interface{}, rule *policy.Rule) (*audit.Result, error) {
 	_ = ctx
 
-	// TODO: Cast resource to the correct type.
-	// Example: r := resource.(servers.Server)
-	//
-	// Then populate the result:
-	//   result.ResourceID = r.ID
-	//   result.ResourceName = r.Name
-	//   result.ProjectID = r.TenantID
-	//   result.Status = r.Status
-	//   result.UpdatedAt = r.Updated
-	//
-	// Implement checks based on rule.Check fields:
-	//   - Status: compare r.Status with rule.Check.Status
-	//   - AgeGT: compare time.Since(r.Updated) with rule.Check.AgeGT
-	//   - Unused: implement resource-specific unused detection
-	//   - ExemptNames: skip if r.Name matches any exempt pattern
+	// TODO: Replace with the correct gophercloud type assertion.
+	// Example: r, ok := resource.(servers.Server)
+	adapter := {{.ResourceName}}Adapter{r: resource}
 
-	result := &audit.Result{
-		RuleID:       rule.Name,
-		ResourceID:   "unknown",
-		ResourceName: "unknown",
-		ProjectID:    "",
-		Compliant:    true,
-		Rule:         rule,
-		Status:       "",
+	result := common.BuildBaseResult(adapter, rule)
+
+	exempt, err := common.RunCommonChecks(adapter, rule, result)
+	if exempt || err != nil {
+		return result, err
 	}
 
-	_ = resource
+	// TODO: Implement resource-specific unused detection.
+	if rule.Check.Unused {
+		result.Observation = "unused check not yet implemented"
+	}
+
+	// TODO: Implement domain-specific checks for {{.ResourceName}}.
+
 	return result, nil
 }
 

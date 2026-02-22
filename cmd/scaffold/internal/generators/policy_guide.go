@@ -24,6 +24,8 @@ func generatePolicyGuideWithSpecs(baseDir, serviceName, displayName, serviceType
 
 	guideFile := filepath.Join(docsServicesDir, serviceName+".md")
 
+	guideChecklist := buildGuideChecklist(serviceName)
+
 	tmpl := `# Policy Guide: {{.DisplayName}} ({{.ServiceName}})
 
 This guide explains how to write policies for {{.DisplayName}} resources in OSPA.
@@ -43,7 +45,25 @@ This guide explains how to write policies for {{.DisplayName}} resources in OSPA
 
 **Allowed Actions:** {{JoinOrNone .Actions}}
 **Allowed Checks:** {{JoinOrNone .Checks}}
+{{if .RichChecks}}
+#### Security & Domain Checks
 
+| Check | Severity | Category | Type | Description |
+|-------|----------|----------|------|-------------|
+{{range .RichChecks}}- **` + "`{{.Name}}`" + `** | {{.Severity}} | {{.Category}} | {{.Type}} | {{.Description}}{{if .GuideRef}} _(Ref: {{.GuideRef}})_{{end}}
+{{end}}{{end}}
+{{end}}
+{{if .GuideChecklist}}
+## OpenStack Security Guide Checklist
+
+The following items from the OpenStack Security Guide apply to {{.DisplayName}}.
+These are **configuration-level** checks that require manual verification on
+the control plane (not API-auditable).
+
+| ID | Description | Section | Manual |
+|----|-------------|---------|--------|
+{{range .GuideChecklist}}- **{{.ID}}** | {{.Description}} | {{.Section}} | {{if .Manual}}Yes{{else}}No{{end}}
+{{end}}
 {{end}}
 
 ## Policy Structure
@@ -61,6 +81,8 @@ policies:
       description: Rule description
       service: {{.ServiceName}}
       resource: <resource_type>
+      severity: critical|high|medium|low
+      category: security|compliance|cost|hygiene
       check:
         # Check conditions (see below)
       action: log|delete|tag
@@ -229,10 +251,26 @@ action_tag_name: "Display Name for Tag"
 
 ## Resource-Specific Examples
 
-{{range .Resources}}
-### {{.Name | Title}} Examples
+{{range $res := .Resources}}
+### {{$res.Name | Title}} Examples
+{{if $res.RichChecks}}
+#### Security Check Example
+{{range $i, $rc := $res.RichChecks}}{{if eq $i 0}}
+{{printf "%c%c%c" 96 96 96}}yaml
+- name: security-check-{{$res.Name}}-{{$rc.Name}}
+  description: "{{$rc.Description}}"
+  service: {{$.ServiceName}}
+  resource: {{$res.Name}}
+  severity: {{$rc.Severity}}
+  category: {{$rc.Category}}{{if $rc.GuideRef}}
+  guide_ref: "{{$rc.GuideRef}}"{{end}}
+  check:
+    {{$rc.Name}}: {{ExampleValue $rc.Type}}
+  action: log
+{{printf "%c%c%c" 96 96 96}}
+{{end}}{{end}}{{end}}
 
-#### Example 1: Find Inactive {{.Name | Title}} Resources
+#### Find Inactive {{.Name | Title}} Resources
 
 {{printf "%c%c%c" 96 96 96}}yaml
 - name: find-inactive-{{.Name}}
@@ -244,7 +282,7 @@ action_tag_name: "Display Name for Tag"
   action: log
 {{printf "%c%c%c" 96 96 96}}
 
-#### Example 2: Find Old {{.Name | Title}} Resources
+#### Find Old {{.Name | Title}} Resources
 
 {{printf "%c%c%c" 96 96 96}}yaml
 - name: find-old-{{.Name}}
@@ -256,7 +294,7 @@ action_tag_name: "Display Name for Tag"
   action: log
 {{printf "%c%c%c" 96 96 96}}
 
-#### Example 3: Cleanup Unused {{.Name | Title}} Resources
+#### Cleanup Unused {{.Name | Title}} Resources
 
 {{printf "%c%c%c" 96 96 96}}yaml
 - name: cleanup-unused-{{.Name}}
@@ -268,20 +306,6 @@ action_tag_name: "Display Name for Tag"
     exempt_names:
       - default
   action: delete
-{{printf "%c%c%c" 96 96 96}}
-
-#### Example 4: Tag Old {{.Name | Title}} Resources
-
-{{printf "%c%c%c" 96 96 96}}yaml
-- name: tag-old-{{.Name}}
-  description: Tag {{.Name}} resources older than 7 days
-  service: {{$.ServiceName}}
-  resource: {{.Name}}
-  check:
-    age_gt: 7d
-  action: tag
-  tag_name: audit-old-{{.Name}}
-  action_tag_name: "Old {{.Name | Title}}"
 {{printf "%c%c%c" 96 96 96}}
 
 {{end}}
@@ -301,6 +325,8 @@ policies:
       description: Audit {{.Name}} resources
       service: {{$.ServiceName}}
       resource: {{.Name}}
+      severity: medium
+      category: hygiene
       check:
         status: active
       action: log
@@ -308,6 +334,8 @@ policies:
       description: Find {{.Name}} resources older than 90 days
       service: {{$.ServiceName}}
       resource: {{.Name}}
+      severity: low
+      category: cost
       check:
         age_gt: 90d
         exempt_names:
@@ -321,6 +349,7 @@ For more information about {{.DisplayName}} resources and their properties:
 
 - **OpenStack {{.DisplayName}} API Documentation:** https://docs.openstack.org/api-ref/{{.ServiceName}}/
 - **{{.DisplayName}} Service Guide:** https://docs.openstack.org/{{.ServiceName}}/latest/
+- **OpenStack Security Guide:** https://docs.openstack.org/security-guide/
 
 ## Testing Your Policy
 
@@ -346,6 +375,7 @@ For more information about {{.DisplayName}} resources and their properties:
 - The ` + "`exempt_names`" + ` list allows you to exclude specific resources by name
 - Age checks use the resource's ` + "`UpdatedAt`" + ` timestamp, falling back to ` + "`CreatedAt`" + ` if not available
 - Status values are case-sensitive and should match OpenStack API responses exactly
+- Use ` + "`severity`" + ` and ` + "`category`" + ` to classify findings for prioritization
 
 ## Troubleshooting
 
@@ -372,20 +402,23 @@ For more information about {{.DisplayName}} resources and their properties:
 `
 
 	data := struct {
-		ServiceName string
-		DisplayName string
-		ServiceType string
-		Resources   []ResourceSpec
+		ServiceName    string
+		DisplayName    string
+		ServiceType    string
+		Resources      []ResourceSpec
+		GuideChecklist []GuideChecklistSpec
 	}{
-		ServiceName: serviceName,
-		DisplayName: displayName,
-		ServiceType: serviceType,
-		Resources:   resources,
+		ServiceName:    serviceName,
+		DisplayName:    displayName,
+		ServiceType:    serviceType,
+		Resources:      resources,
+		GuideChecklist: guideChecklist,
 	}
 
 	funcMap := template.FuncMap{
-		"Title":      ToPascal,
-		"JoinOrNone": JoinOrNone,
+		"Title":        ToPascal,
+		"JoinOrNone":   JoinOrNone,
+		"ExampleValue": exampleCheckValue,
 	}
 
 	t, err := template.New("policyguide").Funcs(funcMap).Parse(tmpl)
@@ -394,4 +427,22 @@ For more information about {{.DisplayName}} resources and their properties:
 	}
 
 	return writeFile(guideFile, t, data)
+}
+
+// exampleCheckValue returns a meaningful example value for a check based on its type.
+func exampleCheckValue(checkType string) string {
+	switch checkType {
+	case "bool":
+		return "true"
+	case "int":
+		return "90"
+	case "cidr":
+		return "\"0.0.0.0/0\""
+	case "duration":
+		return "\"90d\""
+	case "string":
+		return "\"value\""
+	default:
+		return "true"
+	}
 }
