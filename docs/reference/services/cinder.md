@@ -41,7 +41,6 @@ policies:
   - cinder:
     - name: rule-name
       description: Rule description
-      service: cinder
       resource: <resource_type>
       check:
         # Check conditions (see below)
@@ -67,7 +66,6 @@ check:
 ```yaml
 - name: find-inactive-resources
   description: Find inactive cinder resources
-  service: cinder
   resource: <resource_type>
   check:
     status: inactive
@@ -92,7 +90,6 @@ check:
 ```yaml
 - name: find-old-resources
   description: Find resources older than 30 days
-  service: cinder
   resource: <resource_type>
   check:
     age_gt: 30d
@@ -112,7 +109,6 @@ check:
 ```yaml
 - name: find-unused-resources
   description: Find unused cinder resources
-  service: cinder
   resource: <resource_type>
   check:
     unused: true
@@ -135,7 +131,6 @@ check:
 ```yaml
 - name: find-active-except-default
   description: Find active resources except default ones
-  service: cinder
   resource: <resource_type>
   check:
     status: active
@@ -143,6 +138,16 @@ check:
       - default
   action: log
 ```
+
+### Security & Domain-Specific Checks
+
+The following domain-specific checks are available for Cinder resources:
+
+| Check | Resource(s) | Type | Severity | Description |
+|-------|-------------|------|----------|-------------|
+| `encrypted` | volume, snapshot | bool | high | Volume/snapshot is not encrypted |
+| `attached` | volume | bool | medium | Volume is not attached to any instance |
+| `has_backup` | volume | bool | medium | Volume has no backup |
 
 ## Actions
 
@@ -158,7 +163,6 @@ action: log
 ```yaml
 - name: audit-resources
   description: Audit cinder resources
-  service: cinder
   resource: <resource_type>
   check:
     status: inactive
@@ -177,7 +181,6 @@ action: delete
 ```yaml
 - name: cleanup-old-resources
   description: Delete resources older than 90 days
-  service: cinder
   resource: <resource_type>
   check:
     age_gt: 90d
@@ -200,7 +203,6 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: tag-old-resources
   description: Tag resources older than 30 days
-  service: cinder
   resource: <resource_type>
   check:
     age_gt: 30d
@@ -219,7 +221,6 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: find-inactive-volume
   description: Find inactive volume resources
-  service: cinder
   resource: volume
   check:
     status: inactive
@@ -231,7 +232,6 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: find-old-volume
   description: Find volume resources older than 30 days
-  service: cinder
   resource: volume
   check:
     age_gt: 30d
@@ -243,7 +243,6 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: cleanup-unused-volume
   description: Delete unused volume resources
-  service: cinder
   resource: volume
   check:
     unused: true
@@ -257,13 +256,39 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: tag-old-volume
   description: Tag volume resources older than 7 days
-  service: cinder
   resource: volume
   check:
     age_gt: 7d
   action: tag
   tag_name: audit-old-volume
   action_tag_name: "Old Volume"
+```
+
+#### Example 5: Unencrypted Volumes (Security)
+
+```yaml
+- name: unencrypted-volumes
+  description: Flag volumes that are not encrypted
+  resource: volume
+  check:
+    encrypted: false
+  action: log
+  severity: high
+  category: security
+  guide_ref: "Check-Block-09"
+```
+
+#### Example 6: Volumes Without Backup (Compliance)
+
+```yaml
+- name: volumes-without-backup
+  description: Flag volumes missing backups
+  resource: volume
+  check:
+    has_backup: false
+  action: log
+  severity: medium
+  category: compliance
 ```
 
 
@@ -274,7 +299,6 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: find-inactive-snapshot
   description: Find inactive snapshot resources
-  service: cinder
   resource: snapshot
   check:
     status: inactive
@@ -286,7 +310,6 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: find-old-snapshot
   description: Find snapshot resources older than 30 days
-  service: cinder
   resource: snapshot
   check:
     age_gt: 30d
@@ -298,7 +321,6 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: cleanup-unused-snapshot
   description: Delete unused snapshot resources
-  service: cinder
   resource: snapshot
   check:
     unused: true
@@ -312,7 +334,6 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: tag-old-snapshot
   description: Tag snapshot resources older than 7 days
-  service: cinder
   resource: snapshot
   check:
     age_gt: 7d
@@ -336,14 +357,12 @@ policies:
   - cinder:
     - name: audit-volume
       description: Audit volume resources
-      service: cinder
       resource: volume
       check:
         status: active
       action: log
     - name: cleanup-old-volume
       description: Find volume resources older than 90 days
-      service: cinder
       resource: volume
       check:
         age_gt: 90d
@@ -352,14 +371,12 @@ policies:
       action: log
     - name: audit-snapshot
       description: Audit snapshot resources
-      service: cinder
       resource: snapshot
       check:
         status: active
       action: log
     - name: cleanup-old-snapshot
       description: Find snapshot resources older than 90 days
-      service: cinder
       resource: snapshot
       check:
         age_gt: 90d

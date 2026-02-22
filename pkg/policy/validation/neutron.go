@@ -21,7 +21,7 @@ func (v *NeutronValidator) ValidateResource(check *policy.CheckConditions, resou
 	switch resourceType {
 
 	case "network":
-		if err := validateAllowedChecks(check, []string{"status", "age_gt", "unused", "exempt_names"}); err != nil {
+		if err := validateAllowedChecks(check, []string{"status", "age_gt", "unused", "exempt_names", "shared_network"}); err != nil {
 			return fmt.Errorf("rule %q: %w", ruleName, err)
 		}
 
@@ -31,17 +31,26 @@ func (v *NeutronValidator) ValidateResource(check *policy.CheckConditions, resou
 		}
 
 	case "security_group_rule":
-		// Security group rules have specific checks for matching dangerous patterns
-		if err := validateAllowedChecks(check, []string{"direction", "ethertype", "protocol", "port", "remote_ip_prefix", "exempt_names"}); err != nil {
+		if err := validateAllowedChecks(check, []string{"direction", "ethertype", "protocol", "port", "remote_ip_prefix", "port_range_wide", "exempt_names"}); err != nil {
 			return fmt.Errorf("rule %q: %w", ruleName, err)
 		}
 
 	case "floating_ip":
-		if err := validateAllowedChecks(check, []string{"status", "age_gt", "unused", "exempt_names"}); err != nil {
+		if err := validateAllowedChecks(check, []string{"status", "age_gt", "unused", "unassociated", "exempt_names"}); err != nil {
 			return fmt.Errorf("rule %q: %w", ruleName, err)
 		}
 
 	case "subnet":
+		if err := validateAllowedChecks(check, []string{"status", "age_gt", "unused", "exempt_names"}); err != nil {
+			return fmt.Errorf("rule %q: %w", ruleName, err)
+		}
+
+	case "port":
+		if err := validateAllowedChecks(check, []string{"status", "age_gt", "unused", "exempt_names", "no_security_group"}); err != nil {
+			return fmt.Errorf("rule %q: %w", ruleName, err)
+		}
+
+	case "router":
 		if err := validateAllowedChecks(check, []string{"status", "age_gt", "unused", "exempt_names"}); err != nil {
 			return fmt.Errorf("rule %q: %w", ruleName, err)
 		}

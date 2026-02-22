@@ -24,6 +24,10 @@ func (a *InstanceAuditor) ResourceType() string {
 	return "instance"
 }
 
+func (a *InstanceAuditor) ImplementedChecks() []string {
+	return []string{"status", "age_gt", "unused", "exempt_names"}
+}
+
 func (a *InstanceAuditor) Check(ctx context.Context, resource interface{}, rule *policy.Rule) (*audit.Result, error) {
 	_ = ctx
 

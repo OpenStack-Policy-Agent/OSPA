@@ -39,9 +39,9 @@ type fakeAuditor struct {
 	fixed   bool
 }
 
-func (a *fakeAuditor) ResourceType() string { return a.resType }
+func (a *fakeAuditor) ResourceType() string       { return a.resType }
+func (a *fakeAuditor) ImplementedChecks() []string { return nil }
 func (a *fakeAuditor) Check(context.Context, interface{}, *policy.Rule) (*audit.Result, error) {
-	// Always non-compliant so remediation triggers in apply mode.
 	return &audit.Result{Compliant: false}, nil
 }
 func (a *fakeAuditor) Fix(context.Context, interface{}, interface{}, *policy.Rule) error {

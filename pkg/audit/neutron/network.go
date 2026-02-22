@@ -7,20 +7,34 @@ import (
 	"time"
 
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/audit"
+	"github.com/OpenStack-Policy-Agent/OSPA/pkg/audit/common"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/policy"
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 )
 
+type networkAdapter struct{ n networks.Network }
+
+func (a networkAdapter) GetID() string           { return a.n.ID }
+func (a networkAdapter) GetName() string         { return a.n.Name }
+func (a networkAdapter) GetProjectID() string    { return a.n.TenantID }
+func (a networkAdapter) GetStatus() string       { return a.n.Status }
+func (a networkAdapter) GetCreatedAt() time.Time { return a.n.CreatedAt }
+func (a networkAdapter) GetUpdatedAt() time.Time { return a.n.UpdatedAt }
+
 // NetworkAuditor audits neutron/network resources.
 //
-// Allowed checks: status, age_gt, unused, exempt_names
+// Allowed checks: status, age_gt, unused, exempt_names, shared_network
 // Allowed actions: log, delete, tag
 type NetworkAuditor struct{}
 
 func (a *NetworkAuditor) ResourceType() string {
 	return "network"
+}
+
+func (a *NetworkAuditor) ImplementedChecks() []string {
+	return []string{"status", "age_gt", "unused", "exempt_names"}
 }
 
 func (a *NetworkAuditor) Check(ctx context.Context, resource interface{}, rule *policy.Rule) (*audit.Result, error) {
@@ -31,55 +45,15 @@ func (a *NetworkAuditor) Check(ctx context.Context, resource interface{}, rule *
 		return nil, fmt.Errorf("expected networks.Network, got %T", resource)
 	}
 
-	result := &audit.Result{
-		RuleID:       rule.Name,
-		ResourceID:   network.ID,
-		ResourceName: network.Name,
-		ProjectID:    network.TenantID,
-		Status:       network.Status,
-		UpdatedAt:    network.UpdatedAt,
-		Compliant:    true,
-		Rule:         rule,
+	adapter := networkAdapter{n: network}
+	result := common.BuildBaseResult(adapter, rule)
+
+	exempt, err := common.RunCommonChecks(adapter, rule, result)
+	if exempt || err != nil {
+		return result, err
 	}
 
-	// Check exemptions first
-	if isExemptByName(network.Name, rule.Check.ExemptNames) {
-		result.Compliant = true
-		result.Observation = "exempt by name"
-		return result, nil
-	}
-
-	// Status check
-	if rule.Check.Status != "" {
-		if network.Status == rule.Check.Status {
-			result.Compliant = false
-			result.Observation = fmt.Sprintf("status is %s", network.Status)
-		}
-	}
-
-	// Age check
-	if rule.Check.AgeGT != "" {
-		age, err := rule.Check.ParseAgeGT()
-		if err != nil {
-			return nil, fmt.Errorf("parsing age_gt: %w", err)
-		}
-
-		resourceTime := network.UpdatedAt
-		if resourceTime.IsZero() {
-			resourceTime = network.CreatedAt
-		}
-
-		if !resourceTime.IsZero() && time.Since(resourceTime) > age {
-			result.Compliant = false
-			result.Observation = fmt.Sprintf("resource is older than %s (last updated: %s)", rule.Check.AgeGT, resourceTime.Format(time.RFC3339))
-		}
-	}
-
-	// Unused check - a network is unused if it has no ports attached
 	if rule.Check.Unused {
-		// Note: The unused check requires additional API call context
-		// For now, mark as compliant - the orchestrator can inject port info if needed
-		// A network with no subnets and no ports is considered unused
 		if len(network.Subnets) == 0 {
 			result.Compliant = false
 			result.Observation = "network has no subnets"

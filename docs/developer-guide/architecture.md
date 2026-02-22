@@ -122,7 +122,19 @@ Auditors evaluate resources against policy rules. Each resource type has an audi
 
 - Implements `Check()` to evaluate compliance
 - Implements `Fix()` to apply remediation
+- Implements `ImplementedChecks()` to declare which check fields the auditor evaluates
 - Returns structured `Result` objects
+
+**Auditor Interface:**
+
+```go
+type Auditor interface {
+    Check(ctx context.Context, resource interface{}, rule *policy.Rule) (*Result, error)
+    Fix(ctx context.Context, client interface{}, resource interface{}, rule *policy.Rule) error
+    ResourceType() string
+    ImplementedChecks() []string
+}
+```
 
 **Key Files:**
 
@@ -144,6 +156,9 @@ type Result struct {
     Compliant    bool
     Observation  string
     Rule         *policy.Rule
+    Severity     string
+    Category     string
+    GuideRef     string
 }
 ```
 
@@ -175,7 +190,6 @@ defaults:
 policies:
   - <service>:
     - name: rule-name
-      service: <service>
       resource: <resource_type>
       check:
         # Conditions
@@ -191,6 +205,8 @@ The orchestrator coordinates the entire audit process:
 - Loads and validates policies
 - Manages worker pools
 - Coordinates discovery, audit, and remediation
+- Validates check coverage (compares rule checks against auditor's `ImplementedChecks()`)
+- Populates severity, category, and guide_ref classification on results
 - Handles graceful shutdown
 
 ### 6. Remediation
@@ -286,9 +302,10 @@ graph LR
 
 1. Create discoverer in `pkg/discovery/services/<service>.go`
 2. Create auditor in `pkg/audit/<service>/<resource>.go`
-3. Update service to return new discoverer/auditor
-4. Register resource in service's `init()` function
-5. Update validator if needed
+3. Implement `ImplementedChecks()` to declare supported checks
+4. Update service to return new discoverer/auditor
+5. Register resource in service's `init()` function
+6. Update validator if needed
 
 ## Best Practices
 
@@ -298,6 +315,7 @@ graph LR
 4. **Context Handling**: Always respect context cancellation
 5. **Type Safety**: Use type assertions with error checking
 6. **Documentation**: Document supported resources in service comments
+7. **Declare all checks in `ImplementedChecks()`**: Enable coverage validation by declaring all checks auditors evaluate
 
 ## Reference Implementations
 

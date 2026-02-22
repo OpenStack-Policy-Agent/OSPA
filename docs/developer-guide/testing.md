@@ -212,7 +212,6 @@ version: v1
 policies:
   - neutron:
     - name: test-sg-status
-      service: neutron
       resource: security_group
       check:
         status: ACTIVE

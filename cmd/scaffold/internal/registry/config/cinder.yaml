@@ -1,6 +1,45 @@
 name: cinder
 display_name: Cinder
 service_type: volumev3
+
+guide_checklist:
+  - id: Check-Block-01
+    description: "User/group ownership of config files set to root/cinder"
+    section: "block-storage/checklist"
+    manual: true
+  - id: Check-Block-02
+    description: "Strict permissions (640) on configuration files"
+    section: "block-storage/checklist"
+    manual: true
+  - id: Check-Block-03
+    description: "Keystone used for authentication"
+    section: "block-storage/checklist"
+    manual: true
+  - id: Check-Block-04
+    description: "TLS enabled for authentication"
+    section: "block-storage/checklist"
+    manual: true
+  - id: Check-Block-05
+    description: "Cinder communicates with Nova over TLS"
+    section: "block-storage/checklist"
+    manual: true
+  - id: Check-Block-06
+    description: "Cinder communicates with Glance over TLS"
+    section: "block-storage/checklist"
+    manual: true
+  - id: Check-Block-07
+    description: "NAS operating in a secure environment"
+    section: "block-storage/checklist"
+    manual: true
+  - id: Check-Block-08
+    description: "Max request body size set to default (114688)"
+    section: "block-storage/checklist"
+    manual: true
+  - id: Check-Block-09
+    description: "Volume encryption feature enabled"
+    section: "block-storage/checklist"
+    manual: true
+
 defaults:
   actions:
   - log
@@ -11,48 +50,37 @@ defaults:
   - age_gt
   - unused
   - exempt_names
+
 resources:
   volume:
     description: Block storage volumes
-    actions:
-    - log
-    - delete
-    - tag
-    checks:
-    - status
-    - age_gt
-    - unused
-    - exempt_names
+    actions: [log, delete, tag]
+    checks: [status, age_gt, unused, exempt_names, encrypted, attached, has_backup]
+    rich_checks:
+      - name: encrypted
+        type: bool
+        description: "Volume is not encrypted"
+        category: security
+        severity: high
+        guide_ref: "Check-Block-09"
+      - name: attached
+        type: bool
+        description: "Volume is not attached to any instance"
+        category: cost
+        severity: medium
+      - name: has_backup
+        type: bool
+        description: "Volume has no backup"
+        category: compliance
+        severity: medium
+
   snapshot:
     description: Volume snapshots
-    actions:
-    - log
-    - delete
-    - tag
-    checks:
-    - status
-    - age_gt
-    - unused
-    - exempt_names
-  backup:
-    description: Volume backups
-    actions:
-    - log
-    - delete
-    - tag
-    checks:
-    - status
-    - age_gt
-    - unused
-    - exempt_names
-  qos:
-    description: Quality of service specifications
-    actions:
-    - log
-    - delete
-    - tag
-    checks:
-    - status
-    - age_gt
-    - unused
-    - exempt_names
+    actions: [log, delete, tag]
+    checks: [status, age_gt, unused, exempt_names, encrypted]
+    rich_checks:
+      - name: encrypted
+        type: bool
+        description: "Snapshot is not encrypted"
+        category: security
+        severity: high

@@ -1,65 +1,82 @@
+---
+# Baseline Security Policy
+#
+# A lightweight starting point for OpenStack security auditing.
+# Covers the most common high-impact misconfigurations across
+# compute, networking, and block storage.
+
 version: v1
 defaults:
   workers: 10
   output: findings.json
+
 policies:
   - nova:
     - name: nova-instance-active
       description: Flag instances that are not active.
-      service: nova
       resource: instance
+      severity: low
+      category: hygiene
       check:
         status: active
       action: log
+
   - neutron:
-    # Security Group Rule Checks - detect dangerous firewall configurations
     - name: critical-ssh-open-to-world
       description: Flag SSH (port 22) rules open to 0.0.0.0/0
-      service: neutron
       resource: security_group_rule
+      severity: critical
+      category: security
+      guide_ref: "OSSN-0011"
       check:
         direction: ingress
         ethertype: IPv4
         protocol: tcp
         port: 22
-        remote_ip_prefix: 0.0.0.0/0
+        remote_ip_prefix: "0.0.0.0/0"
       action: log
+
     - name: critical-rdp-open-to-world
       description: Flag RDP (port 3389) rules open to 0.0.0.0/0
-      service: neutron
       resource: security_group_rule
+      severity: critical
+      category: security
       check:
         direction: ingress
         ethertype: IPv4
         protocol: tcp
         port: 3389
-        remote_ip_prefix: 0.0.0.0/0
+        remote_ip_prefix: "0.0.0.0/0"
       action: log
+
     - name: warning-all-ports-open-to-world
       description: Flag rules allowing all TCP ports from 0.0.0.0/0
-      service: neutron
       resource: security_group_rule
+      severity: high
+      category: security
       check:
         direction: ingress
         protocol: tcp
-        remote_ip_prefix: 0.0.0.0/0
+        remote_ip_prefix: "0.0.0.0/0"
       action: log
-    # Security Group Checks - detect unused security groups
+
     - name: cleanup-unused-security-groups
       description: Flag security groups not attached to any ports
-      service: neutron
       resource: security_group
+      severity: low
+      category: hygiene
       check:
         unused: true
         exempt_names:
           - default
       action: log
+
   - cinder:
     - name: cinder-old-snapshot
       description: Flag snapshots older than 30 days.
-      service: cinder
       resource: snapshot
+      severity: medium
+      category: cost
       check:
         age_gt: 30d
       action: log
-

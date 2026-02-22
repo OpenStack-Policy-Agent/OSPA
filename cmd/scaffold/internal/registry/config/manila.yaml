@@ -1,6 +1,41 @@
 name: manila
 display_name: Manila
 service_type: sharev2
+
+guide_checklist:
+  - id: Check-Shared-01
+    description: "User/group ownership of config files set to root/manila"
+    section: "shared-file-systems/checklist"
+    manual: true
+  - id: Check-Shared-02
+    description: "Strict permissions (640) on configuration files"
+    section: "shared-file-systems/checklist"
+    manual: true
+  - id: Check-Shared-03
+    description: "OpenStack Identity used for authentication"
+    section: "shared-file-systems/checklist"
+    manual: true
+  - id: Check-Shared-04
+    description: "TLS enabled for authentication"
+    section: "shared-file-systems/checklist"
+    manual: true
+  - id: Check-Shared-05
+    description: "Manila communicates with Compute over TLS"
+    section: "shared-file-systems/checklist"
+    manual: true
+  - id: Check-Shared-06
+    description: "Manila communicates with Networking over TLS"
+    section: "shared-file-systems/checklist"
+    manual: true
+  - id: Check-Shared-07
+    description: "Manila communicates with Block Storage over TLS"
+    section: "shared-file-systems/checklist"
+    manual: true
+  - id: Check-Shared-08
+    description: "Max request body size set to default (114688)"
+    section: "shared-file-systems/checklist"
+    manual: true
+
 defaults:
   actions:
   - log
@@ -11,48 +46,24 @@ defaults:
   - age_gt
   - unused
   - exempt_names
+
 resources:
   share:
     description: Shared file systems
-    actions:
-    - log
-    - delete
-    - tag
-    checks:
-    - status
-    - age_gt
-    - unused
-    - exempt_names
+    actions: [log, delete, tag]
+    checks: [status, age_gt, unused, exempt_names]
+
   share_snapshot:
     description: Share snapshots
-    actions:
-    - log
-    - delete
-    - tag
-    checks:
-    - status
-    - age_gt
-    - unused
-    - exempt_names
+    actions: [log, delete, tag]
+    checks: [status, age_gt, unused, exempt_names]
+
   share_network:
     description: Share networks
-    actions:
-    - log
-    - delete
-    - tag
-    checks:
-    - status
-    - age_gt
-    - unused
-    - exempt_names
+    actions: [log, delete, tag]
+    checks: [status, age_gt, unused, exempt_names]
+
   share_server:
     description: Share servers
-    actions:
-    - log
-    - delete
-    - tag
-    checks:
-    - status
-    - age_gt
-    - unused
-    - exempt_names
+    actions: [log, delete, tag]
+    checks: [status, age_gt, unused, exempt_names]

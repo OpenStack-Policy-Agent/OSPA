@@ -10,7 +10,8 @@ import (
 
 type fakeAuditor struct{ rt string }
 
-func (a *fakeAuditor) ResourceType() string { return a.rt }
+func (a *fakeAuditor) ResourceType() string                { return a.rt }
+func (a *fakeAuditor) ImplementedChecks() []string          { return nil }
 func (a *fakeAuditor) Check(context.Context, interface{}, *policy.Rule) (*audit.Result, error) {
 	return &audit.Result{Compliant: true}, nil
 }

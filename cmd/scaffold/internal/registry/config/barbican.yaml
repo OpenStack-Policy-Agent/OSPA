@@ -1,6 +1,25 @@
 name: barbican
 display_name: Barbican
 service_type: key-manager
+
+guide_checklist:
+  - id: Check-Key-Manager-01
+    description: "Ownership of config files set to root/barbican"
+    section: "secrets-management/checklist"
+    manual: true
+  - id: Check-Key-Manager-02
+    description: "Strict permissions (640) on configuration files"
+    section: "secrets-management/checklist"
+    manual: true
+  - id: Check-Key-Manager-03
+    description: "OpenStack Identity used for authentication"
+    section: "secrets-management/checklist"
+    manual: true
+  - id: Check-Key-Manager-04
+    description: "TLS enabled for authentication"
+    section: "secrets-management/checklist"
+    manual: true
+
 defaults:
   actions:
   - log
@@ -11,37 +30,19 @@ defaults:
   - age_gt
   - unused
   - exempt_names
+
 resources:
   secret:
     description: Secrets
-    actions:
-    - log
-    - delete
-    - tag
-    checks:
-    - status
-    - age_gt
-    - unused
-    - exempt_names
+    actions: [log, delete, tag]
+    checks: [status, age_gt, unused, exempt_names]
+
   container:
     description: Secret containers
-    actions:
-    - log
-    - delete
-    - tag
-    checks:
-    - status
-    - age_gt
-    - unused
-    - exempt_names
+    actions: [log, delete, tag]
+    checks: [status, age_gt, unused, exempt_names]
+
   order:
     description: Orders
-    actions:
-    - log
-    - delete
-    - tag
-    checks:
-    - status
-    - age_gt
-    - unused
-    - exempt_names
+    actions: [log, delete, tag]
+    checks: [status, age_gt, unused, exempt_names]

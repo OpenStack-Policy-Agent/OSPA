@@ -37,6 +37,9 @@ type Finding struct {
 	Status            string `json:"status,omitempty"`
 	UpdatedAt         string `json:"updated_at,omitempty"`
 	Compliant         bool   `json:"compliant"`
+	Severity          string `json:"severity,omitempty"`
+	Category          string `json:"category,omitempty"`
+	GuideRef          string `json:"guide_ref,omitempty"`
 	ErrorKind         string `json:"error_kind,omitempty"`
 	Mode              string `json:"mode,omitempty"`
 	Observation       string `json:"observation,omitempty"`
@@ -60,6 +63,9 @@ func (w *JSONWriter) WriteResult(r *audit.Result) error {
 		ProjectID:             r.ProjectID,
 		Status:                r.Status,
 		Compliant:             r.Compliant,
+		Severity:              r.Severity,
+		Category:              r.Category,
+		GuideRef:              r.GuideRef,
 		Observation:           r.Observation,
 		RemediationSkipped:    r.RemediationSkipped,
 		RemediationSkipReason: r.RemediationSkipReason,

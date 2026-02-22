@@ -21,12 +21,12 @@ func (v *CinderValidator) ValidateResource(check *policy.CheckConditions, resour
 	switch resourceType {
 
 	case "volume":
-		if err := validateAllowedChecks(check, []string{"status", "age_gt", "unused", "exempt_names"}); err != nil {
+		if err := validateAllowedChecks(check, []string{"status", "age_gt", "unused", "exempt_names", "encrypted", "attached", "has_backup"}); err != nil {
 			return fmt.Errorf("rule %q: %w", ruleName, err)
 		}
 
 	case "snapshot":
-		if err := validateAllowedChecks(check, []string{"status", "age_gt", "unused", "exempt_names"}); err != nil {
+		if err := validateAllowedChecks(check, []string{"status", "age_gt", "unused", "exempt_names", "encrypted"}); err != nil {
 			return fmt.Errorf("rule %q: %w", ruleName, err)
 		}
 

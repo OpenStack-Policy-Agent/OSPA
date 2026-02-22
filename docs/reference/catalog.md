@@ -20,11 +20,11 @@ This page provides a comprehensive list of all OpenStack resources that OSPA can
 |----------|--------|--------|---------|
 | `network` | ✔ | status, age_gt, unused, exempt_names | log, delete, tag |
 | `security_group` | ✔ | status, age_gt, unused, exempt_names | log, delete, tag |
-| `security_group_rule` | ✔ | direction, ethertype, protocol, port, remote_ip_prefix, exempt_names | log, delete |
+| `security_group_rule` | ✔ | direction, ethertype, protocol, port, remote_ip_prefix, port_range_wide, exempt_names | log, delete |
 | `floating_ip` | ◐ | status, age_gt, unused, exempt_names | log, delete, tag |
-| `subnet` | — | — | — |
-| `port` | — | — | — |
-| `router` | — | — | — |
+| `subnet` | ✔ | status, age_gt, unused, exempt_names | log, delete, tag |
+| `port` | ◐ | status, age_gt, unused, exempt_names, no_security_group | log, delete, tag |
+| `router` | ◐ | status, age_gt, unused, exempt_names | log, delete, tag |
 | `loadbalancer` | — | — | — |
 | `pool` | — | — | — |
 | `member` | — | — | — |
@@ -191,9 +191,35 @@ To add support for a new resource:
 | `unused` | Resource not in use | `unused: true` |
 | `exempt_names` | Skip matching names | `exempt_names: ["system-*"]` |
 | `direction` | Rule direction (security_group_rule) | `direction: ingress` |
+| `ethertype` | Ethernet type (security_group_rule) | `ethertype: IPv4` |
 | `protocol` | Network protocol | `protocol: tcp` |
 | `port` | Port number | `port: 22` |
 | `remote_ip_prefix` | CIDR range | `remote_ip_prefix: "0.0.0.0/0"` |
+| `port_range_wide` | Port range >100 ports | `port_range_wide: true` |
+| `unassociated` | Floating IP not attached | `unassociated: true` |
+| `shared_network` | Network shared across tenants | `shared_network: true` |
+| `no_security_group` | Port has no security groups | `no_security_group: true` |
+| `image_name` | Deprecated image names (instance) | `image_name: ["ubuntu-14*"]` |
+| `no_keypair` | No SSH keypair (instance) | `no_keypair: true` |
+| `encrypted` | Volume/snapshot not encrypted | `encrypted: false` |
+| `attached` | Volume not attached | `attached: false` |
+| `has_backup` | Volume has no backup | `has_backup: false` |
+| `visibility` | Image visibility (Glance) | `visibility: public` |
+| `password_expired` | User password expired (Keystone) | `password_expired: true` |
+| `mfa_enabled` | MFA not enabled (Keystone) | `mfa_enabled: false` |
+| `inactive_days` | User inactive N days (Keystone) | `inactive_days: 90` |
+| `has_admin_role` | User has admin role (Keystone) | `has_admin_role: true` |
+| `token_provider` | Token provider type (Keystone) | `token_provider: fernet` |
+
+## Rule Classification Fields
+
+These fields classify rules at the policy level and are not check conditions:
+
+| Field | Description | Example |
+|-------|-------------|---------|
+| `severity` | Finding severity classification | `severity: high` |
+| `category` | Finding category classification | `category: security` |
+| `guide_ref` | Security Guide reference | `guide_ref: "Check-Block-09"` |
 
 ## Action Types Reference
 

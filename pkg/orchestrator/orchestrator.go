@@ -112,6 +112,8 @@ func (o *Orchestrator) Run() (<-chan *audit.Result, error) {
 
 	o.compositeRules = o.buildCompositeRules()
 
+	o.validateCheckCoverage(ruleGroups)
+
 	// Start worker pool
 	var wg sync.WaitGroup
 	jobsChan := make(chan discovery.Job, o.jobsBuffer)
@@ -242,6 +244,8 @@ func (o *Orchestrator) worker(id int, jobsChan <-chan discovery.Job, wg *sync.Wa
 					Rule:       rule,
 				}
 			}
+
+			populateClassification(result, rule)
 
 			// Apply remediation if needed
 			if !result.Compliant && result.Error == nil && rule.Action != "log" {
@@ -406,12 +410,24 @@ func (o *Orchestrator) normalizeCompositeResult(rule *policy.CompositeRule, resu
 			Service:       rule.Service,
 			Resource:      "composite",
 			Action:        rule.Action,
+			Severity:      rule.Severity,
+			Category:      rule.Category,
+			GuideRef:      rule.GuideRef,
 			TagName:       rule.TagName,
 			ActionTagName: rule.ActionTagName,
 		}
 	}
 	if result.ResourceID == "" {
 		result.ResourceID = "composite"
+	}
+	if result.Severity == "" {
+		result.Severity = rule.Severity
+	}
+	if result.Category == "" {
+		result.Category = rule.Category
+	}
+	if result.GuideRef == "" {
+		result.GuideRef = rule.GuideRef
 	}
 }
 
@@ -420,6 +436,9 @@ func (o *Orchestrator) emitCompositeError(rule *policy.CompositeRule, err error)
 		RuleID:     rule.Name,
 		ResourceID: "composite",
 		Compliant:  false,
+		Severity:   rule.Severity,
+		Category:   rule.Category,
+		GuideRef:   rule.GuideRef,
 		Error:      err,
 		ErrorKind:  audit.ErrorKindAudit,
 		Rule: &policy.Rule{
@@ -428,6 +447,9 @@ func (o *Orchestrator) emitCompositeError(rule *policy.CompositeRule, err error)
 			Service:       rule.Service,
 			Resource:      "composite",
 			Action:        rule.Action,
+			Severity:      rule.Severity,
+			Category:      rule.Category,
+			GuideRef:      rule.GuideRef,
 			TagName:       rule.TagName,
 			ActionTagName: rule.ActionTagName,
 		},
@@ -436,5 +458,58 @@ func (o *Orchestrator) emitCompositeError(rule *policy.CompositeRule, err error)
 	case <-o.ctx.Done():
 		return
 	case o.resultsChan <- result:
+	}
+}
+
+// validateCheckCoverage logs warnings for policy rules that reference check
+// fields not declared in the auditor's ImplementedChecks(). This catches
+// misconfigurations early (e.g., using "encrypted" on a resource whose
+// auditor hasn't implemented that check yet).
+func (o *Orchestrator) validateCheckCoverage(ruleGroups map[string]map[string][]*policy.Rule) {
+	for serviceName, resourceRules := range ruleGroups {
+		service, err := services.Get(serviceName)
+		if err != nil {
+			continue
+		}
+
+		for resourceType, rules := range resourceRules {
+			auditor, err := service.GetResourceAuditor(resourceType)
+			if err != nil {
+				continue
+			}
+
+			implemented := make(map[string]bool)
+			for _, c := range auditor.ImplementedChecks() {
+				implemented[c] = true
+			}
+
+			for _, rule := range rules {
+				for _, used := range rule.Check.UsedChecks() {
+					if !implemented[used] {
+						slog.Warn("policy rule uses check not implemented by auditor",
+							"rule", rule.Name,
+							"service", serviceName,
+							"resource", resourceType,
+							"check", used,
+						)
+					}
+				}
+			}
+		}
+	}
+}
+
+func populateClassification(result *audit.Result, rule *policy.Rule) {
+	if rule == nil {
+		return
+	}
+	if result.Severity == "" {
+		result.Severity = rule.Severity
+	}
+	if result.Category == "" {
+		result.Category = rule.Category
+	}
+	if result.GuideRef == "" {
+		result.GuideRef = rule.GuideRef
 	}
 }

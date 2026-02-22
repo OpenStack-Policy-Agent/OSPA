@@ -41,7 +41,6 @@ policies:
   - nova:
     - name: rule-name
       description: Rule description
-      service: nova
       resource: <resource_type>
       check:
         # Check conditions (see below)
@@ -67,7 +66,6 @@ check:
 ```yaml
 - name: find-inactive-resources
   description: Find inactive nova resources
-  service: nova
   resource: <resource_type>
   check:
     status: inactive
@@ -92,7 +90,6 @@ check:
 ```yaml
 - name: find-old-resources
   description: Find resources older than 30 days
-  service: nova
   resource: <resource_type>
   check:
     age_gt: 30d
@@ -112,7 +109,6 @@ check:
 ```yaml
 - name: find-unused-resources
   description: Find unused nova resources
-  service: nova
   resource: <resource_type>
   check:
     unused: true
@@ -135,7 +131,6 @@ check:
 ```yaml
 - name: find-active-except-default
   description: Find active resources except default ones
-  service: nova
   resource: <resource_type>
   check:
     status: active
@@ -143,6 +138,15 @@ check:
       - default
   action: log
 ```
+
+### Security & Domain-Specific Checks
+
+The following domain-specific checks are available for Nova resources:
+
+| Check | Resource(s) | Type | Severity | Description |
+|-------|-------------|------|----------|-------------|
+| `image_name` | instance | string list | medium | Instance uses a deprecated or banned image |
+| `no_keypair` | instance | bool | medium | Instance has no SSH keypair attached |
 
 ## Actions
 
@@ -158,7 +162,6 @@ action: log
 ```yaml
 - name: audit-resources
   description: Audit nova resources
-  service: nova
   resource: <resource_type>
   check:
     status: inactive
@@ -177,7 +180,6 @@ action: delete
 ```yaml
 - name: cleanup-old-resources
   description: Delete resources older than 90 days
-  service: nova
   resource: <resource_type>
   check:
     age_gt: 90d
@@ -200,7 +202,6 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: tag-old-resources
   description: Tag resources older than 30 days
-  service: nova
   resource: <resource_type>
   check:
     age_gt: 30d
@@ -219,7 +220,6 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: find-inactive-instance
   description: Find inactive instance resources
-  service: nova
   resource: instance
   check:
     status: inactive
@@ -231,7 +231,6 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: find-old-instance
   description: Find instance resources older than 30 days
-  service: nova
   resource: instance
   check:
     age_gt: 30d
@@ -243,7 +242,6 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: cleanup-unused-instance
   description: Delete unused instance resources
-  service: nova
   resource: instance
   check:
     unused: true
@@ -257,13 +255,40 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: tag-old-instance
   description: Tag instance resources older than 7 days
-  service: nova
   resource: instance
   check:
     age_gt: 7d
   action: tag
   tag_name: audit-old-instance
   action_tag_name: "Old Instance"
+```
+
+#### Example 5: Instances Without Keypair (Security)
+
+```yaml
+- name: instances-without-keypair
+  description: Flag instances launched without SSH keypair
+  resource: instance
+  check:
+    no_keypair: true
+  action: log
+  severity: medium
+  category: security
+```
+
+#### Example 6: Banned Images (Compliance)
+
+```yaml
+- name: banned-images
+  description: Flag instances using deprecated images
+  resource: instance
+  check:
+    image_name:
+      - "ubuntu-14*"
+      - "centos-6*"
+  action: log
+  severity: medium
+  category: compliance
 ```
 
 
@@ -274,7 +299,6 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: find-inactive-keypair
   description: Find inactive keypair resources
-  service: nova
   resource: keypair
   check:
     status: inactive
@@ -286,7 +310,6 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: find-old-keypair
   description: Find keypair resources older than 30 days
-  service: nova
   resource: keypair
   check:
     age_gt: 30d
@@ -298,7 +321,6 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: cleanup-unused-keypair
   description: Delete unused keypair resources
-  service: nova
   resource: keypair
   check:
     unused: true
@@ -312,7 +334,6 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: tag-old-keypair
   description: Tag keypair resources older than 7 days
-  service: nova
   resource: keypair
   check:
     age_gt: 7d
@@ -336,14 +357,12 @@ policies:
   - nova:
     - name: audit-instance
       description: Audit instance resources
-      service: nova
       resource: instance
       check:
         status: active
       action: log
     - name: cleanup-old-instance
       description: Find instance resources older than 90 days
-      service: nova
       resource: instance
       check:
         age_gt: 90d
@@ -352,14 +371,12 @@ policies:
       action: log
     - name: audit-keypair
       description: Audit keypair resources
-      service: nova
       resource: keypair
       check:
         status: active
       action: log
     - name: cleanup-old-keypair
       description: Find keypair resources older than 90 days
-      service: nova
       resource: keypair
       check:
         age_gt: 90d

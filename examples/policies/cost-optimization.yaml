@@ -1,0 +1,164 @@
+---
+# Cost Optimization Policy Profile
+#
+# Identifies idle, orphaned, and over-provisioned resources that waste
+# cloud spend. Safe to run in audit-only mode (action: log) first, then
+# graduate to delete/tag once thresholds are validated.
+#
+# Additional services (glance, keystone, etc.) can be added here once their
+# service registrations are scaffolded.
+
+version: v1
+defaults:
+  workers: 50
+  output: cost-findings.json
+
+policies:
+  # ─── Neutron (Networking) ────────────────────────────────────────────
+  - neutron:
+
+    - name: fip-unassociated
+      description: "Floating IP not associated with any instance (billed while idle)"
+      resource: floating_ip
+      severity: medium
+      category: cost
+      check:
+        status: DOWN
+      action: log
+
+    - name: fip-unassociated-7d
+      description: "Floating IP unassociated for more than 7 days"
+      resource: floating_ip
+      severity: high
+      category: cost
+      check:
+        status: DOWN
+        age_gt: 7d
+      action: delete
+
+    - name: sg-unused-30d
+      description: "Security group unused for over 30 days"
+      resource: security_group
+      severity: low
+      category: cost
+      check:
+        unused: true
+        age_gt: 30d
+        exempt_names:
+          - default
+      action: log
+
+    - name: network-unused-30d
+      description: "Network with no ports or subnets for over 30 days"
+      resource: network
+      severity: low
+      category: cost
+      check:
+        unused: true
+        age_gt: 30d
+      action: log
+
+    - name: subnet-unused-30d
+      description: "Subnet with no allocated ports for over 30 days"
+      resource: subnet
+      severity: low
+      category: cost
+      check:
+        unused: true
+        age_gt: 30d
+      action: log
+
+  # ─── Nova (Compute) ─────────────────────────────────────────────────
+  - nova:
+
+    - name: instance-shutoff-7d
+      description: "Instance in SHUTOFF state for over 7 days"
+      resource: instance
+      severity: medium
+      category: cost
+      check:
+        status: SHUTOFF
+        age_gt: 7d
+      action: tag
+      tag_name: audit-idle-instance
+      action_tag_name: "Idle Instance (SHUTOFF >7d)"
+
+    - name: instance-shutoff-30d
+      description: "Instance in SHUTOFF state for over 30 days -- candidate for deletion"
+      resource: instance
+      severity: high
+      category: cost
+      check:
+        status: SHUTOFF
+        age_gt: 30d
+      action: log
+
+    - name: instance-error-state
+      description: "Instance stuck in ERROR state"
+      resource: instance
+      severity: medium
+      category: cost
+      check:
+        status: ERROR
+      action: log
+
+    - name: keypair-unused
+      description: "SSH keypair not associated with any running instance"
+      resource: keypair
+      severity: low
+      category: cost
+      check:
+        unused: true
+      action: log
+
+  # ─── Cinder (Block Storage) ─────────────────────────────────────────
+  - cinder:
+
+    - name: volume-available-7d
+      description: "Volume in 'available' (unattached) state for over 7 days"
+      resource: volume
+      severity: medium
+      category: cost
+      check:
+        status: available
+        age_gt: 7d
+      action: log
+
+    - name: volume-available-30d
+      description: "Volume unattached for over 30 days -- candidate for deletion"
+      resource: volume
+      severity: high
+      category: cost
+      check:
+        status: available
+        age_gt: 30d
+      action: tag
+      tag_name: audit-orphaned-volume
+      action_tag_name: "Orphaned Volume (>30d)"
+
+    - name: volume-error-state
+      description: "Volume stuck in error state"
+      resource: volume
+      severity: medium
+      category: cost
+      check:
+        status: error
+      action: log
+
+    - name: snapshot-old-90d
+      description: "Snapshot older than 90 days"
+      resource: snapshot
+      severity: medium
+      category: cost
+      check:
+        age_gt: 90d
+      action: log
+
+    - name: snapshot-old-180d
+      description: "Snapshot older than 180 days -- candidate for deletion"
+      resource: snapshot
+      severity: high
+      category: cost
+      check:
+        age_gt: 180d
+      action: delete

@@ -20,6 +20,10 @@ func (a *SecurityGroupRuleAuditor) ResourceType() string {
 	return "security_group_rule"
 }
 
+func (a *SecurityGroupRuleAuditor) ImplementedChecks() []string {
+	return []string{"direction", "ethertype", "protocol", "port", "remote_ip_prefix", "exempt_names"}
+}
+
 func (a *SecurityGroupRuleAuditor) Check(ctx context.Context, resource interface{}, rule *policy.Rule) (*audit.Result, error) {
 	_ = ctx
 
