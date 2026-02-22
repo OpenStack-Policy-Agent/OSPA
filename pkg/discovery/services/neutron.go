@@ -8,6 +8,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
 )
 
@@ -236,6 +237,48 @@ func (d *NeutronSubnetDiscoverer) Discover(ctx context.Context, client *gophercl
 				ResourceID:   subnet.ID,
 				ProjectID:    subnet.TenantID,
 				Resource:     subnet,
+			}:
+			}
+		}
+	}()
+
+	return ch, nil
+}
+
+
+// NeutronRouterDiscoverer discovers neutron/router resources.
+type NeutronRouterDiscoverer struct{}
+
+func (d *NeutronRouterDiscoverer) ResourceType() string {
+	return "router"
+}
+
+func (d *NeutronRouterDiscoverer) Discover(ctx context.Context, client *gophercloud.ServiceClient, allTenants bool) (<-chan discovery.Job, error) {
+	ch := make(chan discovery.Job)
+
+	go func() {
+		defer close(ch)
+
+		pages, err := routers.List(client, routers.ListOpts{}).AllPages()
+		if err != nil {
+			return
+		}
+
+		routerList, err := routers.ExtractRouters(pages)
+		if err != nil {
+			return
+		}
+
+		for _, router := range routerList {
+			select {
+			case <-ctx.Done():
+				return
+			case ch <- discovery.Job{
+				Service:      "neutron",
+				ResourceType: "router",
+				ResourceID:   router.ID,
+				ProjectID:    router.TenantID,
+				Resource:     router,
 			}:
 			}
 		}

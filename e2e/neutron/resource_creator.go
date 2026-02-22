@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gophercloud/gophercloud"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
@@ -268,6 +269,38 @@ func CreateSubnet(t *testing.T, client *gophercloud.ServiceClient) (resourceID s
 	return subnetID, cleanupAll
 }
 
+
+
+// CreateRouter creates a test router (without an external gateway) and returns:
+//   - resourceID: The router ID (for filtering audit results)
+//   - cleanup: A function to delete the router
+func CreateRouter(t *testing.T, client *gophercloud.ServiceClient) (resourceID string, cleanup func()) {
+	t.Helper()
+
+	name := fmt.Sprintf("%srouter-%d", testPrefix, time.Now().UnixNano())
+	adminStateUp := true
+	opts := routers.CreateOpts{
+		Name:         name,
+		AdminStateUp: &adminStateUp,
+		Description:  "OSPA e2e test router - safe to delete",
+	}
+
+	router, err := routers.Create(client, opts).Extract()
+	if err != nil {
+		t.Fatalf("Failed to create test router: %v", err)
+	}
+	t.Logf("Created test router: %s (%s)", router.Name, router.ID)
+
+	cleanup = func() {
+		t.Logf("Cleaning up test router: %s", router.ID)
+		if err := routers.Delete(client, router.ID).ExtractErr(); err != nil {
+			t.Logf("Warning: failed to delete test router %s: %v", router.ID, err)
+		}
+	}
+
+	return router.ID, cleanup
+}
+
 // CleanupOrphans deletes any leaked test resources (those with testPrefix).
 // Run this manually if tests fail and leave resources behind:
 //
@@ -278,7 +311,32 @@ func CleanupOrphans(t *testing.T, client *gophercloud.ServiceClient) {
 	ctx := context.Background()
 	_ = ctx // For future use with context-aware operations
 
-	// Clean up orphaned security groups first (before networks, as SGs may be attached to ports)
+	// Clean up orphaned routers first (before networks, as routers may reference external networks)
+	t.Log("Searching for orphaned test routers...")
+	routerPages, err := routers.List(client, routers.ListOpts{}).AllPages()
+	if err != nil {
+		t.Logf("Warning: failed to list routers: %v", err)
+	} else {
+		allRouters, err := routers.ExtractRouters(routerPages)
+		if err != nil {
+			t.Logf("Warning: failed to extract routers: %v", err)
+		} else {
+			var rtrDeleted int
+			for _, rtr := range allRouters {
+				if strings.HasPrefix(rtr.Name, testPrefix) {
+					t.Logf("Found orphaned router: %s (%s)", rtr.Name, rtr.ID)
+					if err := routers.Delete(client, rtr.ID).ExtractErr(); err != nil {
+						t.Logf("  Warning: failed to delete router %s: %v", rtr.ID, err)
+					} else {
+						rtrDeleted++
+					}
+				}
+			}
+			t.Logf("Cleanup complete: deleted %d orphaned routers", rtrDeleted)
+		}
+	}
+
+	// Clean up orphaned security groups (before networks, as SGs may be attached to ports)
 	t.Log("Searching for orphaned test security groups...")
 	sgPages, err := groups.List(client, groups.ListOpts{}).AllPages()
 	if err != nil {
