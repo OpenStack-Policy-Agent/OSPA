@@ -6,12 +6,22 @@ import (
 	"time"
 
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/audit"
+	"github.com/OpenStack-Policy-Agent/OSPA/pkg/audit/common"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/policy"
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/attributestags"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 )
+
+type secGroupAdapter struct{ sg groups.SecGroup }
+
+func (a secGroupAdapter) GetID() string        { return a.sg.ID }
+func (a secGroupAdapter) GetName() string      { return a.sg.Name }
+func (a secGroupAdapter) GetProjectID() string { return a.sg.TenantID }
+func (a secGroupAdapter) GetStatus() string    { return "ACTIVE" }
+func (a secGroupAdapter) GetCreatedAt() time.Time { return a.sg.CreatedAt }
+func (a secGroupAdapter) GetUpdatedAt() time.Time { return a.sg.UpdatedAt }
 
 // SecurityGroupAuditor audits neutron/security_group resources.
 //
@@ -31,56 +41,15 @@ func (a *SecurityGroupAuditor) Check(ctx context.Context, resource interface{}, 
 		return nil, fmt.Errorf("expected groups.SecGroup, got %T", resource)
 	}
 
-	result := &audit.Result{
-		RuleID:       rule.Name,
-		ResourceID:   sg.ID,
-		ResourceName: sg.Name,
-		ProjectID:    sg.TenantID,
-		Status:       "ACTIVE", // Security groups don't have a status field; they're always active
-		UpdatedAt:    sg.UpdatedAt,
-		Compliant:    true,
-		Rule:         rule,
+	adapter := secGroupAdapter{sg: sg}
+	result := common.BuildBaseResult(adapter, rule)
+
+	exempt, err := common.RunCommonChecks(adapter, rule, result)
+	if exempt || err != nil {
+		return result, err
 	}
 
-	// Check exemptions first
-	if isExemptByName(sg.Name, rule.Check.ExemptNames) {
-		result.Compliant = true
-		result.Observation = "exempt by name"
-		return result, nil
-	}
-
-	// Status check - security groups are always "ACTIVE" if they exist
-	if rule.Check.Status != "" {
-		if rule.Check.Status == "ACTIVE" {
-			result.Compliant = false
-			result.Observation = "security group is active"
-		}
-	}
-
-	// Age check
-	if rule.Check.AgeGT != "" {
-		age, err := rule.Check.ParseAgeGT()
-		if err != nil {
-			return nil, fmt.Errorf("parsing age_gt: %w", err)
-		}
-
-		resourceTime := sg.UpdatedAt
-		if resourceTime.IsZero() {
-			resourceTime = sg.CreatedAt
-		}
-
-		if !resourceTime.IsZero() && time.Since(resourceTime) > age {
-			result.Compliant = false
-			result.Observation = fmt.Sprintf("security group is older than %s (last updated: %s)", rule.Check.AgeGT, resourceTime.Format(time.RFC3339))
-		}
-	}
-
-	// Unused check - will be evaluated later with client context if needed
-	// A security group is unused if it's not attached to any ports
-	// This is marked here but actual check requires API access
 	if rule.Check.Unused {
-		// The unused flag is set; the actual check will be done in the orchestrator
-		// or via enrichment. For now, we mark it as needing evaluation.
 		result.Observation = "unused check pending - requires port enumeration"
 	}
 

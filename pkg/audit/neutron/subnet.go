@@ -3,13 +3,24 @@ package neutron
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/audit"
+	"github.com/OpenStack-Policy-Agent/OSPA/pkg/audit/common"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/policy"
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
 )
+
+type subnetAdapter struct{ s subnets.Subnet }
+
+func (a subnetAdapter) GetID() string           { return a.s.ID }
+func (a subnetAdapter) GetName() string         { return a.s.Name }
+func (a subnetAdapter) GetProjectID() string    { return a.s.TenantID }
+func (a subnetAdapter) GetStatus() string       { return "" }
+func (a subnetAdapter) GetCreatedAt() time.Time { return time.Time{} }
+func (a subnetAdapter) GetUpdatedAt() time.Time { return time.Time{} }
 
 // SubnetAuditor audits neutron/subnet resources.
 //
@@ -34,22 +45,14 @@ func (a *SubnetAuditor) Check(ctx context.Context, resource interface{}, rule *p
 		return nil, fmt.Errorf("expected subnets.Subnet, got %T", resource)
 	}
 
-	result := &audit.Result{
-		RuleID:       rule.Name,
-		ResourceID:   subnet.ID,
-		ResourceName: subnet.Name,
-		ProjectID:    subnet.TenantID,
-		Compliant:    true,
-		Rule:         rule,
+	adapter := subnetAdapter{s: subnet}
+	result := common.BuildBaseResult(adapter, rule)
+
+	exempt, err := common.RunCommonChecks(adapter, rule, result)
+	if exempt || err != nil {
+		return result, err
 	}
 
-	if isExemptByName(subnet.Name, rule.Check.ExemptNames) {
-		result.Compliant = true
-		result.Observation = "exempt by name"
-		return result, nil
-	}
-
-	// Unused check — a subnet with no allocation pools cannot serve ports.
 	if rule.Check.Unused {
 		if len(subnet.AllocationPools) == 0 {
 			result.Compliant = false
