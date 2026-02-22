@@ -52,7 +52,7 @@ const (
 type Rule struct {
 	Name          string          `yaml:"name"`
 	Description   string          `yaml:"description"`
-	Service       string          `yaml:"service"`
+	Service       string          `yaml:"service,omitempty"`
 	Resource      string          `yaml:"resource"`
 	Check         CheckConditions `yaml:"check"`
 	Action        string          `yaml:"action"`

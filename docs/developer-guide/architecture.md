@@ -175,7 +175,6 @@ defaults:
 policies:
   - <service>:
     - name: rule-name
-      service: <service>
       resource: <resource_type>
       check:
         # Conditions

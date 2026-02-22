@@ -222,7 +222,6 @@ policies:
   - {{.ServiceName}}:
     - name: test-{{.Resource.Name}}-status
       description: Find {{.Resource.Name}} by status
-      service: {{.ServiceName}}
       resource: {{.Resource.Name}}
       check:
         status: ACTIVE
@@ -264,7 +263,6 @@ policies:
   - {{.ServiceName}}:
     - name: test-{{.Resource.Name}}-unused
       description: Find unused {{.Resource.Name}}
-      service: {{.ServiceName}}
       resource: {{.Resource.Name}}
       check:
         unused: true
@@ -298,7 +296,6 @@ policies:
   - {{.ServiceName}}:
     - name: test-{{.Resource.Name}}-exempt
       description: Test exemption by name prefix
-      service: {{.ServiceName}}
       resource: {{.Resource.Name}}
       check:
         status: ACTIVE

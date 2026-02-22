@@ -65,7 +65,6 @@ policies:
   - neutron:
     - name: rule-name
       description: Rule description
-      service: neutron
       resource: <resource_type>
       check:
         # Check conditions (see below)
@@ -91,7 +90,6 @@ check:
 ```yaml
 - name: find-inactive-resources
   description: Find inactive neutron resources
-  service: neutron
   resource: <resource_type>
   check:
     status: inactive
@@ -116,7 +114,6 @@ check:
 ```yaml
 - name: find-old-resources
   description: Find resources older than 30 days
-  service: neutron
   resource: <resource_type>
   check:
     age_gt: 30d
@@ -136,7 +133,6 @@ check:
 ```yaml
 - name: find-unused-resources
   description: Find unused neutron resources
-  service: neutron
   resource: <resource_type>
   check:
     unused: true
@@ -159,7 +155,6 @@ check:
 ```yaml
 - name: find-active-except-default
   description: Find active resources except default ones
-  service: neutron
   resource: <resource_type>
   check:
     status: active
@@ -182,7 +177,6 @@ action: log
 ```yaml
 - name: audit-resources
   description: Audit neutron resources
-  service: neutron
   resource: <resource_type>
   check:
     status: inactive
@@ -201,7 +195,6 @@ action: delete
 ```yaml
 - name: cleanup-old-resources
   description: Delete resources older than 90 days
-  service: neutron
   resource: <resource_type>
   check:
     age_gt: 90d
@@ -224,7 +217,6 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: tag-old-resources
   description: Tag resources older than 30 days
-  service: neutron
   resource: <resource_type>
   check:
     age_gt: 30d
@@ -243,7 +235,6 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: find-inactive-network
   description: Find inactive network resources
-  service: neutron
   resource: network
   check:
     status: inactive
@@ -255,7 +246,6 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: find-old-network
   description: Find network resources older than 30 days
-  service: neutron
   resource: network
   check:
     age_gt: 30d
@@ -267,7 +257,6 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: cleanup-unused-network
   description: Delete unused network resources
-  service: neutron
   resource: network
   check:
     unused: true
@@ -281,7 +270,6 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: tag-old-network
   description: Tag network resources older than 7 days
-  service: neutron
   resource: network
   check:
     age_gt: 7d
@@ -298,7 +286,6 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: find-inactive-security_group
   description: Find inactive security_group resources
-  service: neutron
   resource: security_group
   check:
     status: inactive
@@ -310,7 +297,6 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: find-old-security_group
   description: Find security_group resources older than 30 days
-  service: neutron
   resource: security_group
   check:
     age_gt: 30d
@@ -322,7 +308,6 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: cleanup-unused-security_group
   description: Delete unused security_group resources
-  service: neutron
   resource: security_group
   check:
     unused: true
@@ -336,7 +321,6 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: tag-old-security_group
   description: Tag security_group resources older than 7 days
-  service: neutron
   resource: security_group
   check:
     age_gt: 7d
@@ -353,7 +337,6 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: find-inactive-security_group_rule
   description: Find inactive security_group_rule resources
-  service: neutron
   resource: security_group_rule
   check:
     status: inactive
@@ -365,7 +348,6 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: find-old-security_group_rule
   description: Find security_group_rule resources older than 30 days
-  service: neutron
   resource: security_group_rule
   check:
     age_gt: 30d
@@ -377,7 +359,6 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: cleanup-unused-security_group_rule
   description: Delete unused security_group_rule resources
-  service: neutron
   resource: security_group_rule
   check:
     unused: true
@@ -391,7 +372,6 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: tag-old-security_group_rule
   description: Tag security_group_rule resources older than 7 days
-  service: neutron
   resource: security_group_rule
   check:
     age_gt: 7d
@@ -408,7 +388,6 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: find-inactive-floating_ip
   description: Find inactive floating_ip resources
-  service: neutron
   resource: floating_ip
   check:
     status: inactive
@@ -420,7 +399,6 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: find-old-floating_ip
   description: Find floating_ip resources older than 30 days
-  service: neutron
   resource: floating_ip
   check:
     age_gt: 30d
@@ -432,7 +410,6 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: cleanup-unused-floating_ip
   description: Delete unused floating_ip resources
-  service: neutron
   resource: floating_ip
   check:
     unused: true
@@ -446,7 +423,6 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: tag-old-floating_ip
   description: Tag floating_ip resources older than 7 days
-  service: neutron
   resource: floating_ip
   check:
     age_gt: 7d
@@ -463,7 +439,6 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: find-inactive-subnet
   description: Find inactive subnet resources
-  service: neutron
   resource: subnet
   check:
     status: inactive
@@ -475,7 +450,6 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: find-old-subnet
   description: Find subnet resources older than 30 days
-  service: neutron
   resource: subnet
   check:
     age_gt: 30d
@@ -487,7 +461,6 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: cleanup-unused-subnet
   description: Delete unused subnet resources
-  service: neutron
   resource: subnet
   check:
     unused: true
@@ -501,7 +474,6 @@ action_tag_name: "Display Name for Tag"
 ```yaml
 - name: tag-old-subnet
   description: Tag subnet resources older than 7 days
-  service: neutron
   resource: subnet
   check:
     age_gt: 7d
@@ -525,14 +497,12 @@ policies:
   - neutron:
     - name: audit-network
       description: Audit network resources
-      service: neutron
       resource: network
       check:
         status: active
       action: log
     - name: cleanup-old-network
       description: Find network resources older than 90 days
-      service: neutron
       resource: network
       check:
         age_gt: 90d
@@ -541,14 +511,12 @@ policies:
       action: log
     - name: audit-security_group
       description: Audit security_group resources
-      service: neutron
       resource: security_group
       check:
         status: active
       action: log
     - name: cleanup-old-security_group
       description: Find security_group resources older than 90 days
-      service: neutron
       resource: security_group
       check:
         age_gt: 90d
@@ -557,14 +525,12 @@ policies:
       action: log
     - name: audit-security_group_rule
       description: Audit security_group_rule resources
-      service: neutron
       resource: security_group_rule
       check:
         status: active
       action: log
     - name: cleanup-old-security_group_rule
       description: Find security_group_rule resources older than 90 days
-      service: neutron
       resource: security_group_rule
       check:
         age_gt: 90d
@@ -573,14 +539,12 @@ policies:
       action: log
     - name: audit-floating_ip
       description: Audit floating_ip resources
-      service: neutron
       resource: floating_ip
       check:
         status: active
       action: log
     - name: cleanup-old-floating_ip
       description: Find floating_ip resources older than 90 days
-      service: neutron
       resource: floating_ip
       check:
         age_gt: 90d
@@ -589,14 +553,12 @@ policies:
       action: log
     - name: audit-subnet
       description: Audit subnet resources
-      service: neutron
       resource: subnet
       check:
         status: active
       action: log
     - name: cleanup-old-subnet
       description: Find subnet resources older than 90 days
-      service: neutron
       resource: subnet
       check:
         age_gt: 90d

@@ -41,7 +41,6 @@ policies:
   - neutron:
     - name: find-ssh-open-to-world
       description: Find SSH rules open to 0.0.0.0/0
-      service: neutron
       resource: security_group_rule
       check:
         direction: ingress
@@ -118,7 +117,6 @@ Now that you've run your first audit:
 - neutron:
   - name: unused-security-groups
     description: Find security groups not attached to ports
-    service: neutron
     resource: security_group
     check:
       unused: true
@@ -133,7 +131,6 @@ Now that you've run your first audit:
 - cinder:
   - name: old-snapshots
     description: Find snapshots older than 90 days
-    service: cinder
     resource: snapshot
     check:
       age_gt: 90d
@@ -146,7 +143,6 @@ Now that you've run your first audit:
 - nova:
   - name: shutoff-instances
     description: Find instances that are shut off
-    service: nova
     resource: instance
     check:
       status: SHUTOFF

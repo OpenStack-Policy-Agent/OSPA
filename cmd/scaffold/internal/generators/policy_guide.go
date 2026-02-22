@@ -79,7 +79,6 @@ policies:
   - {{.ServiceName}}:
     - name: rule-name
       description: Rule description
-      service: {{.ServiceName}}
       resource: <resource_type>
       severity: critical|high|medium|low
       category: security|compliance|cost|hygiene
@@ -107,7 +106,6 @@ check:
 {{printf "%c%c%c" 96 96 96}}yaml
 - name: find-inactive-resources
   description: Find inactive {{.ServiceName}} resources
-  service: {{.ServiceName}}
   resource: <resource_type>
   check:
     status: inactive
@@ -132,7 +130,6 @@ check:
 {{printf "%c%c%c" 96 96 96}}yaml
 - name: find-old-resources
   description: Find resources older than 30 days
-  service: {{.ServiceName}}
   resource: <resource_type>
   check:
     age_gt: 30d
@@ -152,7 +149,6 @@ check:
 {{printf "%c%c%c" 96 96 96}}yaml
 - name: find-unused-resources
   description: Find unused {{.ServiceName}} resources
-  service: {{.ServiceName}}
   resource: <resource_type>
   check:
     unused: true
@@ -175,7 +171,6 @@ check:
 {{printf "%c%c%c" 96 96 96}}yaml
 - name: find-active-except-default
   description: Find active resources except default ones
-  service: {{.ServiceName}}
   resource: <resource_type>
   check:
     status: active
@@ -198,7 +193,6 @@ action: log
 {{printf "%c%c%c" 96 96 96}}yaml
 - name: audit-resources
   description: Audit {{.ServiceName}} resources
-  service: {{.ServiceName}}
   resource: <resource_type>
   check:
     status: inactive
@@ -217,7 +211,6 @@ action: delete
 {{printf "%c%c%c" 96 96 96}}yaml
 - name: cleanup-old-resources
   description: Delete resources older than 90 days
-  service: {{.ServiceName}}
   resource: <resource_type>
   check:
     age_gt: 90d
@@ -240,7 +233,6 @@ action_tag_name: "Display Name for Tag"
 {{printf "%c%c%c" 96 96 96}}yaml
 - name: tag-old-resources
   description: Tag resources older than 30 days
-  service: {{.ServiceName}}
   resource: <resource_type>
   check:
     age_gt: 30d
@@ -259,7 +251,6 @@ action_tag_name: "Display Name for Tag"
 {{printf "%c%c%c" 96 96 96}}yaml
 - name: security-check-{{$res.Name}}-{{$rc.Name}}
   description: "{{$rc.Description}}"
-  service: {{$.ServiceName}}
   resource: {{$res.Name}}
   severity: {{$rc.Severity}}
   category: {{$rc.Category}}{{if $rc.GuideRef}}
@@ -275,7 +266,6 @@ action_tag_name: "Display Name for Tag"
 {{printf "%c%c%c" 96 96 96}}yaml
 - name: find-inactive-{{.Name}}
   description: Find inactive {{.Name}} resources
-  service: {{$.ServiceName}}
   resource: {{.Name}}
   check:
     status: inactive
@@ -287,7 +277,6 @@ action_tag_name: "Display Name for Tag"
 {{printf "%c%c%c" 96 96 96}}yaml
 - name: find-old-{{.Name}}
   description: Find {{.Name}} resources older than 30 days
-  service: {{$.ServiceName}}
   resource: {{.Name}}
   check:
     age_gt: 30d
@@ -299,7 +288,6 @@ action_tag_name: "Display Name for Tag"
 {{printf "%c%c%c" 96 96 96}}yaml
 - name: cleanup-unused-{{.Name}}
   description: Delete unused {{.Name}} resources
-  service: {{$.ServiceName}}
   resource: {{.Name}}
   check:
     unused: true
@@ -323,7 +311,6 @@ policies:
   - {{.ServiceName}}:{{range .Resources}}
     - name: audit-{{.Name}}
       description: Audit {{.Name}} resources
-      service: {{$.ServiceName}}
       resource: {{.Name}}
       severity: medium
       category: hygiene
@@ -332,7 +319,6 @@ policies:
       action: log
     - name: cleanup-old-{{.Name}}
       description: Find {{.Name}} resources older than 90 days
-      service: {{$.ServiceName}}
       resource: {{.Name}}
       severity: low
       category: cost

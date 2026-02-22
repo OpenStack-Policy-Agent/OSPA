@@ -1,0 +1,221 @@
+---
+# OpenStack Security Guide -- API-Auditable Policy Profile
+#
+# This policy covers resource-level security checks that OSPA can enforce
+# via the OpenStack API. Each rule is annotated with severity, category,
+# and (where applicable) a guide_ref tracing back to the OpenStack Security
+# Guide or OSSN advisories.
+#
+# Configuration-level checks (file permissions, TLS settings, etc.) are NOT
+# auditable via the API; see the guide_checklist sections in each service's
+# registry YAML for those items.
+#
+# Additional services (glance, keystone, etc.) can be added here once their
+# service registrations are scaffolded.
+
+version: v1
+defaults:
+  workers: 50
+  output: security-findings.json
+
+policies:
+  # ─── Neutron (Networking) ────────────────────────────────────────────
+  - neutron:
+
+    # --- Security Group Rules: dangerous ingress patterns ---
+
+    - name: sg-ssh-open-to-world-v4
+      description: "IPv4 SSH (port 22) ingress open to 0.0.0.0/0"
+      resource: security_group_rule
+      severity: critical
+      category: security
+      guide_ref: "OSSN-0011"
+      check:
+        direction: ingress
+        ethertype: IPv4
+        protocol: tcp
+        port: 22
+        remote_ip_prefix: "0.0.0.0/0"
+      action: log
+
+    - name: sg-ssh-open-to-world-v6
+      description: "IPv6 SSH (port 22) ingress open to ::/0"
+      resource: security_group_rule
+      severity: critical
+      category: security
+      guide_ref: "OSSN-0011"
+      check:
+        direction: ingress
+        ethertype: IPv6
+        protocol: tcp
+        port: 22
+        remote_ip_prefix: "::/0"
+      action: log
+
+    - name: sg-rdp-open-to-world
+      description: "RDP (port 3389) ingress open to 0.0.0.0/0"
+      resource: security_group_rule
+      severity: critical
+      category: security
+      check:
+        direction: ingress
+        ethertype: IPv4
+        protocol: tcp
+        port: 3389
+        remote_ip_prefix: "0.0.0.0/0"
+      action: log
+
+    - name: sg-mysql-open-to-world
+      description: "MySQL (port 3306) ingress open to 0.0.0.0/0"
+      resource: security_group_rule
+      severity: critical
+      category: security
+      check:
+        direction: ingress
+        ethertype: IPv4
+        protocol: tcp
+        port: 3306
+        remote_ip_prefix: "0.0.0.0/0"
+      action: log
+
+    - name: sg-postgres-open-to-world
+      description: "PostgreSQL (port 5432) ingress open to 0.0.0.0/0"
+      resource: security_group_rule
+      severity: critical
+      category: security
+      check:
+        direction: ingress
+        ethertype: IPv4
+        protocol: tcp
+        port: 5432
+        remote_ip_prefix: "0.0.0.0/0"
+      action: log
+
+    - name: sg-redis-open-to-world
+      description: "Redis (port 6379) ingress open to 0.0.0.0/0"
+      resource: security_group_rule
+      severity: critical
+      category: security
+      check:
+        direction: ingress
+        ethertype: IPv4
+        protocol: tcp
+        port: 6379
+        remote_ip_prefix: "0.0.0.0/0"
+      action: log
+
+    - name: sg-memcached-open-to-world
+      description: "Memcached (port 11211) ingress open to 0.0.0.0/0"
+      resource: security_group_rule
+      severity: critical
+      category: security
+      check:
+        direction: ingress
+        ethertype: IPv4
+        protocol: tcp
+        port: 11211
+        remote_ip_prefix: "0.0.0.0/0"
+      action: log
+
+    - name: sg-wide-port-range
+      description: "Security group rule with excessively wide port range (>100 ports)"
+      resource: security_group_rule
+      severity: high
+      category: security
+      check:
+        direction: ingress
+        port_range_wide: true
+      action: log
+
+    - name: sg-icmp-open-to-world
+      description: "ICMP (ping) ingress open to 0.0.0.0/0"
+      resource: security_group_rule
+      severity: medium
+      category: security
+      check:
+        direction: ingress
+        ethertype: IPv4
+        protocol: icmp
+        remote_ip_prefix: "0.0.0.0/0"
+      action: log
+
+    # --- Security Groups ---
+
+    - name: sg-unused
+      description: "Security group not attached to any port"
+      resource: security_group
+      severity: low
+      category: hygiene
+      check:
+        unused: true
+        exempt_names:
+          - default
+      action: log
+
+    # --- Networks ---
+
+    - name: network-shared-no-rbac
+      description: "Shared network visible to all tenants without RBAC"
+      resource: network
+      severity: high
+      category: security
+      check:
+        shared_network: true
+      action: log
+
+  # ─── Nova (Compute) ─────────────────────────────────────────────────
+  - nova:
+
+    - name: instance-no-keypair
+      description: "Instance launched without an SSH keypair"
+      resource: instance
+      severity: medium
+      category: security
+      check:
+        no_keypair: true
+      action: log
+
+    - name: instance-deprecated-image
+      description: "Instance running a known deprecated or end-of-life image"
+      resource: instance
+      severity: medium
+      category: compliance
+      check:
+        image_name:
+          - ubuntu-18.04*
+          - centos-7*
+          - debian-9*
+          - windows-server-2012*
+      action: log
+
+  # ─── Cinder (Block Storage) ─────────────────────────────────────────
+  - cinder:
+
+    - name: volume-not-encrypted
+      description: "Volume is not encrypted (data at rest exposure)"
+      resource: volume
+      severity: high
+      category: security
+      guide_ref: "Check-Block-09"
+      check:
+        encrypted: false
+      action: log
+
+    - name: volume-no-backup
+      description: "Volume has no backup configured"
+      resource: volume
+      severity: medium
+      category: compliance
+      check:
+        has_backup: false
+      action: log
+
+    - name: snapshot-not-encrypted
+      description: "Snapshot is not encrypted"
+      resource: snapshot
+      severity: high
+      category: security
+      guide_ref: "Check-Block-09"
+      check:
+        encrypted: false
+      action: log

@@ -15,7 +15,6 @@ policies:
   - <service>:
     - name: <rule-name>
       description: <description>
-      service: <service>
       resource: <resource-type>
       check:
         <condition>: <value>
@@ -80,7 +79,6 @@ Each rule has these fields:
 ```yaml
 - name: critical-ssh-open-to-world
   description: Find SSH rules open to the internet
-  service: neutron
   resource: security_group_rule
   check:
     direction: ingress
@@ -175,7 +173,6 @@ policies:
   - neutron:
     - name: critical-ssh-open-to-world
       description: SSH port 22 open to 0.0.0.0/0
-      service: neutron
       resource: security_group_rule
       check:
         direction: ingress
@@ -186,7 +183,6 @@ policies:
 
     - name: critical-rdp-open-to-world
       description: RDP port 3389 open to 0.0.0.0/0
-      service: neutron
       resource: security_group_rule
       check:
         direction: ingress
@@ -206,7 +202,6 @@ policies:
   - neutron:
     - name: unused-floating-ips
       description: Unattached floating IPs
-      service: neutron
       resource: floating_ip
       check:
         status: DOWN
@@ -215,7 +210,6 @@ policies:
   - cinder:
     - name: unattached-volumes
       description: Available volumes older than 7 days
-      service: cinder
       resource: volume
       check:
         status: available
@@ -224,7 +218,6 @@ policies:
 
     - name: old-snapshots
       description: Snapshots older than 90 days
-      service: cinder
       resource: snapshot
       check:
         age_gt: 90d
@@ -239,7 +232,6 @@ policies:
   - nova:
     - name: stale-instances
       description: Instances running over 30 days
-      service: nova
       resource: instance
       check:
         age_gt: 30d

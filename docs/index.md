@@ -62,7 +62,6 @@ policies:
   - neutron:
     - name: critical-ssh-open-to-world
       description: Find SSH rules open to 0.0.0.0/0
-      service: neutron
       resource: security_group_rule
       check:
         direction: ingress
