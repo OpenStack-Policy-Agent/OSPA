@@ -41,6 +41,11 @@ func (v *NeutronValidator) ValidateResource(check *policy.CheckConditions, resou
 			return fmt.Errorf("rule %q: %w", ruleName, err)
 		}
 
+	case "subnet":
+		if err := validateAllowedChecks(check, []string{"status", "age_gt", "unused", "exempt_names"}); err != nil {
+			return fmt.Errorf("rule %q: %w", ruleName, err)
+		}
+
 	default:
 		return fmt.Errorf("rule %q: unsupported resource type %q for neutron service", ruleName, resourceType)
 	}

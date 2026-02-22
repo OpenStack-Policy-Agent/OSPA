@@ -257,6 +257,17 @@ func CreateSecurityGroupRuleWithOptions(t *testing.T, client *gophercloud.Servic
 	return rule.ID, opts.SecGroupID, cleanup
 }
 
+
+
+// CreateSubnet creates a test subnet (and its parent network) and returns:
+//   - resourceID: The subnet ID (for filtering audit results)
+//   - cleanup: A function to delete the subnet and its parent network
+func CreateSubnet(t *testing.T, client *gophercloud.ServiceClient) (resourceID string, cleanup func()) {
+	t.Helper()
+	_, subnetID, cleanupAll := CreateNetworkWithSubnet(t, client)
+	return subnetID, cleanupAll
+}
+
 // CleanupOrphans deletes any leaked test resources (those with testPrefix).
 // Run this manually if tests fail and leave resources behind:
 //
