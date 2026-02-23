@@ -18,6 +18,9 @@ package neutron
 // =============================================================================
 
 import (
+	"encoding/csv"
+	"encoding/json"
+	"os"
 	"testing"
 
 	"github.com/OpenStack-Policy-Agent/OSPA/e2e"
@@ -293,6 +296,242 @@ policies:
 	}
 
 	t.Log("Security group rule delete action test completed")
+}
+
+// TestNeutron_SecurityGroupRule_DryRunSkip verifies that dry-run mode skips remediation.
+func TestNeutron_SecurityGroupRule_DryRunSkip(t *testing.T) {
+	engine := e2e.NewTestEngine(t)
+	engine.Apply = false
+	client := engine.GetNetworkClient(t)
+
+	resourceID, cleanup := CreateSecurityGroupRule(t, client)
+	defer cleanup()
+
+	policyYAML := `version: v1
+defaults:
+  workers: 2
+policies:
+  - neutron:
+    - name: test-sgr-dryrun
+      description: Dry run delete on SSH open to world
+      resource: security_group_rule
+      check:
+        direction: ingress
+        protocol: tcp
+        port: 22
+        remote_ip_prefix: 0.0.0.0/0
+      action: delete`
+
+	policy := engine.LoadPolicyFromYAML(t, policyYAML)
+	results := engine.RunAudit(t, policy)
+
+	resourceResults := results.FilterByService("neutron").
+		FilterByResourceType("security_group_rule").
+		FilterByResourceID(resourceID)
+
+	resourceResults.LogSummary(t)
+
+	if resourceResults.Scanned == 0 {
+		t.Error("Expected security group rule to be scanned")
+	}
+
+	resourceResults.AssertRemediationSkipped(t, "dry-run")
+}
+
+// TestNeutron_SecurityGroupRule_AllowActionsFiltering verifies the allow-actions filter.
+func TestNeutron_SecurityGroupRule_AllowActionsFiltering(t *testing.T) {
+	engine := e2e.NewTestEngine(t)
+	engine.Apply = true
+	engine.AllowActions = []string{"tag"}
+	client := engine.GetNetworkClient(t)
+
+	resourceID, cleanup := CreateSecurityGroupRule(t, client)
+	defer cleanup()
+
+	policyYAML := `version: v1
+defaults:
+  workers: 2
+policies:
+  - neutron:
+    - name: test-sgr-allowlist
+      description: Delete not in allowlist
+      resource: security_group_rule
+      check:
+        direction: ingress
+        protocol: tcp
+        port: 22
+        remote_ip_prefix: 0.0.0.0/0
+      action: delete`
+
+	policy := engine.LoadPolicyFromYAML(t, policyYAML)
+	results := engine.RunAudit(t, policy)
+
+	resourceResults := results.FilterByService("neutron").
+		FilterByResourceType("security_group_rule").
+		FilterByResourceID(resourceID)
+
+	resourceResults.LogSummary(t)
+
+	if resourceResults.Scanned == 0 {
+		t.Error("Expected security group rule to be scanned")
+	}
+
+	resourceResults.AssertRemediationSkipped(t, "action_not_allowed")
+}
+
+// TestNeutron_SecurityGroupRule_Classification verifies classification on SG rule violations.
+func TestNeutron_SecurityGroupRule_Classification(t *testing.T) {
+	engine := e2e.NewTestEngine(t)
+	client := engine.GetNetworkClient(t)
+
+	resourceID, cleanup := CreateSecurityGroupRule(t, client)
+	defer cleanup()
+
+	policyYAML := `version: v1
+defaults:
+  workers: 2
+policies:
+  - neutron:
+    - name: test-sgr-classification
+      description: SSH open to world with classification
+      resource: security_group_rule
+      check:
+        direction: ingress
+        protocol: tcp
+        port: 22
+        remote_ip_prefix: 0.0.0.0/0
+      action: log
+      severity: high
+      category: security
+      guide_ref: CIS-4.1`
+
+	policy := engine.LoadPolicyFromYAML(t, policyYAML)
+	results := engine.RunAudit(t, policy)
+
+	resourceResults := results.FilterByService("neutron").
+		FilterByResourceType("security_group_rule").
+		FilterByResourceID(resourceID)
+
+	resourceResults.LogSummary(t)
+
+	if resourceResults.Scanned == 0 {
+		t.Fatal("Expected security group rule to be scanned")
+	}
+
+	resourceResults.AssertClassification(t, "high", "security", "CIS-4.1")
+}
+
+// TestNeutron_SecurityGroupRule_OutputJSON verifies JSON output contains required fields.
+func TestNeutron_SecurityGroupRule_OutputJSON(t *testing.T) {
+	engine := e2e.NewTestEngine(t)
+	client := engine.GetNetworkClient(t)
+
+	_, cleanup := CreateSecurityGroupRule(t, client)
+	defer cleanup()
+
+	policyYAML := `version: v1
+defaults:
+  workers: 2
+policies:
+  - neutron:
+    - name: test-sgr-json
+      description: Output format test
+      resource: security_group_rule
+      check:
+        direction: ingress
+      action: log
+      severity: medium
+      category: compliance`
+
+	policy := engine.LoadPolicyFromYAML(t, policyYAML)
+	results, filePath := engine.RunAuditToFile(t, policy, "json")
+	defer os.Remove(filePath)
+
+	if results.Scanned == 0 {
+		t.Skip("No resources scanned, cannot validate output")
+	}
+
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		t.Fatalf("Failed to read JSON output: %v", err)
+	}
+	if len(data) == 0 {
+		t.Fatal("JSON output file is empty")
+	}
+
+	var finding map[string]interface{}
+	if err := json.Unmarshal(data[:e2e.FindLineEnd(data)], &finding); err != nil {
+		t.Fatalf("Failed to parse JSON output: %v", err)
+	}
+
+	for _, field := range []string{"rule_id", "resource_id", "compliant", "severity", "category"} {
+		if _, ok := finding[field]; !ok {
+			t.Errorf("JSON output missing required field: %s", field)
+		}
+	}
+}
+
+// TestNeutron_SecurityGroupRule_OutputCSV verifies CSV output has the correct headers.
+func TestNeutron_SecurityGroupRule_OutputCSV(t *testing.T) {
+	engine := e2e.NewTestEngine(t)
+	client := engine.GetNetworkClient(t)
+
+	_, cleanup := CreateSecurityGroupRule(t, client)
+	defer cleanup()
+
+	policyYAML := `version: v1
+defaults:
+  workers: 2
+policies:
+  - neutron:
+    - name: test-sgr-csv
+      description: Output format test
+      resource: security_group_rule
+      check:
+        direction: ingress
+      action: log
+      severity: low
+      category: hygiene`
+
+	policy := engine.LoadPolicyFromYAML(t, policyYAML)
+	results, filePath := engine.RunAuditToFile(t, policy, "csv")
+	defer os.Remove(filePath)
+
+	if results.Scanned == 0 {
+		t.Skip("No resources scanned, cannot validate output")
+	}
+
+	f, err := os.Open(filePath)
+	if err != nil {
+		t.Fatalf("Failed to open CSV output: %v", err)
+	}
+	defer f.Close()
+
+	reader := csv.NewReader(f)
+	header, err := reader.Read()
+	if err != nil {
+		t.Fatalf("Failed to read CSV header: %v", err)
+	}
+
+	expected := map[string]bool{"rule_id": false, "resource_id": false, "compliant": false, "severity": false, "category": false, "guide_ref": false}
+	for _, col := range header {
+		if _, ok := expected[col]; ok {
+			expected[col] = true
+		}
+	}
+	for col, found := range expected {
+		if !found {
+			t.Errorf("CSV header missing expected column: %s", col)
+		}
+	}
+
+	row, err := reader.Read()
+	if err != nil {
+		t.Fatalf("Failed to read CSV data row: %v", err)
+	}
+	if len(row) != len(header) {
+		t.Errorf("CSV data row has %d columns, expected %d", len(row), len(header))
+	}
 }
 
 // TestCleanup_SecurityGroupRule cleans up orphaned test resources.

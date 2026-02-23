@@ -4,25 +4,28 @@ package e2e
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/auth"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/orchestrator"
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/policy"
+	"github.com/OpenStack-Policy-Agent/OSPA/pkg/report"
 	"github.com/gophercloud/gophercloud"
-	_ "github.com/OpenStack-Policy-Agent/OSPA/pkg/discovery/services" // Register discoverers
-	_ "github.com/OpenStack-Policy-Agent/OSPA/pkg/services"           // Register services
-	_ "github.com/OpenStack-Policy-Agent/OSPA/pkg/services/services"  // Register service implementations
+	_ "github.com/OpenStack-Policy-Agent/OSPA/pkg/discovery/services"
+	_ "github.com/OpenStack-Policy-Agent/OSPA/pkg/services"
+	_ "github.com/OpenStack-Policy-Agent/OSPA/pkg/services/services"
 )
 
 // TestEngine provides a framework for running e2e tests
 type TestEngine struct {
-	Session     *auth.Session
-	CloudName   string
-	PolicyPath  string
-	Workers     int
-	Apply       bool
-	AllTenants  bool
+	Session      *auth.Session
+	CloudName    string
+	PolicyPath   string
+	Workers      int
+	Apply        bool
+	AllTenants   bool
+	AllowActions []string
 }
 
 // NewTestEngine creates a new test engine with default settings
@@ -59,9 +62,39 @@ func (e *TestEngine) GetNetworkClient(t *testing.T) *gophercloud.ServiceClient {
 	t.Helper()
 	client, err := e.Session.GetNeutronClient()
 	if err != nil {
-		t.Fatalf("Failed to get neutron client: %v", err)
+		skipOrFail(t, "neutron", err)
 	}
 	return client
+}
+
+// GetComputeClient returns a gophercloud client for the Nova service.
+func (e *TestEngine) GetComputeClient(t *testing.T) *gophercloud.ServiceClient {
+	t.Helper()
+	client, err := e.Session.GetNovaClient()
+	if err != nil {
+		skipOrFail(t, "nova", err)
+	}
+	return client
+}
+
+// GetBlockStorageClient returns a gophercloud client for the Cinder service.
+func (e *TestEngine) GetBlockStorageClient(t *testing.T) *gophercloud.ServiceClient {
+	t.Helper()
+	client, err := e.Session.GetCinderClient()
+	if err != nil {
+		skipOrFail(t, "cinder", err)
+	}
+	return client
+}
+
+// skipOrFail skips the test if the service is not available in the catalog,
+// otherwise fails fatally.
+func skipOrFail(t *testing.T, service string, err error) {
+	t.Helper()
+	if strings.Contains(err.Error(), "unable to create a service client") {
+		t.Skipf("%s service not available in catalog, skipping: %v", service, err)
+	}
+	t.Fatalf("Failed to get %s client: %v", service, err)
 }
 
 // LoadPolicy loads a policy from the configured path or a custom path
@@ -86,6 +119,9 @@ func (e *TestEngine) RunAudit(t *testing.T, p *policy.Policy) *AuditResults {
 	t.Helper()
 
 	orch := orchestrator.NewOrchestrator(p, e.Session, e.Workers, e.Apply, e.AllTenants)
+	if len(e.AllowActions) > 0 {
+		orch.SetRemediationAllowlist(e.AllowActions)
+	}
 	defer orch.Stop()
 
 	resultsChan, err := orch.Run()
@@ -120,14 +156,22 @@ func (e *TestEngine) RunAudit(t *testing.T, p *policy.Policy) *AuditResults {
 		}
 
 		results.Results = append(results.Results, &ResultSummary{
-			RuleID:       result.RuleID,
-			ResourceID:   result.ResourceID,
-			ResourceName: result.ResourceName,
-			Service:      service,
-			ResourceType: resourceType,
-			Compliant:    result.Compliant,
-			Observation:  result.Observation,
-			Error:        result.Error,
+			RuleID:                result.RuleID,
+			ResourceID:            result.ResourceID,
+			ResourceName:          result.ResourceName,
+			Service:               service,
+			ResourceType:          resourceType,
+			Compliant:             result.Compliant,
+			Observation:           result.Observation,
+			Error:                 result.Error,
+			Severity:              result.Severity,
+			Category:              result.Category,
+			GuideRef:              result.GuideRef,
+			RemediationAttempted:  result.RemediationAttempted,
+			Remediated:            result.Remediated,
+			RemediationSkipped:    result.RemediationSkipped,
+			RemediationSkipReason: result.RemediationSkipReason,
+			RemediationError:      result.RemediationError,
 		})
 	}
 
@@ -152,6 +196,16 @@ type ResultSummary struct {
 	Compliant    bool
 	Observation  string
 	Error        error
+
+	Severity  string
+	Category  string
+	GuideRef  string
+
+	RemediationAttempted  bool
+	Remediated            bool
+	RemediationSkipped    bool
+	RemediationSkipReason string
+	RemediationError      error
 }
 
 // FilterByService filters results by service name
@@ -246,7 +300,6 @@ func (r *AuditResults) LogSummary(t *testing.T) {
 func (e *TestEngine) LoadPolicyFromYAML(t *testing.T, yamlContent string) *policy.Policy {
 	t.Helper()
 
-	// Create a temporary file with the YAML content
 	tmpFile, err := os.CreateTemp("", "ospa-e2e-policy-*.yaml")
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
@@ -260,5 +313,133 @@ func (e *TestEngine) LoadPolicyFromYAML(t *testing.T, yamlContent string) *polic
 	tmpFile.Close()
 
 	return e.LoadPolicy(t, tmpFile.Name())
+}
+
+// RunAuditToFile runs an audit and writes results to a file in the given format.
+// Returns the collected AuditResults and the path to the written file.
+func (e *TestEngine) RunAuditToFile(t *testing.T, p *policy.Policy, format string) (results *AuditResults, filePath string) {
+	t.Helper()
+
+	outFile, err := os.CreateTemp("", "ospa-e2e-output-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp output file: %v", err)
+	}
+	filePath = outFile.Name()
+
+	writer, err := report.NewWriter(format, outFile)
+	if err != nil {
+		outFile.Close()
+		t.Fatalf("Failed to create report writer: %v", err)
+	}
+
+	orch := orchestrator.NewOrchestrator(p, e.Session, e.Workers, e.Apply, e.AllTenants)
+	defer orch.Stop()
+
+	resultsChan, err := orch.Run()
+	if err != nil {
+		outFile.Close()
+		t.Fatalf("Failed to start orchestrator: %v", err)
+	}
+
+	results = &AuditResults{Results: []*ResultSummary{}}
+	for result := range resultsChan {
+		if writeErr := writer.WriteResult(result); writeErr != nil {
+			t.Errorf("Failed to write result: %v", writeErr)
+		}
+		results.Scanned++
+		if result.Error != nil {
+			results.Errors++
+		}
+		if !result.Compliant {
+			results.Violations++
+		}
+		service := ""
+		resourceType := ""
+		if result.Rule != nil {
+			service = result.Rule.Service
+			resourceType = result.Rule.Resource
+		}
+		results.Results = append(results.Results, &ResultSummary{
+			RuleID:       result.RuleID,
+			ResourceID:   result.ResourceID,
+			ResourceName: result.ResourceName,
+			Service:      service,
+			ResourceType: resourceType,
+			Compliant:    result.Compliant,
+			Observation:  result.Observation,
+			Error:        result.Error,
+			Severity:     result.Severity,
+			Category:     result.Category,
+			GuideRef:     result.GuideRef,
+		})
+	}
+
+	if closeErr := writer.Close(); closeErr != nil {
+		t.Errorf("Failed to close writer: %v", closeErr)
+	}
+	outFile.Close()
+
+	return results, filePath
+}
+
+// FilterByRuleID filters results by rule ID
+func (r *AuditResults) FilterByRuleID(ruleID string) *AuditResults {
+	filtered := &AuditResults{Results: []*ResultSummary{}}
+	for _, result := range r.Results {
+		if result.RuleID == ruleID {
+			filtered.Results = append(filtered.Results, result)
+			filtered.Scanned++
+			if !result.Compliant {
+				filtered.Violations++
+			}
+			if result.Error != nil {
+				filtered.Errors++
+			}
+		}
+	}
+	return filtered
+}
+
+// AssertClassification checks that all results have the expected severity, category, and guide_ref.
+func (r *AuditResults) AssertClassification(t *testing.T, severity, category, guideRef string) {
+	t.Helper()
+	for _, result := range r.Results {
+		if severity != "" && result.Severity != severity {
+			t.Errorf("Result %s: expected severity %q, got %q", result.ResourceID, severity, result.Severity)
+		}
+		if category != "" && result.Category != category {
+			t.Errorf("Result %s: expected category %q, got %q", result.ResourceID, category, result.Category)
+		}
+		if guideRef != "" && result.GuideRef != guideRef {
+			t.Errorf("Result %s: expected guide_ref %q, got %q", result.ResourceID, guideRef, result.GuideRef)
+		}
+	}
+}
+
+// AssertRemediationSkipped checks that all non-compliant results have remediation skipped.
+func (r *AuditResults) AssertRemediationSkipped(t *testing.T, expectedReason string) {
+	t.Helper()
+	for _, result := range r.Results {
+		if result.Compliant {
+			continue
+		}
+		if !result.RemediationSkipped {
+			t.Errorf("Result %s: expected RemediationSkipped=true", result.ResourceID)
+		}
+		if expectedReason != "" && result.RemediationSkipReason != expectedReason {
+			t.Errorf("Result %s: expected skip reason %q, got %q", result.ResourceID, expectedReason, result.RemediationSkipReason)
+		}
+	}
+}
+
+// FindLineEnd returns the index of the first newline in data, or len(data) if none.
+// Useful for parsing NDJSON output (one JSON object per line).
+func FindLineEnd(data []byte) int {
+	for i, b := range data {
+		if b == '\n' {
+			return i
+		}
+	}
+	return len(data)
 }
 

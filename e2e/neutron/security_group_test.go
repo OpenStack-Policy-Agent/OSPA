@@ -14,6 +14,9 @@ package neutron
 // =============================================================================
 
 import (
+	"encoding/csv"
+	"encoding/json"
+	"os"
 	"testing"
 
 	"github.com/OpenStack-Policy-Agent/OSPA/e2e"
@@ -152,6 +155,81 @@ policies:
 	}
 }
 
+// TestNeutron_SecurityGroup_AgeGTCompliant verifies a fresh SG passes age_gt: 30d.
+func TestNeutron_SecurityGroup_AgeGTCompliant(t *testing.T) {
+	engine := e2e.NewTestEngine(t)
+	client := engine.GetNetworkClient(t)
+
+	resourceID, cleanup := CreateSecurityGroup(t, client)
+	defer cleanup()
+
+	policyYAML := `version: v1
+defaults:
+  workers: 2
+policies:
+  - neutron:
+    - name: test-sg-age
+      description: Find security groups older than 30 days
+      service: neutron
+      resource: security_group
+      check:
+        age_gt: 30d
+      action: log`
+
+	policy := engine.LoadPolicyFromYAML(t, policyYAML)
+	results := engine.RunAudit(t, policy)
+
+	resourceResults := results.FilterByService("neutron").
+		FilterByResourceType("security_group").
+		FilterByResourceID(resourceID)
+
+	resourceResults.LogSummary(t)
+
+	if resourceResults.Scanned == 0 {
+		t.Error("Expected security group to be scanned")
+	}
+	if resourceResults.Violations > 0 {
+		t.Error("Freshly created security group should not be flagged by age_gt: 30d")
+	}
+}
+
+// TestNeutron_SecurityGroup_AgeGTViolation verifies an SG trips age_gt: 0m (any age triggers).
+func TestNeutron_SecurityGroup_AgeGTViolation(t *testing.T) {
+	engine := e2e.NewTestEngine(t)
+	client := engine.GetNetworkClient(t)
+
+	resourceID, cleanup := CreateSecurityGroup(t, client)
+	defer cleanup()
+
+	policyYAML := `version: v1
+defaults:
+  workers: 2
+policies:
+  - neutron:
+    - name: test-sg-age-short
+      description: Find SGs older than 0m (always triggers)
+      resource: security_group
+      check:
+        age_gt: 0m
+      action: log`
+
+	policy := engine.LoadPolicyFromYAML(t, policyYAML)
+	results := engine.RunAudit(t, policy)
+
+	resourceResults := results.FilterByService("neutron").
+		FilterByResourceType("security_group").
+		FilterByResourceID(resourceID)
+
+	resourceResults.LogSummary(t)
+
+	if resourceResults.Scanned == 0 {
+		t.Error("Expected security group to be scanned")
+	}
+	if resourceResults.Violations == 0 {
+		t.Error("Security group should be flagged by age_gt: 0m")
+	}
+}
+
 // TestNeutron_SecurityGroup_ExemptDefault verifies the 'default' security group can be exempted.
 func TestNeutron_SecurityGroup_ExemptDefault(t *testing.T) {
 	engine := e2e.NewTestEngine(t)
@@ -285,6 +363,272 @@ policies:
 	}
 
 	t.Log("Security group tag action test completed")
+}
+
+// TestNeutron_SecurityGroup_DeleteAction verifies the delete remediation action on unused SGs.
+func TestNeutron_SecurityGroup_DeleteAction(t *testing.T) {
+	engine := e2e.NewTestEngine(t)
+	engine.Apply = true
+	client := engine.GetNetworkClient(t)
+
+	resourceID, cleanup := CreateSecurityGroup(t, client)
+	defer cleanup()
+
+	policyYAML := `version: v1
+defaults:
+  workers: 2
+policies:
+  - neutron:
+    - name: test-sg-delete
+      description: Delete unused security groups
+      service: neutron
+      resource: security_group
+      check:
+        unused: true
+      action: delete`
+
+	policy := engine.LoadPolicyFromYAML(t, policyYAML)
+	results := engine.RunAudit(t, policy)
+
+	resourceResults := results.FilterByService("neutron").
+		FilterByResourceType("security_group").
+		FilterByResourceID(resourceID)
+
+	resourceResults.LogSummary(t)
+
+	if resourceResults.Scanned == 0 {
+		t.Error("Expected security group to be scanned")
+	}
+	if resourceResults.Errors > 0 {
+		t.Errorf("Unexpected errors during delete: %d", resourceResults.Errors)
+	}
+}
+
+// TestNeutron_SecurityGroup_DryRunSkip verifies that dry-run mode skips remediation.
+func TestNeutron_SecurityGroup_DryRunSkip(t *testing.T) {
+	engine := e2e.NewTestEngine(t)
+	engine.Apply = false
+	client := engine.GetNetworkClient(t)
+
+	resourceID, cleanup := CreateSecurityGroup(t, client)
+	defer cleanup()
+
+	policyYAML := `version: v1
+defaults:
+  workers: 2
+policies:
+  - neutron:
+    - name: test-sg-dryrun
+      description: Dry run delete on unused security groups
+      resource: security_group
+      check:
+        unused: true
+      action: delete`
+
+	policy := engine.LoadPolicyFromYAML(t, policyYAML)
+	results := engine.RunAudit(t, policy)
+
+	resourceResults := results.FilterByService("neutron").
+		FilterByResourceType("security_group").
+		FilterByResourceID(resourceID)
+
+	resourceResults.LogSummary(t)
+
+	if resourceResults.Scanned == 0 {
+		t.Error("Expected security group to be scanned")
+	}
+
+	resourceResults.AssertRemediationSkipped(t, "dry-run")
+}
+
+// TestNeutron_SecurityGroup_AllowActionsFiltering verifies the allow-actions filter.
+func TestNeutron_SecurityGroup_AllowActionsFiltering(t *testing.T) {
+	engine := e2e.NewTestEngine(t)
+	engine.Apply = true
+	engine.AllowActions = []string{"tag"}
+	client := engine.GetNetworkClient(t)
+
+	resourceID, cleanup := CreateSecurityGroup(t, client)
+	defer cleanup()
+
+	policyYAML := `version: v1
+defaults:
+  workers: 2
+policies:
+  - neutron:
+    - name: test-sg-allowlist
+      description: Delete not in allowlist
+      resource: security_group
+      check:
+        unused: true
+      action: delete`
+
+	policy := engine.LoadPolicyFromYAML(t, policyYAML)
+	results := engine.RunAudit(t, policy)
+
+	resourceResults := results.FilterByService("neutron").
+		FilterByResourceType("security_group").
+		FilterByResourceID(resourceID)
+
+	resourceResults.LogSummary(t)
+
+	if resourceResults.Scanned == 0 {
+		t.Error("Expected security group to be scanned")
+	}
+
+	resourceResults.AssertRemediationSkipped(t, "action_not_allowed")
+}
+
+// TestNeutron_SecurityGroup_Classification verifies severity/category/guide_ref propagation.
+func TestNeutron_SecurityGroup_Classification(t *testing.T) {
+	engine := e2e.NewTestEngine(t)
+	client := engine.GetNetworkClient(t)
+
+	resourceID, cleanup := CreateSecurityGroup(t, client)
+	defer cleanup()
+
+	policyYAML := `version: v1
+defaults:
+  workers: 2
+policies:
+  - neutron:
+    - name: test-sg-classification
+      description: Test classification field propagation
+      resource: security_group
+      check:
+        status: ACTIVE
+      action: log
+      severity: high
+      category: security
+      guide_ref: OSSN-0047`
+
+	policy := engine.LoadPolicyFromYAML(t, policyYAML)
+	results := engine.RunAudit(t, policy)
+
+	resourceResults := results.FilterByService("neutron").
+		FilterByResourceType("security_group").
+		FilterByResourceID(resourceID)
+
+	resourceResults.LogSummary(t)
+
+	if resourceResults.Scanned == 0 {
+		t.Fatal("Expected security group to be scanned")
+	}
+
+	resourceResults.AssertClassification(t, "high", "security", "OSSN-0047")
+}
+
+// TestNeutron_SecurityGroup_OutputJSON verifies JSON output contains required fields.
+func TestNeutron_SecurityGroup_OutputJSON(t *testing.T) {
+	engine := e2e.NewTestEngine(t)
+	client := engine.GetNetworkClient(t)
+
+	_, cleanup := CreateSecurityGroup(t, client)
+	defer cleanup()
+
+	policyYAML := `version: v1
+defaults:
+  workers: 2
+policies:
+  - neutron:
+    - name: test-sg-json
+      description: Output format test
+      resource: security_group
+      check:
+        status: ACTIVE
+      action: log
+      severity: medium
+      category: compliance`
+
+	policy := engine.LoadPolicyFromYAML(t, policyYAML)
+	results, filePath := engine.RunAuditToFile(t, policy, "json")
+	defer os.Remove(filePath)
+
+	if results.Scanned == 0 {
+		t.Skip("No resources scanned, cannot validate output")
+	}
+
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		t.Fatalf("Failed to read JSON output: %v", err)
+	}
+	if len(data) == 0 {
+		t.Fatal("JSON output file is empty")
+	}
+
+	var finding map[string]interface{}
+	if err := json.Unmarshal(data[:e2e.FindLineEnd(data)], &finding); err != nil {
+		t.Fatalf("Failed to parse JSON output: %v", err)
+	}
+
+	for _, field := range []string{"rule_id", "resource_id", "compliant", "severity", "category"} {
+		if _, ok := finding[field]; !ok {
+			t.Errorf("JSON output missing required field: %s", field)
+		}
+	}
+}
+
+// TestNeutron_SecurityGroup_OutputCSV verifies CSV output has the correct headers.
+func TestNeutron_SecurityGroup_OutputCSV(t *testing.T) {
+	engine := e2e.NewTestEngine(t)
+	client := engine.GetNetworkClient(t)
+
+	_, cleanup := CreateSecurityGroup(t, client)
+	defer cleanup()
+
+	policyYAML := `version: v1
+defaults:
+  workers: 2
+policies:
+  - neutron:
+    - name: test-sg-csv
+      description: Output format test
+      resource: security_group
+      check:
+        status: ACTIVE
+      action: log
+      severity: low
+      category: hygiene`
+
+	policy := engine.LoadPolicyFromYAML(t, policyYAML)
+	results, filePath := engine.RunAuditToFile(t, policy, "csv")
+	defer os.Remove(filePath)
+
+	if results.Scanned == 0 {
+		t.Skip("No resources scanned, cannot validate output")
+	}
+
+	f, err := os.Open(filePath)
+	if err != nil {
+		t.Fatalf("Failed to open CSV output: %v", err)
+	}
+	defer f.Close()
+
+	reader := csv.NewReader(f)
+	header, err := reader.Read()
+	if err != nil {
+		t.Fatalf("Failed to read CSV header: %v", err)
+	}
+
+	expected := map[string]bool{"rule_id": false, "resource_id": false, "compliant": false, "severity": false, "category": false, "guide_ref": false}
+	for _, col := range header {
+		if _, ok := expected[col]; ok {
+			expected[col] = true
+		}
+	}
+	for col, found := range expected {
+		if !found {
+			t.Errorf("CSV header missing expected column: %s", col)
+		}
+	}
+
+	row, err := reader.Read()
+	if err != nil {
+		t.Fatalf("Failed to read CSV data row: %v", err)
+	}
+	if len(row) != len(header) {
+		t.Errorf("CSV data row has %d columns, expected %d", len(row), len(header))
+	}
 }
 
 // TestCleanup_SecurityGroup cleans up orphaned test resources.
