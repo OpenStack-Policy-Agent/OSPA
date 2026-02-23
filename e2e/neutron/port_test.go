@@ -3,31 +3,27 @@
 package neutron
 
 // =============================================================================
-// FloatingIp E2E TESTS
+// Port E2E TESTS
 // =============================================================================
 //
-// BEFORE WRITING TESTS:
-// 1. Implement CreateFloatingIp() in resource_creator.go
-// 2. The creator should handle all dependencies (network, subnet, etc.)
-// 3. The creator returns a cleanup function - always defer it!
+// These tests verify OSPA's ability to discover and audit Neutron ports.
 //
 // TEST COVERAGE CHECKLIST:
-// - [x] Status check (status: ACTIVE, DOWN, ERROR, etc.)
+// - [x] Status check (status: DOWN for unattached port)
 // - [x] Age check (age_gt: 30d)
-// - [x] Unused check (unused: true) - if applicable
+// - [x] Unused check (unused: true - port not attached to device)
+// - [x] No security group check (no_security_group: true)
 // - [x] Exempt names (exempt_names: [...])
 // - [x] Discovery (multiple resources)
 // - [x] Classification propagation (severity/category/guide_ref)
 // - [x] Output JSON
 // - [x] Output CSV
 // - [x] Delete action
-// - [x] Tag action
 // - [x] Dry-run remediation skip
 // - [x] Allow-actions filtering
-// - [x] Domain check: unassociated (Floating IP not attached to any port)
 //
 // RUNNING TESTS:
-//   OS_CLOUD=mycloud go test -tags=e2e ./e2e/neutron/... -v -run FloatingIp
+//   OS_CLOUD=mycloud go test -tags=e2e ./e2e/neutron/... -v -run Port
 //
 // =============================================================================
 
@@ -40,12 +36,12 @@ import (
 	"github.com/OpenStack-Policy-Agent/OSPA/e2e"
 )
 
-// TestNeutron_FloatingIp_StatusCheck verifies status-based auditing.
-func TestNeutron_FloatingIp_StatusCheck(t *testing.T) {
+// TestNeutron_Port_StatusCheck verifies status-based auditing.
+func TestNeutron_Port_StatusCheck(t *testing.T) {
 	engine := e2e.NewTestEngine(t)
 	client := engine.GetNetworkClient(t)
 
-	resourceID, cleanup := CreateFloatingIp(t, client)
+	resourceID, cleanup := CreatePort(t, client)
 	defer cleanup()
 
 	policyYAML := `version: v1
@@ -53,41 +49,44 @@ defaults:
   workers: 2
 policies:
   - neutron:
-    - name: test-floating_ip-status
-      description: Find floating_ip by status
-      resource: floating_ip
+    - name: test-port-status
+      description: Find ports with DOWN status
+      resource: port
       check:
-        status: ACTIVE
+        status: DOWN
       action: log`
 
 	policy := engine.LoadPolicyFromYAML(t, policyYAML)
 	results := engine.RunAudit(t, policy)
 
 	resourceResults := results.FilterByService("neutron").
-		FilterByResourceType("floating_ip").
+		FilterByResourceType("port").
 		FilterByResourceID(resourceID)
 
 	resourceResults.LogSummary(t)
 
 	if resourceResults.Scanned == 0 {
-		t.Error("Expected resource to be scanned")
-	}
-	if resourceResults.Errors > 0 {
-		t.Errorf("Unexpected errors: %d", resourceResults.Errors)
+		t.Error("Expected port to be scanned but it wasn't discovered")
 	}
 
-	// Unassociated FIPs have status DOWN, so status: ACTIVE should NOT flag them
-	if resourceResults.Violations > 0 {
-		t.Error("Unassociated floating IP should not match status: ACTIVE (it is DOWN)")
+	if resourceResults.Errors > 0 {
+		t.Errorf("Unexpected errors during audit: %d", resourceResults.Errors)
+	}
+
+	// An unattached port is DOWN, so status: DOWN should flag it
+	if resourceResults.Violations == 0 {
+		t.Error("Expected DOWN port to be flagged by status: DOWN check")
+	} else {
+		t.Log("Port correctly flagged by status check - test passed")
 	}
 }
 
-// TestNeutron_FloatingIp_AgeGTCheck verifies age-based auditing.
-func TestNeutron_FloatingIp_AgeGTCheck(t *testing.T) {
+// TestNeutron_Port_AgeGTCheck verifies age-based auditing.
+func TestNeutron_Port_AgeGTCheck(t *testing.T) {
 	engine := e2e.NewTestEngine(t)
 	client := engine.GetNetworkClient(t)
 
-	resourceID, cleanup := CreateFloatingIp(t, client)
+	resourceID, cleanup := CreatePort(t, client)
 	defer cleanup()
 
 	policyYAML := `version: v1
@@ -95,9 +94,9 @@ defaults:
   workers: 2
 policies:
   - neutron:
-    - name: test-floating_ip-age
-      description: Find floating_ip older than 30 days
-      resource: floating_ip
+    - name: test-port-age
+      description: Find ports older than 30 days
+      resource: port
       check:
         age_gt: 30d
       action: log`
@@ -106,28 +105,26 @@ policies:
 	results := engine.RunAudit(t, policy)
 
 	resourceResults := results.FilterByService("neutron").
-		FilterByResourceType("floating_ip").
+		FilterByResourceType("port").
 		FilterByResourceID(resourceID)
 
 	resourceResults.LogSummary(t)
 
 	if resourceResults.Scanned == 0 {
-		t.Error("Expected resource to be scanned")
+		t.Error("Expected port to be scanned")
 	}
-	// Freshly created resource should be compliant (younger than 30 days)
+	// Freshly created port should be compliant
 	if resourceResults.Violations > 0 {
-		t.Error("Freshly created resource should not be flagged by age_gt: 30d")
+		t.Error("Freshly created port should not be flagged by age_gt: 30d")
 	}
-
-	// TODO: Add an AgeGTViolation test: create resource, audit with age_gt: 0m, expect violation
 }
 
-// TestNeutron_FloatingIp_UnusedCheck verifies unused detection.
-func TestNeutron_FloatingIp_UnusedCheck(t *testing.T) {
+// TestNeutron_Port_UnusedCheck verifies unused detection (no device attached).
+func TestNeutron_Port_UnusedCheck(t *testing.T) {
 	engine := e2e.NewTestEngine(t)
 	client := engine.GetNetworkClient(t)
 
-	resourceID, cleanup := CreateFloatingIp(t, client)
+	resourceID, cleanup := CreatePort(t, client)
 	defer cleanup()
 
 	policyYAML := `version: v1
@@ -135,9 +132,9 @@ defaults:
   workers: 2
 policies:
   - neutron:
-    - name: test-floating_ip-unused
-      description: Find unused floating_ip
-      resource: floating_ip
+    - name: test-port-unused
+      description: Find ports not attached to any device
+      resource: port
       check:
         unused: true
       action: log`
@@ -146,40 +143,82 @@ policies:
 	results := engine.RunAudit(t, policy)
 
 	resourceResults := results.FilterByService("neutron").
-		FilterByResourceType("floating_ip").
+		FilterByResourceType("port").
 		FilterByResourceID(resourceID)
 
 	resourceResults.LogSummary(t)
 
 	if resourceResults.Scanned == 0 {
-		t.Error("Expected floating IP to be scanned")
+		t.Error("Expected port to be scanned")
 	}
 
-	// CreateFloatingIp allocates without port attachment, so it should be flagged
+	// CreatePort creates a port without a device, so it should be flagged
 	if resourceResults.Violations == 0 {
-		t.Error("Unassociated floating IP should be flagged as unused")
+		t.Error("Unattached port should be flagged as unused")
 	} else {
-		t.Log("Floating IP correctly flagged as unused (not attached to port) - test passed")
+		t.Log("Port correctly flagged as unused (no device) - test passed")
 	}
 }
 
-// TestNeutron_FloatingIp_ExemptNames verifies name exemptions work.
-func TestNeutron_FloatingIp_ExemptNames(t *testing.T) {
+// TestNeutron_Port_NoSecurityGroupCheck verifies no_security_group detection.
+func TestNeutron_Port_NoSecurityGroupCheck(t *testing.T) {
 	engine := e2e.NewTestEngine(t)
 	client := engine.GetNetworkClient(t)
 
-	resourceID, cleanup := CreateFloatingIp(t, client)
+	resourceID, cleanup := CreatePort(t, client)
 	defer cleanup()
 
-	// FIP description starts with "ospa-e2e-" -- exempt it
 	policyYAML := `version: v1
 defaults:
   workers: 2
 policies:
   - neutron:
-    - name: test-floating_ip-exempt
-      description: Test exemption by description prefix
-      resource: floating_ip
+    - name: test-port-no-sg
+      description: Find ports with no security groups
+      resource: port
+      check:
+        no_security_group: true
+      action: log
+      severity: high
+      category: security`
+
+	policy := engine.LoadPolicyFromYAML(t, policyYAML)
+	results := engine.RunAudit(t, policy)
+
+	resourceResults := results.FilterByService("neutron").
+		FilterByResourceType("port").
+		FilterByResourceID(resourceID)
+
+	resourceResults.LogSummary(t)
+
+	if resourceResults.Scanned == 0 {
+		t.Error("Expected port to be scanned")
+	}
+
+	// CreatePort creates a port with empty security groups
+	if resourceResults.Violations == 0 {
+		t.Error("Port with no security groups should be flagged")
+	} else {
+		t.Log("Port correctly flagged as having no security groups - test passed")
+	}
+}
+
+// TestNeutron_Port_ExemptNames verifies name exemptions work.
+func TestNeutron_Port_ExemptNames(t *testing.T) {
+	engine := e2e.NewTestEngine(t)
+	client := engine.GetNetworkClient(t)
+
+	resourceID, cleanup := CreatePort(t, client)
+	defer cleanup()
+
+	policyYAML := `version: v1
+defaults:
+  workers: 2
+policies:
+  - neutron:
+    - name: test-port-exempt
+      description: Test exemption by name prefix
+      resource: port
       check:
         unused: true
         exempt_names:
@@ -190,30 +229,30 @@ policies:
 	results := engine.RunAudit(t, policy)
 
 	resourceResults := results.FilterByService("neutron").
-		FilterByResourceType("floating_ip").
+		FilterByResourceType("port").
 		FilterByResourceID(resourceID)
 
 	resourceResults.LogSummary(t)
 
 	if resourceResults.Scanned == 0 {
-		t.Error("Expected floating IP to be scanned")
+		t.Error("Expected port to be scanned")
 	}
 
 	if resourceResults.Violations > 0 {
-		t.Error("Expected floating IP to be exempt by description pattern, but it was flagged")
+		t.Error("Expected port to be exempt by name pattern, but it was flagged")
 	} else {
-		t.Log("Floating IP correctly exempted by description pattern - test passed")
+		t.Log("Port correctly exempted by name pattern - test passed")
 	}
 }
 
-// TestNeutron_FloatingIp_Discovery verifies batch discovery.
-func TestNeutron_FloatingIp_Discovery(t *testing.T) {
+// TestNeutron_Port_MultipleDiscovery verifies batch discovery of ports.
+func TestNeutron_Port_MultipleDiscovery(t *testing.T) {
 	engine := e2e.NewTestEngine(t)
 	client := engine.GetNetworkClient(t)
 
-	id1, cleanup1 := CreateFloatingIp(t, client)
+	id1, cleanup1 := CreatePort(t, client)
 	defer cleanup1()
-	id2, cleanup2 := CreateFloatingIp(t, client)
+	id2, cleanup2 := CreatePort(t, client)
 	defer cleanup2()
 
 	policyYAML := `version: v1
@@ -221,9 +260,9 @@ defaults:
   workers: 2
 policies:
   - neutron:
-    - name: test-floating_ip-discovery
-      description: Discover floating_ip resources
-      resource: floating_ip
+    - name: test-port-discovery
+      description: Discover multiple ports
+      resource: port
       check:
         unused: true
       action: log`
@@ -231,23 +270,25 @@ policies:
 	policy := engine.LoadPolicyFromYAML(t, policyYAML)
 	results := engine.RunAudit(t, policy)
 
-	r1 := results.FilterByService("neutron").FilterByResourceType("floating_ip").FilterByResourceID(id1)
-	r2 := results.FilterByService("neutron").FilterByResourceType("floating_ip").FilterByResourceID(id2)
+	r1 := results.FilterByService("neutron").FilterByResourceType("port").FilterByResourceID(id1)
+	r2 := results.FilterByService("neutron").FilterByResourceType("port").FilterByResourceID(id2)
 
 	if r1.Scanned == 0 {
-		t.Error("First resource was not discovered")
+		t.Error("First port was not discovered")
 	}
 	if r2.Scanned == 0 {
-		t.Error("Second resource was not discovered")
+		t.Error("Second port was not discovered")
 	}
+
+	t.Log("Batch discovery test passed: both ports found")
 }
 
-// TestNeutron_FloatingIp_Classification verifies severity/category/guide_ref propagation.
-func TestNeutron_FloatingIp_Classification(t *testing.T) {
+// TestNeutron_Port_Classification verifies severity/category/guide_ref propagation.
+func TestNeutron_Port_Classification(t *testing.T) {
 	engine := e2e.NewTestEngine(t)
 	client := engine.GetNetworkClient(t)
 
-	resourceID, cleanup := CreateFloatingIp(t, client)
+	resourceID, cleanup := CreatePort(t, client)
 	defer cleanup()
 
 	policyYAML := `version: v1
@@ -255,35 +296,35 @@ defaults:
   workers: 2
 policies:
   - neutron:
-    - name: test-floating_ip-classify
+    - name: test-port-classify
       description: Test classification fields
-      resource: floating_ip
+      resource: port
       check:
         unused: true
       action: log
       severity: high
       category: cost
-      guide_ref: OSPA-FIP-001`
+      guide_ref: OSPA-PORT-001`
 
 	policy := engine.LoadPolicyFromYAML(t, policyYAML)
 	results := engine.RunAudit(t, policy)
 
 	resourceResults := results.FilterByService("neutron").
-		FilterByResourceType("floating_ip").
+		FilterByResourceType("port").
 		FilterByResourceID(resourceID)
 
 	if resourceResults.Scanned == 0 {
-		t.Error("Expected resource to be scanned")
+		t.Error("Expected port to be scanned")
 	}
-	resourceResults.AssertClassification(t, "high", "cost", "OSPA-FIP-001")
+	resourceResults.AssertClassification(t, "high", "cost", "OSPA-PORT-001")
 }
 
-// TestNeutron_FloatingIp_OutputJSON verifies JSON output contains required fields.
-func TestNeutron_FloatingIp_OutputJSON(t *testing.T) {
+// TestNeutron_Port_OutputJSON verifies JSON output contains required fields.
+func TestNeutron_Port_OutputJSON(t *testing.T) {
 	engine := e2e.NewTestEngine(t)
 	client := engine.GetNetworkClient(t)
 
-	_, cleanup := CreateFloatingIp(t, client)
+	_, cleanup := CreatePort(t, client)
 	defer cleanup()
 
 	policyYAML := `version: v1
@@ -291,9 +332,9 @@ defaults:
   workers: 2
 policies:
   - neutron:
-    - name: test-floating_ip-json
+    - name: test-port-json
       description: Output format test
-      resource: floating_ip
+      resource: port
       check:
         unused: true
       action: log
@@ -328,12 +369,12 @@ policies:
 	}
 }
 
-// TestNeutron_FloatingIp_OutputCSV verifies CSV output has the correct headers.
-func TestNeutron_FloatingIp_OutputCSV(t *testing.T) {
+// TestNeutron_Port_OutputCSV verifies CSV output has the correct headers.
+func TestNeutron_Port_OutputCSV(t *testing.T) {
 	engine := e2e.NewTestEngine(t)
 	client := engine.GetNetworkClient(t)
 
-	_, cleanup := CreateFloatingIp(t, client)
+	_, cleanup := CreatePort(t, client)
 	defer cleanup()
 
 	policyYAML := `version: v1
@@ -341,9 +382,9 @@ defaults:
   workers: 2
 policies:
   - neutron:
-    - name: test-floating_ip-csv
+    - name: test-port-csv
       description: Output format test
-      resource: floating_ip
+      resource: port
       check:
         unused: true
       action: log
@@ -391,13 +432,13 @@ policies:
 	}
 }
 
-// TestNeutron_FloatingIp_DeleteAction verifies delete remediation.
-func TestNeutron_FloatingIp_DeleteAction(t *testing.T) {
+// TestNeutron_Port_DeleteAction verifies delete remediation.
+func TestNeutron_Port_DeleteAction(t *testing.T) {
 	engine := e2e.NewTestEngine(t)
 	engine.Apply = true
 	client := engine.GetNetworkClient(t)
 
-	resourceID, cleanup := CreateFloatingIp(t, client)
+	resourceID, cleanup := CreatePort(t, client)
 	defer cleanup()
 
 	policyYAML := `version: v1
@@ -405,9 +446,9 @@ defaults:
   workers: 2
 policies:
   - neutron:
-    - name: test-floating_ip-delete
-      description: Delete floating_ip resources
-      resource: floating_ip
+    - name: test-port-delete
+      description: Delete unused ports
+      resource: port
       check:
         unused: true
       action: delete`
@@ -416,7 +457,7 @@ policies:
 	results := engine.RunAudit(t, policy)
 
 	resourceResults := results.FilterByService("neutron").
-		FilterByResourceType("floating_ip").
+		FilterByResourceType("port").
 		FilterByResourceID(resourceID)
 
 	resourceResults.LogSummary(t)
@@ -424,52 +465,15 @@ policies:
 	if resourceResults.Errors > 0 {
 		t.Errorf("Unexpected errors during delete: %d", resourceResults.Errors)
 	}
-
-	// TODO: Verify the resource was actually deleted (e.g. GET returns 404)
 }
 
-// TestNeutron_FloatingIp_TagAction verifies tag remediation.
-func TestNeutron_FloatingIp_TagAction(t *testing.T) {
-	engine := e2e.NewTestEngine(t)
-	engine.Apply = true
-	client := engine.GetNetworkClient(t)
-
-	resourceID, cleanup := CreateFloatingIp(t, client)
-	defer cleanup()
-
-	policyYAML := `version: v1
-defaults:
-  workers: 2
-policies:
-  - neutron:
-    - name: test-floating_ip-tag
-      description: Tag floating_ip resources
-      resource: floating_ip
-      check:
-        unused: true
-      action: tag
-      tag_name: ospa-e2e-tagged`
-
-	policy := engine.LoadPolicyFromYAML(t, policyYAML)
-	results := engine.RunAudit(t, policy)
-
-	resourceResults := results.FilterByService("neutron").
-		FilterByResourceType("floating_ip").
-		FilterByResourceID(resourceID)
-
-	resourceResults.LogSummary(t)
-
-	// Tag action is not yet implemented, so we expect errors
-	t.Log("Tag action test completed (tag not yet implemented, errors expected)")
-}
-
-// TestNeutron_FloatingIp_DryRunSkip verifies dry-run skips remediation.
-func TestNeutron_FloatingIp_DryRunSkip(t *testing.T) {
+// TestNeutron_Port_DryRunSkip verifies dry-run skips remediation.
+func TestNeutron_Port_DryRunSkip(t *testing.T) {
 	engine := e2e.NewTestEngine(t)
 	engine.Apply = false
 	client := engine.GetNetworkClient(t)
 
-	resourceID, cleanup := CreateFloatingIp(t, client)
+	resourceID, cleanup := CreatePort(t, client)
 	defer cleanup()
 
 	policyYAML := `version: v1
@@ -477,9 +481,9 @@ defaults:
   workers: 2
 policies:
   - neutron:
-    - name: test-floating_ip-dryrun
+    - name: test-port-dryrun
       description: Dry run delete
-      resource: floating_ip
+      resource: port
       check:
         unused: true
       action: delete`
@@ -488,23 +492,21 @@ policies:
 	results := engine.RunAudit(t, policy)
 
 	resourceResults := results.FilterByService("neutron").
-		FilterByResourceType("floating_ip").
+		FilterByResourceType("port").
 		FilterByResourceID(resourceID)
 
 	resourceResults.LogSummary(t)
 	resourceResults.AssertRemediationSkipped(t, "dry-run")
-
-	// TODO: Verify the resource still exists after dry-run (e.g. GET returns 200)
 }
 
-// TestNeutron_FloatingIp_AllowActionsFiltering verifies the allow-actions filter.
-func TestNeutron_FloatingIp_AllowActionsFiltering(t *testing.T) {
+// TestNeutron_Port_AllowActionsFiltering verifies the allow-actions filter.
+func TestNeutron_Port_AllowActionsFiltering(t *testing.T) {
 	engine := e2e.NewTestEngine(t)
 	engine.Apply = true
 	engine.AllowActions = []string{"tag"}
 	client := engine.GetNetworkClient(t)
 
-	resourceID, cleanup := CreateFloatingIp(t, client)
+	resourceID, cleanup := CreatePort(t, client)
 	defer cleanup()
 
 	policyYAML := `version: v1
@@ -512,9 +514,9 @@ defaults:
   workers: 2
 policies:
   - neutron:
-    - name: test-floating_ip-allowlist
+    - name: test-port-allowlist
       description: Delete not in allowlist
-      resource: floating_ip
+      resource: port
       check:
         unused: true
       action: delete`
@@ -523,63 +525,21 @@ policies:
 	results := engine.RunAudit(t, policy)
 
 	resourceResults := results.FilterByService("neutron").
-		FilterByResourceType("floating_ip").
+		FilterByResourceType("port").
 		FilterByResourceID(resourceID)
 
 	resourceResults.LogSummary(t)
 
 	if resourceResults.Scanned == 0 {
-		t.Error("Expected resource to be scanned")
+		t.Error("Expected port to be scanned")
 	}
 
 	resourceResults.AssertRemediationSkipped(t, "action_not_allowed")
 }
 
-// TestNeutron_FloatingIp_Check_Unassociated tests the unassociated domain check.
-func TestNeutron_FloatingIp_Check_Unassociated(t *testing.T) {
-	engine := e2e.NewTestEngine(t)
-	client := engine.GetNetworkClient(t)
-
-	resourceID, cleanup := CreateFloatingIp(t, client)
-	defer cleanup()
-
-	policyYAML := `version: v1
-defaults:
-  workers: 2
-policies:
-  - neutron:
-    - name: test-floating_ip-unassociated
-      description: Find floating IPs not attached to any port
-      resource: floating_ip
-      check:
-        unassociated: true
-      action: log
-      severity: medium
-      category: cost`
-
-	policy := engine.LoadPolicyFromYAML(t, policyYAML)
-	results := engine.RunAudit(t, policy)
-
-	resourceResults := results.FilterByService("neutron").
-		FilterByResourceType("floating_ip").
-		FilterByResourceID(resourceID)
-
-	resourceResults.LogSummary(t)
-
-	if resourceResults.Scanned == 0 {
-		t.Error("Expected floating IP to be scanned")
-	}
-
-	if resourceResults.Violations == 0 {
-		t.Error("Unassociated floating IP should be flagged")
-	} else {
-		t.Log("Floating IP correctly flagged as unassociated - test passed")
-	}
-}
-
-// TestCleanup_FloatingIp cleans up orphaned test resources.
-// Run manually: go test -tags=e2e ./e2e/neutron/... -run TestCleanup
-func TestCleanup_FloatingIp(t *testing.T) {
+// TestCleanup_Port cleans up orphaned test resources.
+// Run manually: go test -tags=e2e ./e2e/neutron/... -run TestCleanup -v
+func TestCleanup_Port(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping cleanup in short mode")
 	}
