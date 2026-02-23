@@ -29,7 +29,7 @@ go run ./cmd/agent --cloud mycloud --policy ./examples/policies.yaml --out findi
 
 | Service | Description | Status |
 |---------|-------------|--------|
-| **Neutron** | Networking | ◐ Partial |
+| **Neutron** | Networking | ✔ Implemented |
 | **Nova** | Compute | ◐ Partial |
 | **Cinder** | Block Storage | ◐ Partial |
 | **Glance** | Image | — |
