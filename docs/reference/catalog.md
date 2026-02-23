@@ -21,13 +21,10 @@ This page provides a comprehensive list of all OpenStack resources that OSPA can
 | `network` | ✔ | status, age_gt, unused, exempt_names | log, delete, tag |
 | `security_group` | ✔ | status, age_gt, unused, exempt_names | log, delete, tag |
 | `security_group_rule` | ✔ | direction, ethertype, protocol, port, remote_ip_prefix, port_range_wide, exempt_names | log, delete |
-| `floating_ip` | ◐ | status, age_gt, unused, exempt_names | log, delete, tag |
+| `floating_ip` | ✔ | status, age_gt, unused, unassociated, exempt_names | log, delete, tag |
 | `subnet` | ✔ | status, age_gt, unused, exempt_names | log, delete, tag |
-| `port` | ◐ | status, age_gt, unused, exempt_names, no_security_group | log, delete, tag |
-| `router` | ◐ | status, age_gt, unused, exempt_names | log, delete, tag |
-| `loadbalancer` | — | — | — |
-| `pool` | — | — | — |
-| `member` | — | — | — |
+| `port` | ✔ | status, age_gt, unused, exempt_names, no_security_group | log, delete, tag |
+| `router` | ✔ | status, age_gt, unused, exempt_names | log, delete, tag |
 
 ### Nova (Compute)
 

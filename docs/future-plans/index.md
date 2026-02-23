@@ -20,7 +20,7 @@ Expand support to all major OpenStack services:
 | Service | Status |
 |---------|--------|
 | Nova (Compute) | Partial |
-| Neutron (Network) | Partial |
+| Neutron (Network) | **Implemented** |
 | Cinder (Block Storage) | Partial |
 | Glance (Image) | Planned |
 | Keystone (Identity) | Planned |
@@ -90,10 +90,11 @@ We welcome feature requests! To suggest a feature:
 
 ### Immediate Priorities
 
-1. **Complete Neutron support** - Finish security_group and security_group_rule implementation
-2. **Improve E2E test coverage** - Reliable end-to-end tests for all resources
-3. **Documentation** - Comprehensive user and developer guides
+1. **Complete Nova support** - Finish instance and keypair implementation
+2. **Complete Cinder support** - Finish volume and snapshot implementation
+3. **Improve E2E test coverage** - Reliable end-to-end tests for all resources
 4. **Glance support** - Add image service auditing
+5. **Octavia support** - Add load balancer auditing (loadbalancer, listener, pool, member, healthmonitor)
 
 ### Help Wanted
 
@@ -110,7 +111,7 @@ These areas welcome contributions:
 
 | Version | Date | Highlights |
 |---------|------|------------|
-| 0.1.0 | TBD | Initial release with Neutron support |
+| 0.1.0 | TBD | Initial release with full Neutron support (network, security_group, security_group_rule, floating_ip, subnet, router, port) |
 
 ## Stay Updated
 
