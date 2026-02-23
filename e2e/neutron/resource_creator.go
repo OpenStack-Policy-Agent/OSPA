@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gophercloud/gophercloud"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/floatingips"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
@@ -301,17 +302,42 @@ func CreateRouter(t *testing.T, client *gophercloud.ServiceClient) (resourceID s
 	return router.ID, cleanup
 }
 
-// CreateFloatingIp creates a test floating_ip and returns:
-//   - resourceID: The ID of the created resource (for filtering audit results)
-//   - cleanup: A function to delete the resource and its dependencies
+// CreateFloatingIp allocates a floating IP from the external "public" network
+// and returns the floating IP ID and a cleanup function.
 func CreateFloatingIp(t *testing.T, client *gophercloud.ServiceClient) (resourceID string, cleanup func()) {
 	t.Helper()
 
-	// TODO: Implement resource creation
-	// See the example above and the gophercloud documentation
+	// Find the external/public network
+	netPages, err := networks.List(client, networks.ListOpts{Name: "public"}).AllPages()
+	if err != nil {
+		t.Fatalf("Failed to list networks: %v", err)
+	}
+	netList, err := networks.ExtractNetworks(netPages)
+	if err != nil || len(netList) == 0 {
+		t.Fatalf("Failed to find external 'public' network: %v", err)
+	}
+	publicNetID := netList[0].ID
 
-	t.Skip("CreateFloatingIp not implemented - implement in resource_creator.go")
-	return "", func() {}
+	desc := fmt.Sprintf("%sfip-%d", testPrefix, time.Now().UnixNano())
+	opts := floatingips.CreateOpts{
+		FloatingNetworkID: publicNetID,
+		Description:       desc,
+	}
+
+	fip, err := floatingips.Create(client, opts).Extract()
+	if err != nil {
+		t.Fatalf("Failed to create test floating IP: %v", err)
+	}
+	t.Logf("Created test floating IP: %s (%s, desc=%s)", fip.FloatingIP, fip.ID, fip.Description)
+
+	cleanup = func() {
+		t.Logf("Cleaning up test floating IP: %s", fip.ID)
+		if err := floatingips.Delete(client, fip.ID).ExtractErr(); err != nil {
+			t.Logf("Warning: failed to delete test floating IP %s: %v", fip.ID, err)
+		}
+	}
+
+	return fip.ID, cleanup
 }
 
 // CleanupOrphans deletes any leaked test resources (those with testPrefix).
@@ -324,7 +350,32 @@ func CleanupOrphans(t *testing.T, client *gophercloud.ServiceClient) {
 	ctx := context.Background()
 	_ = ctx // For future use with context-aware operations
 
-	// Clean up orphaned routers first (before networks, as routers may reference external networks)
+	// Clean up orphaned floating IPs first
+	t.Log("Searching for orphaned test floating IPs...")
+	fipPages, err := floatingips.List(client, floatingips.ListOpts{}).AllPages()
+	if err != nil {
+		t.Logf("Warning: failed to list floating IPs: %v", err)
+	} else {
+		allFIPs, err := floatingips.ExtractFloatingIPs(fipPages)
+		if err != nil {
+			t.Logf("Warning: failed to extract floating IPs: %v", err)
+		} else {
+			var fipDeleted int
+			for _, fip := range allFIPs {
+				if strings.HasPrefix(fip.Description, testPrefix) {
+					t.Logf("Found orphaned floating IP: %s (%s, desc=%s)", fip.FloatingIP, fip.ID, fip.Description)
+					if err := floatingips.Delete(client, fip.ID).ExtractErr(); err != nil {
+						t.Logf("  Warning: failed to delete floating IP %s: %v", fip.ID, err)
+					} else {
+						fipDeleted++
+					}
+				}
+			}
+			t.Logf("Cleanup complete: deleted %d orphaned floating IPs", fipDeleted)
+		}
+	}
+
+	// Clean up orphaned routers (before networks, as routers may reference external networks)
 	t.Log("Searching for orphaned test routers...")
 	routerPages, err := routers.List(client, routers.ListOpts{}).AllPages()
 	if err != nil {
