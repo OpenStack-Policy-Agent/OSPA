@@ -512,6 +512,7 @@ action_tag_name: "Display Name for Tag"
 ```
 
 
+
 ### Router Examples
 
 
@@ -549,6 +550,7 @@ action_tag_name: "Display Name for Tag"
       - default
   action: delete
 ```
+
 
 
 
@@ -711,7 +713,7 @@ For more information about Neutron resources and their properties:
 
 **Policy validation fails:**
 - Ensure service name matches exactly: `neutron`
-- Verify resource type is supported: `{network Networks [status age_gt unused exempt_names shared_network] [{shared_network bool Network is shared across tenants without RBAC security high }] [log delete tag] {false false false}}`, `{security_group Security groups [status age_gt unused exempt_names] [] [log delete tag] {false false false}}`, `{security_group_rule Security group rules [direction ethertype protocol port remote_ip_prefix port_range_wide exempt_names] [{direction string Traffic direction (ingress/egress) security medium } {ethertype string Ethernet type (IPv4/IPv6) security low } {protocol string IP protocol (tcp/udp/icmp) security medium } {port int Port number within port range security high } {remote_ip_prefix cidr Source/destination CIDR - 0.0.0.0/0 means open to world security critical OSSN-0011} {port_range_wide bool Port range spans more than 100 ports security high } {exempt_names string_list Exempt by security group ID pattern hygiene low }] [log delete] {false false false}}`, `{floating_ip Floating IP addresses [status age_gt unused unassociated exempt_names] [{unassociated bool Floating IP not attached to any port cost medium }] [log delete tag] {false false false}}`, `{subnet Subnets [status age_gt unused exempt_names] [] [log delete tag] {false false false}}`, `{router Routers [status age_gt unused exempt_names] [] [log delete tag] {false false false}}`
+- Verify resource type is supported: `network`, `security_group`, `security_group_rule`, `floating_ip`, `subnet`, `router`
 - Check YAML syntax is correct
 
 **No resources found:**

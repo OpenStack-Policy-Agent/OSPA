@@ -301,6 +301,19 @@ func CreateRouter(t *testing.T, client *gophercloud.ServiceClient) (resourceID s
 	return router.ID, cleanup
 }
 
+// CreateFloatingIp creates a test floating_ip and returns:
+//   - resourceID: The ID of the created resource (for filtering audit results)
+//   - cleanup: A function to delete the resource and its dependencies
+func CreateFloatingIp(t *testing.T, client *gophercloud.ServiceClient) (resourceID string, cleanup func()) {
+	t.Helper()
+
+	// TODO: Implement resource creation
+	// See the example above and the gophercloud documentation
+
+	t.Skip("CreateFloatingIp not implemented - implement in resource_creator.go")
+	return "", func() {}
+}
+
 // CleanupOrphans deletes any leaked test resources (those with testPrefix).
 // Run this manually if tests fail and leave resources behind:
 //

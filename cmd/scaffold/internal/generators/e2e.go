@@ -92,14 +92,11 @@ func generateResourceCreator(dir, serviceName, displayName string, resources []R
 package {{.ServiceName}}
 
 import (
-	"fmt"
 	"testing"
-	"time"
 
 	"github.com/gophercloud/gophercloud"
 	// TODO: Import the specific gophercloud packages you need:
-	// "github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
-	// "github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
+	// "github.com/gophercloud/gophercloud/openstack/<service>/<version>/<resource>"
 )
 
 const testPrefix = "ospa-e2e-"

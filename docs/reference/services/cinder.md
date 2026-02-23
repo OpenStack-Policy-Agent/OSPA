@@ -16,7 +16,15 @@ This guide explains how to write policies for Cinder resources in OSPA.
 **Resource Type:** `volume`
 
 **Allowed Actions:** log, delete, tag
-**Allowed Checks:** status, age_gt, unused, exempt_names
+**Allowed Checks:** status, age_gt, unused, exempt_names, encrypted, attached, has_backup
+
+#### Security & Domain Checks
+
+| Check | Severity | Category | Type | Description |
+|-------|----------|----------|------|-------------|
+- **`encrypted`** | high | security | bool | Volume is not encrypted _(Ref: Check-Block-09)_
+- **`attached`** | medium | cost | bool | Volume is not attached to any instance
+- **`has_backup`** | medium | compliance | bool | Volume has no backup
 
 
 ### Snapshot
@@ -24,7 +32,33 @@ This guide explains how to write policies for Cinder resources in OSPA.
 **Resource Type:** `snapshot`
 
 **Allowed Actions:** log, delete, tag
-**Allowed Checks:** status, age_gt, unused, exempt_names
+**Allowed Checks:** status, age_gt, unused, exempt_names, encrypted
+
+#### Security & Domain Checks
+
+| Check | Severity | Category | Type | Description |
+|-------|----------|----------|------|-------------|
+- **`encrypted`** | high | security | bool | Snapshot is not encrypted
+
+
+
+## OpenStack Security Guide Checklist
+
+The following items from the OpenStack Security Guide apply to Cinder.
+These are **configuration-level** checks that require manual verification on
+the control plane (not API-auditable).
+
+| ID | Description | Section | Manual |
+|----|-------------|---------|--------|
+- **Check-Block-01** | User/group ownership of config files set to root/cinder | block-storage/checklist | Yes
+- **Check-Block-02** | Strict permissions (640) on configuration files | block-storage/checklist | Yes
+- **Check-Block-03** | Keystone used for authentication | block-storage/checklist | Yes
+- **Check-Block-04** | TLS enabled for authentication | block-storage/checklist | Yes
+- **Check-Block-05** | Cinder communicates with Nova over TLS | block-storage/checklist | Yes
+- **Check-Block-06** | Cinder communicates with Glance over TLS | block-storage/checklist | Yes
+- **Check-Block-07** | NAS operating in a secure environment | block-storage/checklist | Yes
+- **Check-Block-08** | Max request body size set to default (114688) | block-storage/checklist | Yes
+- **Check-Block-09** | Volume encryption feature enabled | block-storage/checklist | Yes
 
 
 
@@ -42,6 +76,8 @@ policies:
     - name: rule-name
       description: Rule description
       resource: <resource_type>
+      severity: critical|high|medium|low
+      category: security|compliance|cost|hygiene
       check:
         # Check conditions (see below)
       action: log|delete|tag
@@ -139,16 +175,6 @@ check:
   action: log
 ```
 
-### Security & Domain-Specific Checks
-
-The following domain-specific checks are available for Cinder resources:
-
-| Check | Resource(s) | Type | Severity | Description |
-|-------|-------------|------|----------|-------------|
-| `encrypted` | volume, snapshot | bool | high | Volume/snapshot is not encrypted |
-| `attached` | volume | bool | medium | Volume is not attached to any instance |
-| `has_backup` | volume | bool | medium | Volume has no backup |
-
 ## Actions
 
 ### Log Action
@@ -216,7 +242,22 @@ action_tag_name: "Display Name for Tag"
 
 ### Volume Examples
 
-#### Example 1: Find Inactive Volume Resources
+#### Security Check Example
+
+```yaml
+- name: security-check-volume-encrypted
+  description: "Volume is not encrypted"
+  resource: volume
+  severity: high
+  category: security
+  guide_ref: "Check-Block-09"
+  check:
+    encrypted: true
+  action: log
+```
+
+
+#### Find Inactive Volume Resources
 
 ```yaml
 - name: find-inactive-volume
@@ -227,7 +268,7 @@ action_tag_name: "Display Name for Tag"
   action: log
 ```
 
-#### Example 2: Find Old Volume Resources
+#### Find Old Volume Resources
 
 ```yaml
 - name: find-old-volume
@@ -238,7 +279,7 @@ action_tag_name: "Display Name for Tag"
   action: log
 ```
 
-#### Example 3: Cleanup Unused Volume Resources
+#### Cleanup Unused Volume Resources
 
 ```yaml
 - name: cleanup-unused-volume
@@ -251,50 +292,24 @@ action_tag_name: "Display Name for Tag"
   action: delete
 ```
 
-#### Example 4: Tag Old Volume Resources
-
-```yaml
-- name: tag-old-volume
-  description: Tag volume resources older than 7 days
-  resource: volume
-  check:
-    age_gt: 7d
-  action: tag
-  tag_name: audit-old-volume
-  action_tag_name: "Old Volume"
-```
-
-#### Example 5: Unencrypted Volumes (Security)
-
-```yaml
-- name: unencrypted-volumes
-  description: Flag volumes that are not encrypted
-  resource: volume
-  check:
-    encrypted: false
-  action: log
-  severity: high
-  category: security
-  guide_ref: "Check-Block-09"
-```
-
-#### Example 6: Volumes Without Backup (Compliance)
-
-```yaml
-- name: volumes-without-backup
-  description: Flag volumes missing backups
-  resource: volume
-  check:
-    has_backup: false
-  action: log
-  severity: medium
-  category: compliance
-```
-
 
 ### Snapshot Examples
 
-#### Example 1: Find Inactive Snapshot Resources
+#### Security Check Example
+
+```yaml
+- name: security-check-snapshot-encrypted
+  description: "Snapshot is not encrypted"
+  resource: snapshot
+  severity: high
+  category: security
+  check:
+    encrypted: true
+  action: log
+```
+
+
+#### Find Inactive Snapshot Resources
 
 ```yaml
 - name: find-inactive-snapshot
@@ -305,7 +320,7 @@ action_tag_name: "Display Name for Tag"
   action: log
 ```
 
-#### Example 2: Find Old Snapshot Resources
+#### Find Old Snapshot Resources
 
 ```yaml
 - name: find-old-snapshot
@@ -316,7 +331,7 @@ action_tag_name: "Display Name for Tag"
   action: log
 ```
 
-#### Example 3: Cleanup Unused Snapshot Resources
+#### Cleanup Unused Snapshot Resources
 
 ```yaml
 - name: cleanup-unused-snapshot
@@ -327,19 +342,6 @@ action_tag_name: "Display Name for Tag"
     exempt_names:
       - default
   action: delete
-```
-
-#### Example 4: Tag Old Snapshot Resources
-
-```yaml
-- name: tag-old-snapshot
-  description: Tag snapshot resources older than 7 days
-  resource: snapshot
-  check:
-    age_gt: 7d
-  action: tag
-  tag_name: audit-old-snapshot
-  action_tag_name: "Old Snapshot"
 ```
 
 
@@ -358,12 +360,16 @@ policies:
     - name: audit-volume
       description: Audit volume resources
       resource: volume
+      severity: medium
+      category: hygiene
       check:
         status: active
       action: log
     - name: cleanup-old-volume
       description: Find volume resources older than 90 days
       resource: volume
+      severity: low
+      category: cost
       check:
         age_gt: 90d
         exempt_names:
@@ -372,12 +378,16 @@ policies:
     - name: audit-snapshot
       description: Audit snapshot resources
       resource: snapshot
+      severity: medium
+      category: hygiene
       check:
         status: active
       action: log
     - name: cleanup-old-snapshot
       description: Find snapshot resources older than 90 days
       resource: snapshot
+      severity: low
+      category: cost
       check:
         age_gt: 90d
         exempt_names:
@@ -391,6 +401,7 @@ For more information about Cinder resources and their properties:
 
 - **OpenStack Cinder API Documentation:** https://docs.openstack.org/api-ref/cinder/
 - **Cinder Service Guide:** https://docs.openstack.org/cinder/latest/
+- **OpenStack Security Guide:** https://docs.openstack.org/security-guide/
 
 ## Testing Your Policy
 
@@ -416,12 +427,13 @@ For more information about Cinder resources and their properties:
 - The `exempt_names` list allows you to exclude specific resources by name
 - Age checks use the resource's `UpdatedAt` timestamp, falling back to `CreatedAt` if not available
 - Status values are case-sensitive and should match OpenStack API responses exactly
+- Use `severity` and `category` to classify findings for prioritization
 
 ## Troubleshooting
 
 **Policy validation fails:**
 - Ensure service name matches exactly: `cinder`
-- Verify resource type is supported: `{volume Block storage volumes [status age_gt unused exempt_names] [log delete tag] {false false false}}`, `{snapshot Volume snapshots [status age_gt unused exempt_names] [log delete tag] {false false false}}`
+- Verify resource type is supported: `{volume Block storage volumes [status age_gt unused exempt_names encrypted attached has_backup] [{encrypted bool Volume is not encrypted security high Check-Block-09} {attached bool Volume is not attached to any instance cost medium } {has_backup bool Volume has no backup compliance medium }] [log delete tag] {false false false}}`, `{snapshot Volume snapshots [status age_gt unused exempt_names encrypted] [{encrypted bool Snapshot is not encrypted security high }] [log delete tag] {false false false}}`
 - Check YAML syntax is correct
 
 **No resources found:**

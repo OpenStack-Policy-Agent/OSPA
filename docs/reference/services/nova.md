@@ -16,7 +16,14 @@ This guide explains how to write policies for Nova resources in OSPA.
 **Resource Type:** `instance`
 
 **Allowed Actions:** log, delete, tag
-**Allowed Checks:** status, age_gt, unused, exempt_names
+**Allowed Checks:** status, age_gt, unused, exempt_names, image_name, no_keypair
+
+#### Security & Domain Checks
+
+| Check | Severity | Category | Type | Description |
+|-------|----------|----------|------|-------------|
+- **`image_name`** | medium | compliance | string_list | Instance uses a deprecated or banned image
+- **`no_keypair`** | medium | security | bool | Instance has no SSH keypair attached
 
 
 ### Keypair
@@ -24,7 +31,23 @@ This guide explains how to write policies for Nova resources in OSPA.
 **Resource Type:** `keypair`
 
 **Allowed Actions:** log, delete, tag
-**Allowed Checks:** status, age_gt, unused, exempt_names
+**Allowed Checks:** age_gt, unused, exempt_names
+
+
+
+## OpenStack Security Guide Checklist
+
+The following items from the OpenStack Security Guide apply to Nova.
+These are **configuration-level** checks that require manual verification on
+the control plane (not API-auditable).
+
+| ID | Description | Section | Manual |
+|----|-------------|---------|--------|
+- **Check-Compute-01** | User/group ownership of config files set to root/nova | compute/checklist | Yes
+- **Check-Compute-02** | Strict permissions (640) on configuration files | compute/checklist | Yes
+- **Check-Compute-03** | Keystone used for authentication | compute/checklist | Yes
+- **Check-Compute-04** | Secure protocol (TLS) for authentication | compute/checklist | Yes
+- **Check-Compute-05** | Nova communicates with Glance over TLS | compute/checklist | Yes
 
 
 
@@ -42,6 +65,8 @@ policies:
     - name: rule-name
       description: Rule description
       resource: <resource_type>
+      severity: critical|high|medium|low
+      category: security|compliance|cost|hygiene
       check:
         # Check conditions (see below)
       action: log|delete|tag
@@ -139,15 +164,6 @@ check:
   action: log
 ```
 
-### Security & Domain-Specific Checks
-
-The following domain-specific checks are available for Nova resources:
-
-| Check | Resource(s) | Type | Severity | Description |
-|-------|-------------|------|----------|-------------|
-| `image_name` | instance | string list | medium | Instance uses a deprecated or banned image |
-| `no_keypair` | instance | bool | medium | Instance has no SSH keypair attached |
-
 ## Actions
 
 ### Log Action
@@ -215,7 +231,21 @@ action_tag_name: "Display Name for Tag"
 
 ### Instance Examples
 
-#### Example 1: Find Inactive Instance Resources
+#### Security Check Example
+
+```yaml
+- name: security-check-instance-image_name
+  description: "Instance uses a deprecated or banned image"
+  resource: instance
+  severity: medium
+  category: compliance
+  check:
+    image_name: true
+  action: log
+```
+
+
+#### Find Inactive Instance Resources
 
 ```yaml
 - name: find-inactive-instance
@@ -226,7 +256,7 @@ action_tag_name: "Display Name for Tag"
   action: log
 ```
 
-#### Example 2: Find Old Instance Resources
+#### Find Old Instance Resources
 
 ```yaml
 - name: find-old-instance
@@ -237,7 +267,7 @@ action_tag_name: "Display Name for Tag"
   action: log
 ```
 
-#### Example 3: Cleanup Unused Instance Resources
+#### Cleanup Unused Instance Resources
 
 ```yaml
 - name: cleanup-unused-instance
@@ -250,51 +280,11 @@ action_tag_name: "Display Name for Tag"
   action: delete
 ```
 
-#### Example 4: Tag Old Instance Resources
-
-```yaml
-- name: tag-old-instance
-  description: Tag instance resources older than 7 days
-  resource: instance
-  check:
-    age_gt: 7d
-  action: tag
-  tag_name: audit-old-instance
-  action_tag_name: "Old Instance"
-```
-
-#### Example 5: Instances Without Keypair (Security)
-
-```yaml
-- name: instances-without-keypair
-  description: Flag instances launched without SSH keypair
-  resource: instance
-  check:
-    no_keypair: true
-  action: log
-  severity: medium
-  category: security
-```
-
-#### Example 6: Banned Images (Compliance)
-
-```yaml
-- name: banned-images
-  description: Flag instances using deprecated images
-  resource: instance
-  check:
-    image_name:
-      - "ubuntu-14*"
-      - "centos-6*"
-  action: log
-  severity: medium
-  category: compliance
-```
-
 
 ### Keypair Examples
 
-#### Example 1: Find Inactive Keypair Resources
+
+#### Find Inactive Keypair Resources
 
 ```yaml
 - name: find-inactive-keypair
@@ -305,7 +295,7 @@ action_tag_name: "Display Name for Tag"
   action: log
 ```
 
-#### Example 2: Find Old Keypair Resources
+#### Find Old Keypair Resources
 
 ```yaml
 - name: find-old-keypair
@@ -316,7 +306,7 @@ action_tag_name: "Display Name for Tag"
   action: log
 ```
 
-#### Example 3: Cleanup Unused Keypair Resources
+#### Cleanup Unused Keypair Resources
 
 ```yaml
 - name: cleanup-unused-keypair
@@ -327,19 +317,6 @@ action_tag_name: "Display Name for Tag"
     exempt_names:
       - default
   action: delete
-```
-
-#### Example 4: Tag Old Keypair Resources
-
-```yaml
-- name: tag-old-keypair
-  description: Tag keypair resources older than 7 days
-  resource: keypair
-  check:
-    age_gt: 7d
-  action: tag
-  tag_name: audit-old-keypair
-  action_tag_name: "Old Keypair"
 ```
 
 
@@ -358,12 +335,16 @@ policies:
     - name: audit-instance
       description: Audit instance resources
       resource: instance
+      severity: medium
+      category: hygiene
       check:
         status: active
       action: log
     - name: cleanup-old-instance
       description: Find instance resources older than 90 days
       resource: instance
+      severity: low
+      category: cost
       check:
         age_gt: 90d
         exempt_names:
@@ -372,12 +353,16 @@ policies:
     - name: audit-keypair
       description: Audit keypair resources
       resource: keypair
+      severity: medium
+      category: hygiene
       check:
         status: active
       action: log
     - name: cleanup-old-keypair
       description: Find keypair resources older than 90 days
       resource: keypair
+      severity: low
+      category: cost
       check:
         age_gt: 90d
         exempt_names:
@@ -391,6 +376,7 @@ For more information about Nova resources and their properties:
 
 - **OpenStack Nova API Documentation:** https://docs.openstack.org/api-ref/nova/
 - **Nova Service Guide:** https://docs.openstack.org/nova/latest/
+- **OpenStack Security Guide:** https://docs.openstack.org/security-guide/
 
 ## Testing Your Policy
 
@@ -416,12 +402,13 @@ For more information about Nova resources and their properties:
 - The `exempt_names` list allows you to exclude specific resources by name
 - Age checks use the resource's `UpdatedAt` timestamp, falling back to `CreatedAt` if not available
 - Status values are case-sensitive and should match OpenStack API responses exactly
+- Use `severity` and `category` to classify findings for prioritization
 
 ## Troubleshooting
 
 **Policy validation fails:**
 - Ensure service name matches exactly: `nova`
-- Verify resource type is supported: `{instance Server instances [status age_gt unused exempt_names] [log delete tag] {false false false}}`, `{keypair SSH keypairs [status age_gt unused exempt_names] [log delete tag] {false false false}}`
+- Verify resource type is supported: `{instance Server instances [status age_gt unused exempt_names image_name no_keypair] [{image_name string_list Instance uses a deprecated or banned image compliance medium } {no_keypair bool Instance has no SSH keypair attached security medium }] [log delete tag] {false false false}}`, `{keypair SSH keypairs [age_gt unused exempt_names] [] [log delete tag] {false false false}}`
 - Check YAML syntax is correct
 
 **No resources found:**

@@ -66,6 +66,26 @@ func (e *TestEngine) GetNetworkClient(t *testing.T) *gophercloud.ServiceClient {
 	return client
 }
 
+// GetComputeClient returns a gophercloud client for the Nova service.
+func (e *TestEngine) GetComputeClient(t *testing.T) *gophercloud.ServiceClient {
+	t.Helper()
+	client, err := e.Session.GetNovaClient()
+	if err != nil {
+		t.Fatalf("Failed to get nova client: %v", err)
+	}
+	return client
+}
+
+// GetBlockStorageClient returns a gophercloud client for the Cinder service.
+func (e *TestEngine) GetBlockStorageClient(t *testing.T) *gophercloud.ServiceClient {
+	t.Helper()
+	client, err := e.Session.GetCinderClient()
+	if err != nil {
+		t.Fatalf("Failed to get cinder client: %v", err)
+	}
+	return client
+}
+
 // LoadPolicy loads a policy from the configured path or a custom path
 func (e *TestEngine) LoadPolicy(t *testing.T, customPath ...string) *policy.Policy {
 	t.Helper()
