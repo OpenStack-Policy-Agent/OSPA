@@ -187,12 +187,19 @@ package {{.ServiceName}}
 // 3. The creator returns a cleanup function - always defer it!
 //
 // TEST COVERAGE CHECKLIST:
-// - [ ] Status check (status: ACTIVE, DOWN, ERROR, etc.)
-// - [ ] Age check (age_gt: 30d)
-// - [ ] Unused check (unused: true) - if applicable
-// - [ ] Exempt names (exempt_names: [...])
-// - [ ] Multiple resources (batch discovery)
-// - [ ] Error handling (invalid resource, missing permissions)
+// - [x] Status check (status: ACTIVE, DOWN, ERROR, etc.)
+// - [x] Age check (age_gt: 30d)
+// - [x] Unused check (unused: true) - if applicable
+// - [x] Exempt names (exempt_names: [...])
+// - [x] Discovery (multiple resources)
+// - [x] Classification propagation (severity/category/guide_ref)
+// - [x] Output JSON
+// - [x] Output CSV{{if HasAction .Resource.Actions "delete"}}
+// - [x] Delete action{{end}}{{if HasAction .Resource.Actions "tag"}}
+// - [x] Tag action{{end}}{{if or (HasAction .Resource.Actions "delete") (HasAction .Resource.Actions "tag")}}
+// - [x] Dry-run remediation skip
+// - [x] Allow-actions filtering{{end}}{{range .Resource.RichChecks}}
+// - [ ] Domain check: {{.Name}} ({{.Description}}){{end}}
 //
 // RUNNING TESTS:
 //   OS_CLOUD=mycloud go test -tags=e2e ./e2e/{{.ServiceName}}/... -v -run {{.Resource.Name | Pascal}}
@@ -200,6 +207,9 @@ package {{.ServiceName}}
 // =============================================================================
 
 import (
+	"encoding/csv"
+	"encoding/json"
+	"os"
 	"testing"
 
 	"github.com/OpenStack-Policy-Agent/OSPA/e2e"
@@ -210,11 +220,9 @@ func Test{{.DisplayName}}_{{.Resource.Name | Pascal}}_StatusCheck(t *testing.T) 
 	engine := e2e.NewTestEngine(t)
 	client := engine.Get{{.ClientMethod}}Client(t)
 
-	// Create test resource using the helper from resource_creator.go
 	resourceID, cleanup := Create{{.Resource.Name | Pascal}}(t, client)
 	defer cleanup()
 
-	// Run audit with status check
 	policyYAML := ` + "`" + `version: v1
 defaults:
   workers: 2
@@ -230,21 +238,61 @@ policies:
 	policy := engine.LoadPolicyFromYAML(t, policyYAML)
 	results := engine.RunAudit(t, policy)
 
-	// Filter to our specific resource
 	resourceResults := results.FilterByService("{{.ServiceName}}").
 		FilterByResourceType("{{.Resource.Name}}").
 		FilterByResourceID(resourceID)
 
 	resourceResults.LogSummary(t)
 
-	// Verify the resource was discovered
 	if resourceResults.Scanned == 0 {
 		t.Error("Expected resource to be scanned")
 	}
-
 	if resourceResults.Errors > 0 {
 		t.Errorf("Unexpected errors: %d", resourceResults.Errors)
 	}
+
+	// TODO: Adjust expected status for this resource type (e.g. "available", "in-use", "BUILD")
+	// TODO: Add a non-compliant status test (create resource, check for a status it does NOT have)
+}
+
+// Test{{.DisplayName}}_{{.Resource.Name | Pascal}}_AgeGTCheck verifies age-based auditing.
+func Test{{.DisplayName}}_{{.Resource.Name | Pascal}}_AgeGTCheck(t *testing.T) {
+	engine := e2e.NewTestEngine(t)
+	client := engine.Get{{.ClientMethod}}Client(t)
+
+	resourceID, cleanup := Create{{.Resource.Name | Pascal}}(t, client)
+	defer cleanup()
+
+	policyYAML := ` + "`" + `version: v1
+defaults:
+  workers: 2
+policies:
+  - {{.ServiceName}}:
+    - name: test-{{.Resource.Name}}-age
+      description: Find {{.Resource.Name}} older than 30 days
+      resource: {{.Resource.Name}}
+      check:
+        age_gt: 30d
+      action: log` + "`" + `
+
+	policy := engine.LoadPolicyFromYAML(t, policyYAML)
+	results := engine.RunAudit(t, policy)
+
+	resourceResults := results.FilterByService("{{.ServiceName}}").
+		FilterByResourceType("{{.Resource.Name}}").
+		FilterByResourceID(resourceID)
+
+	resourceResults.LogSummary(t)
+
+	if resourceResults.Scanned == 0 {
+		t.Error("Expected resource to be scanned")
+	}
+	// Freshly created resource should be compliant (younger than 30 days)
+	if resourceResults.Violations > 0 {
+		t.Error("Freshly created resource should not be flagged by age_gt: 30d")
+	}
+
+	// TODO: Add an AgeGTViolation test: create resource, sleep briefly, audit with age_gt: 1s, expect violation
 }
 
 // Test{{.DisplayName}}_{{.Resource.Name | Pascal}}_UnusedCheck verifies unused detection.
@@ -252,7 +300,6 @@ func Test{{.DisplayName}}_{{.Resource.Name | Pascal}}_UnusedCheck(t *testing.T) 
 	engine := e2e.NewTestEngine(t)
 	client := engine.Get{{.ClientMethod}}Client(t)
 
-	// Create an "unused" resource (no attachments/dependencies)
 	resourceID, cleanup := Create{{.Resource.Name | Pascal}}(t, client)
 	defer cleanup()
 
@@ -277,7 +324,7 @@ policies:
 
 	resourceResults.LogSummary(t)
 
-	// TODO: Add assertions based on whether the resource should be flagged
+	// TODO: Assert based on resource-specific unused semantics
 }
 
 // Test{{.DisplayName}}_{{.Resource.Name | Pascal}}_ExemptNames verifies name exemptions work.
@@ -288,7 +335,6 @@ func Test{{.DisplayName}}_{{.Resource.Name | Pascal}}_ExemptNames(t *testing.T) 
 	resourceID, cleanup := Create{{.Resource.Name | Pascal}}(t, client)
 	defer cleanup()
 
-	// The resource name starts with "ospa-e2e-" - exempt it
 	policyYAML := ` + "`" + `version: v1
 defaults:
   workers: 2
@@ -310,12 +356,353 @@ policies:
 		FilterByResourceType("{{.Resource.Name}}").
 		FilterByResourceID(resourceID)
 
-	// Resource should be compliant (exempted by name)
 	if resourceResults.Violations > 0 {
 		t.Error("Expected resource to be exempt by name")
 	}
 }
 
+// Test{{.DisplayName}}_{{.Resource.Name | Pascal}}_Discovery verifies batch discovery.
+func Test{{.DisplayName}}_{{.Resource.Name | Pascal}}_Discovery(t *testing.T) {
+	engine := e2e.NewTestEngine(t)
+	client := engine.Get{{.ClientMethod}}Client(t)
+
+	id1, cleanup1 := Create{{.Resource.Name | Pascal}}(t, client)
+	defer cleanup1()
+	id2, cleanup2 := Create{{.Resource.Name | Pascal}}(t, client)
+	defer cleanup2()
+
+	policyYAML := ` + "`" + `version: v1
+defaults:
+  workers: 2
+policies:
+  - {{.ServiceName}}:
+    - name: test-{{.Resource.Name}}-discovery
+      description: Discover {{.Resource.Name}} resources
+      resource: {{.Resource.Name}}
+      check:
+        status: ACTIVE
+      action: log` + "`" + `
+
+	policy := engine.LoadPolicyFromYAML(t, policyYAML)
+	results := engine.RunAudit(t, policy)
+
+	r1 := results.FilterByService("{{.ServiceName}}").FilterByResourceType("{{.Resource.Name}}").FilterByResourceID(id1)
+	r2 := results.FilterByService("{{.ServiceName}}").FilterByResourceType("{{.Resource.Name}}").FilterByResourceID(id2)
+
+	if r1.Scanned == 0 {
+		t.Error("First resource was not discovered")
+	}
+	if r2.Scanned == 0 {
+		t.Error("Second resource was not discovered")
+	}
+}
+
+// Test{{.DisplayName}}_{{.Resource.Name | Pascal}}_Classification verifies severity/category/guide_ref propagation.
+func Test{{.DisplayName}}_{{.Resource.Name | Pascal}}_Classification(t *testing.T) {
+	engine := e2e.NewTestEngine(t)
+	client := engine.Get{{.ClientMethod}}Client(t)
+
+	resourceID, cleanup := Create{{.Resource.Name | Pascal}}(t, client)
+	defer cleanup()
+
+	policyYAML := ` + "`" + `version: v1
+defaults:
+  workers: 2
+policies:
+  - {{.ServiceName}}:
+    - name: test-{{.Resource.Name}}-classify
+      description: Test classification fields
+      resource: {{.Resource.Name}}
+      check:
+        status: ACTIVE
+      action: log
+      severity: high
+      category: security
+      guide_ref: TEST-001` + "`" + `
+
+	policy := engine.LoadPolicyFromYAML(t, policyYAML)
+	results := engine.RunAudit(t, policy)
+
+	resourceResults := results.FilterByService("{{.ServiceName}}").
+		FilterByResourceType("{{.Resource.Name}}").
+		FilterByResourceID(resourceID)
+
+	if resourceResults.Scanned == 0 {
+		t.Error("Expected resource to be scanned")
+	}
+	resourceResults.AssertClassification(t, "high", "security", "TEST-001")
+
+	// TODO: Replace TEST-001 with a real OpenStack Security Guide reference for this resource
+}
+
+// Test{{.DisplayName}}_{{.Resource.Name | Pascal}}_OutputJSON verifies JSON output contains required fields.
+func Test{{.DisplayName}}_{{.Resource.Name | Pascal}}_OutputJSON(t *testing.T) {
+	engine := e2e.NewTestEngine(t)
+	client := engine.Get{{.ClientMethod}}Client(t)
+
+	_, cleanup := Create{{.Resource.Name | Pascal}}(t, client)
+	defer cleanup()
+
+	policyYAML := ` + "`" + `version: v1
+defaults:
+  workers: 2
+policies:
+  - {{.ServiceName}}:
+    - name: test-{{.Resource.Name}}-json
+      description: Output format test
+      resource: {{.Resource.Name}}
+      check:
+        status: ACTIVE
+      action: log
+      severity: medium
+      category: compliance` + "`" + `
+
+	policy := engine.LoadPolicyFromYAML(t, policyYAML)
+	results, filePath := engine.RunAuditToFile(t, policy, "json")
+	defer os.Remove(filePath)
+
+	if results.Scanned == 0 {
+		t.Skip("No resources scanned, cannot validate output")
+	}
+
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		t.Fatalf("Failed to read JSON output: %v", err)
+	}
+	if len(data) == 0 {
+		t.Fatal("JSON output file is empty")
+	}
+
+	var finding map[string]interface{}
+	if err := json.Unmarshal(data[:e2e.FindLineEnd(data)], &finding); err != nil {
+		t.Fatalf("Failed to parse JSON output: %v", err)
+	}
+
+	for _, field := range []string{"rule_id", "resource_id", "compliant", "severity", "category"} {
+		if _, ok := finding[field]; !ok {
+			t.Errorf("JSON output missing required field: %s", field)
+		}
+	}
+}
+
+// Test{{.DisplayName}}_{{.Resource.Name | Pascal}}_OutputCSV verifies CSV output has the correct headers.
+func Test{{.DisplayName}}_{{.Resource.Name | Pascal}}_OutputCSV(t *testing.T) {
+	engine := e2e.NewTestEngine(t)
+	client := engine.Get{{.ClientMethod}}Client(t)
+
+	_, cleanup := Create{{.Resource.Name | Pascal}}(t, client)
+	defer cleanup()
+
+	policyYAML := ` + "`" + `version: v1
+defaults:
+  workers: 2
+policies:
+  - {{.ServiceName}}:
+    - name: test-{{.Resource.Name}}-csv
+      description: Output format test
+      resource: {{.Resource.Name}}
+      check:
+        status: ACTIVE
+      action: log
+      severity: low
+      category: operations` + "`" + `
+
+	policy := engine.LoadPolicyFromYAML(t, policyYAML)
+	results, filePath := engine.RunAuditToFile(t, policy, "csv")
+	defer os.Remove(filePath)
+
+	if results.Scanned == 0 {
+		t.Skip("No resources scanned, cannot validate output")
+	}
+
+	f, err := os.Open(filePath)
+	if err != nil {
+		t.Fatalf("Failed to open CSV output: %v", err)
+	}
+	defer f.Close()
+
+	reader := csv.NewReader(f)
+	header, err := reader.Read()
+	if err != nil {
+		t.Fatalf("Failed to read CSV header: %v", err)
+	}
+
+	expected := map[string]bool{"rule_id": false, "resource_id": false, "compliant": false, "severity": false, "category": false, "guide_ref": false}
+	for _, col := range header {
+		if _, ok := expected[col]; ok {
+			expected[col] = true
+		}
+	}
+	for col, found := range expected {
+		if !found {
+			t.Errorf("CSV header missing expected column: %s", col)
+		}
+	}
+
+	row, err := reader.Read()
+	if err != nil {
+		t.Fatalf("Failed to read CSV data row: %v", err)
+	}
+	if len(row) != len(header) {
+		t.Errorf("CSV data row has %d columns, expected %d", len(row), len(header))
+	}
+}
+{{if HasAction .Resource.Actions "delete"}}
+// Test{{.DisplayName}}_{{.Resource.Name | Pascal}}_DeleteAction verifies delete remediation.
+func Test{{.DisplayName}}_{{.Resource.Name | Pascal}}_DeleteAction(t *testing.T) {
+	engine := e2e.NewTestEngine(t)
+	engine.Apply = true
+	client := engine.Get{{.ClientMethod}}Client(t)
+
+	resourceID, cleanup := Create{{.Resource.Name | Pascal}}(t, client)
+	defer cleanup()
+
+	policyYAML := ` + "`" + `version: v1
+defaults:
+  workers: 2
+policies:
+  - {{.ServiceName}}:
+    - name: test-{{.Resource.Name}}-delete
+      description: Delete {{.Resource.Name}} resources
+      resource: {{.Resource.Name}}
+      check:
+        unused: true
+      action: delete` + "`" + `
+
+	policy := engine.LoadPolicyFromYAML(t, policyYAML)
+	results := engine.RunAudit(t, policy)
+
+	resourceResults := results.FilterByService("{{.ServiceName}}").
+		FilterByResourceType("{{.Resource.Name}}").
+		FilterByResourceID(resourceID)
+
+	resourceResults.LogSummary(t)
+
+	if resourceResults.Errors > 0 {
+		t.Errorf("Unexpected errors during delete: %d", resourceResults.Errors)
+	}
+
+	// TODO: Verify the resource was actually deleted (e.g. GET returns 404)
+}
+{{end}}{{if HasAction .Resource.Actions "tag"}}
+// Test{{.DisplayName}}_{{.Resource.Name | Pascal}}_TagAction verifies tag remediation.
+func Test{{.DisplayName}}_{{.Resource.Name | Pascal}}_TagAction(t *testing.T) {
+	engine := e2e.NewTestEngine(t)
+	engine.Apply = true
+	client := engine.Get{{.ClientMethod}}Client(t)
+
+	resourceID, cleanup := Create{{.Resource.Name | Pascal}}(t, client)
+	defer cleanup()
+
+	policyYAML := ` + "`" + `version: v1
+defaults:
+  workers: 2
+policies:
+  - {{.ServiceName}}:
+    - name: test-{{.Resource.Name}}-tag
+      description: Tag {{.Resource.Name}} resources
+      resource: {{.Resource.Name}}
+      check:
+        status: ACTIVE
+      action: tag
+      tag_name: ospa-e2e-tagged` + "`" + `
+
+	policy := engine.LoadPolicyFromYAML(t, policyYAML)
+	results := engine.RunAudit(t, policy)
+
+	resourceResults := results.FilterByService("{{.ServiceName}}").
+		FilterByResourceType("{{.Resource.Name}}").
+		FilterByResourceID(resourceID)
+
+	resourceResults.LogSummary(t)
+
+	if resourceResults.Errors > 0 {
+		t.Errorf("Unexpected errors during tag: %d", resourceResults.Errors)
+	}
+
+	// TODO: Verify the tag was actually applied (e.g. GET resource, check tags list)
+}
+{{end}}{{if or (HasAction .Resource.Actions "delete") (HasAction .Resource.Actions "tag")}}
+// Test{{.DisplayName}}_{{.Resource.Name | Pascal}}_DryRunSkip verifies dry-run skips remediation.
+func Test{{.DisplayName}}_{{.Resource.Name | Pascal}}_DryRunSkip(t *testing.T) {
+	engine := e2e.NewTestEngine(t)
+	engine.Apply = false
+	client := engine.Get{{.ClientMethod}}Client(t)
+
+	resourceID, cleanup := Create{{.Resource.Name | Pascal}}(t, client)
+	defer cleanup()
+
+	policyYAML := ` + "`" + `version: v1
+defaults:
+  workers: 2
+policies:
+  - {{.ServiceName}}:
+    - name: test-{{.Resource.Name}}-dryrun
+      description: Dry run delete
+      resource: {{.Resource.Name}}
+      check:
+        unused: true
+      action: delete` + "`" + `
+
+	policy := engine.LoadPolicyFromYAML(t, policyYAML)
+	results := engine.RunAudit(t, policy)
+
+	resourceResults := results.FilterByService("{{.ServiceName}}").
+		FilterByResourceType("{{.Resource.Name}}").
+		FilterByResourceID(resourceID)
+
+	resourceResults.LogSummary(t)
+	resourceResults.AssertRemediationSkipped(t, "dry-run")
+
+	// TODO: Verify the resource still exists after dry-run (e.g. GET returns 200)
+}
+
+// Test{{.DisplayName}}_{{.Resource.Name | Pascal}}_AllowActionsFiltering verifies the allow-actions filter.
+func Test{{.DisplayName}}_{{.Resource.Name | Pascal}}_AllowActionsFiltering(t *testing.T) {
+	engine := e2e.NewTestEngine(t)
+	engine.Apply = true
+	engine.AllowActions = []string{"tag"}
+	client := engine.Get{{.ClientMethod}}Client(t)
+
+	resourceID, cleanup := Create{{.Resource.Name | Pascal}}(t, client)
+	defer cleanup()
+
+	policyYAML := ` + "`" + `version: v1
+defaults:
+  workers: 2
+policies:
+  - {{.ServiceName}}:
+    - name: test-{{.Resource.Name}}-allowlist
+      description: Delete not in allowlist
+      resource: {{.Resource.Name}}
+      check:
+        unused: true
+      action: delete` + "`" + `
+
+	policy := engine.LoadPolicyFromYAML(t, policyYAML)
+	results := engine.RunAudit(t, policy)
+
+	resourceResults := results.FilterByService("{{.ServiceName}}").
+		FilterByResourceType("{{.Resource.Name}}").
+		FilterByResourceID(resourceID)
+
+	resourceResults.LogSummary(t)
+
+	if resourceResults.Scanned == 0 {
+		t.Error("Expected resource to be scanned")
+	}
+
+	resourceResults.AssertRemediationSkipped(t, "action_not_allowed")
+}
+{{end}}{{range .Resource.RichChecks}}
+// Test{{$.DisplayName}}_{{$.Resource.Name | Pascal}}_Check_{{.Name | Pascal}} tests the {{.Name}} domain check.
+func Test{{$.DisplayName}}_{{$.Resource.Name | Pascal}}_Check_{{.Name | Pascal}}(t *testing.T) {
+	// TODO: Implement domain-specific check test for {{.Name}}
+	// Description: {{.Description}}
+	// Category: {{.Category}}, Severity: {{.Severity}}
+	t.Skip("Domain check test for {{.Name}} not yet implemented")
+}
+{{end}}
 // TestCleanup_{{.Resource.Name | Pascal}} cleans up orphaned test resources.
 // Run manually: go test -tags=e2e ./e2e/{{.ServiceName}}/... -run TestCleanup
 func TestCleanup_{{.Resource.Name | Pascal}}(t *testing.T) {
@@ -343,7 +730,9 @@ func TestCleanup_{{.Resource.Name | Pascal}}(t *testing.T) {
 	}
 
 	funcMap := template.FuncMap{
-		"Pascal": ToPascal,
+		"Pascal":    ToPascal,
+		"HasAction": hasAction,
+		"HasCheck":  hasCheck,
 	}
 
 	t, err := template.New("resource_test").Funcs(funcMap).Parse(tmpl)
@@ -489,6 +878,26 @@ func trimRight(s, cutset string) string {
 		}
 	}
 	return s
+}
+
+// hasAction checks if a given action is in the actions slice.
+func hasAction(actions []string, action string) bool {
+	for _, a := range actions {
+		if strings.EqualFold(a, action) {
+			return true
+		}
+	}
+	return false
+}
+
+// hasCheck checks if a given check is in the checks slice.
+func hasCheck(checks []string, check string) bool {
+	for _, c := range checks {
+		if strings.EqualFold(c, check) {
+			return true
+		}
+	}
+	return false
 }
 
 // hasE2ETestImplementation checks if an e2e test file already exists.
