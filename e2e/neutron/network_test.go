@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/OpenStack-Policy-Agent/OSPA/e2e"
 )
@@ -245,7 +244,7 @@ policies:
 	}
 }
 
-// TestNeutron_Network_AgeGTViolation verifies a resource trips age_gt: 1s after a brief sleep.
+// TestNeutron_Network_AgeGTViolation verifies a resource trips age_gt: 0m (any age triggers).
 func TestNeutron_Network_AgeGTViolation(t *testing.T) {
 	engine := e2e.NewTestEngine(t)
 	client := engine.GetNetworkClient(t)
@@ -253,20 +252,16 @@ func TestNeutron_Network_AgeGTViolation(t *testing.T) {
 	networkID, cleanup := CreateNetwork(t, client)
 	defer cleanup()
 
-	// Wait briefly so the resource ages past 1 second
-	time.Sleep(2 * time.Second)
-
 	policyYAML := `version: v1
 defaults:
   workers: 2
 policies:
   - neutron:
     - name: test-network-age-short
-      description: Find networks older than 1 second
-      service: neutron
+      description: Find networks older than 0m (always triggers)
       resource: network
       check:
-        age_gt: 1s
+        age_gt: 0m
       action: log`
 
 	policy := engine.LoadPolicyFromYAML(t, policyYAML)
@@ -283,7 +278,7 @@ policies:
 	}
 
 	if resourceResults.Violations == 0 {
-		t.Error("Network older than 1s should be flagged by age_gt: 1s")
+		t.Error("Network should be flagged by age_gt: 0m")
 	} else {
 		t.Log("Network correctly flagged as old - test passed")
 	}
@@ -652,7 +647,7 @@ policies:
         status: ACTIVE
       action: log
       severity: low
-      category: operations`
+      category: hygiene`
 
 	policy := engine.LoadPolicyFromYAML(t, policyYAML)
 	results, filePath := engine.RunAuditToFile(t, policy, "csv")

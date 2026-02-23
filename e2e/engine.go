@@ -4,6 +4,7 @@ package e2e
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/OpenStack-Policy-Agent/OSPA/pkg/auth"
@@ -61,7 +62,7 @@ func (e *TestEngine) GetNetworkClient(t *testing.T) *gophercloud.ServiceClient {
 	t.Helper()
 	client, err := e.Session.GetNeutronClient()
 	if err != nil {
-		t.Fatalf("Failed to get neutron client: %v", err)
+		skipOrFail(t, "neutron", err)
 	}
 	return client
 }
@@ -71,7 +72,7 @@ func (e *TestEngine) GetComputeClient(t *testing.T) *gophercloud.ServiceClient {
 	t.Helper()
 	client, err := e.Session.GetNovaClient()
 	if err != nil {
-		t.Fatalf("Failed to get nova client: %v", err)
+		skipOrFail(t, "nova", err)
 	}
 	return client
 }
@@ -81,9 +82,19 @@ func (e *TestEngine) GetBlockStorageClient(t *testing.T) *gophercloud.ServiceCli
 	t.Helper()
 	client, err := e.Session.GetCinderClient()
 	if err != nil {
-		t.Fatalf("Failed to get cinder client: %v", err)
+		skipOrFail(t, "cinder", err)
 	}
 	return client
+}
+
+// skipOrFail skips the test if the service is not available in the catalog,
+// otherwise fails fatally.
+func skipOrFail(t *testing.T, service string, err error) {
+	t.Helper()
+	if strings.Contains(err.Error(), "unable to create a service client") {
+		t.Skipf("%s service not available in catalog, skipping: %v", service, err)
+	}
+	t.Fatalf("Failed to get %s client: %v", service, err)
 }
 
 // LoadPolicy loads a policy from the configured path or a custom path

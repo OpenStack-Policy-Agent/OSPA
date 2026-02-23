@@ -117,7 +117,7 @@ policies:
 		t.Error("Freshly created resource should not be flagged by age_gt: 30d")
 	}
 
-	// TODO: Add an AgeGTViolation test: create resource, sleep briefly, audit with age_gt: 1s, expect violation
+	// TODO: Add an AgeGTViolation test: create resource, audit with age_gt: 0m, expect violation
 }
 
 // TestNeutron_FloatingIp_UnusedCheck verifies unused detection.
@@ -330,7 +330,7 @@ policies:
         status: ACTIVE
       action: log
       severity: low
-      category: operations`
+      category: hygiene`
 
 	policy := engine.LoadPolicyFromYAML(t, policyYAML)
 	results, filePath := engine.RunAuditToFile(t, policy, "csv")

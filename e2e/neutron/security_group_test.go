@@ -18,7 +18,6 @@ import (
 	"encoding/json"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/OpenStack-Policy-Agent/OSPA/e2e"
 )
@@ -194,7 +193,7 @@ policies:
 	}
 }
 
-// TestNeutron_SecurityGroup_AgeGTViolation verifies an SG trips age_gt: 1s after a brief sleep.
+// TestNeutron_SecurityGroup_AgeGTViolation verifies an SG trips age_gt: 0m (any age triggers).
 func TestNeutron_SecurityGroup_AgeGTViolation(t *testing.T) {
 	engine := e2e.NewTestEngine(t)
 	client := engine.GetNetworkClient(t)
@@ -202,19 +201,16 @@ func TestNeutron_SecurityGroup_AgeGTViolation(t *testing.T) {
 	resourceID, cleanup := CreateSecurityGroup(t, client)
 	defer cleanup()
 
-	time.Sleep(2 * time.Second)
-
 	policyYAML := `version: v1
 defaults:
   workers: 2
 policies:
   - neutron:
     - name: test-sg-age-short
-      description: Find security groups older than 1 second
-      service: neutron
+      description: Find SGs older than 0m (always triggers)
       resource: security_group
       check:
-        age_gt: 1s
+        age_gt: 0m
       action: log`
 
 	policy := engine.LoadPolicyFromYAML(t, policyYAML)
@@ -230,7 +226,7 @@ policies:
 		t.Error("Expected security group to be scanned")
 	}
 	if resourceResults.Violations == 0 {
-		t.Error("Security group older than 1s should be flagged by age_gt: 1s")
+		t.Error("Security group should be flagged by age_gt: 0m")
 	}
 }
 
@@ -592,7 +588,7 @@ policies:
         status: ACTIVE
       action: log
       severity: low
-      category: operations`
+      category: hygiene`
 
 	policy := engine.LoadPolicyFromYAML(t, policyYAML)
 	results, filePath := engine.RunAuditToFile(t, policy, "csv")

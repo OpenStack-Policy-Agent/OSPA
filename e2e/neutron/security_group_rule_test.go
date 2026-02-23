@@ -402,7 +402,7 @@ policies:
         remote_ip_prefix: 0.0.0.0/0
       action: log
       severity: high
-      category: network
+      category: security
       guide_ref: CIS-4.1`
 
 	policy := engine.LoadPolicyFromYAML(t, policyYAML)
@@ -418,7 +418,7 @@ policies:
 		t.Fatal("Expected security group rule to be scanned")
 	}
 
-	resourceResults.AssertClassification(t, "high", "network", "CIS-4.1")
+	resourceResults.AssertClassification(t, "high", "security", "CIS-4.1")
 }
 
 // TestNeutron_SecurityGroupRule_OutputJSON verifies JSON output contains required fields.
@@ -491,7 +491,7 @@ policies:
         direction: ingress
       action: log
       severity: low
-      category: operations`
+      category: hygiene`
 
 	policy := engine.LoadPolicyFromYAML(t, policyYAML)
 	results, filePath := engine.RunAuditToFile(t, policy, "csv")
