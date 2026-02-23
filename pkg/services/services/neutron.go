@@ -33,6 +33,9 @@ import (
 //   - router: Routers
 //     Checks: status, age_gt, unused, exempt_names
 //     Actions: log, delete, tag
+//   - port: Ports
+//     Checks: status, age_gt, unused, exempt_names, no_security_group
+//     Actions: log, delete, tag
 type NeutronService struct{}
 
 func init() {
@@ -43,6 +46,7 @@ func init() {
 	rootservices.RegisterResource("neutron", "floating_ip")
 	rootservices.RegisterResource("neutron", "subnet")
 	rootservices.RegisterResource("neutron", "router")
+	rootservices.RegisterResource("neutron", "port")
 }
 
 func (s *NeutronService) Name() string {
@@ -67,6 +71,8 @@ func (s *NeutronService) GetResourceAuditor(resourceType string) (audit.Auditor,
 		return &neutron.SubnetAuditor{}, nil
 	case "router":
 		return &neutron.RouterAuditor{}, nil
+	case "port":
+		return &neutron.PortAuditor{}, nil
 	default:
 		return nil, fmt.Errorf("unsupported resource type %q for service %q", resourceType, s.Name())
 	}
@@ -86,6 +92,8 @@ func (s *NeutronService) GetResourceDiscoverer(resourceType string) (discovery.D
 		return &discovery_services.NeutronSubnetDiscoverer{}, nil
 	case "router":
 		return &discovery_services.NeutronRouterDiscoverer{}, nil
+	case "port":
+		return &discovery_services.NeutronPortDiscoverer{}, nil
 	default:
 		return nil, fmt.Errorf("unsupported resource type %q for service %q", resourceType, s.Name())
 	}

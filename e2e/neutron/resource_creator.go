@@ -16,6 +16,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/rules"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
 )
 
@@ -340,6 +341,47 @@ func CreateFloatingIp(t *testing.T, client *gophercloud.ServiceClient) (resource
 	return fip.ID, cleanup
 }
 
+
+
+// CreatePort creates a test port on a new network+subnet and returns:
+//   - resourceID: The port ID (for filtering audit results)
+//   - cleanup: A function to delete the port, subnet, and network
+//
+// The port is created with no security groups to enable no_security_group testing.
+func CreatePort(t *testing.T, client *gophercloud.ServiceClient) (resourceID string, cleanup func()) {
+	t.Helper()
+
+	networkID, _, netCleanup := CreateNetworkWithSubnet(t, client)
+
+	name := fmt.Sprintf("%sport-%d", testPrefix, time.Now().UnixNano())
+	noSGs := []string{}
+	adminStateUp := true
+	opts := ports.CreateOpts{
+		NetworkID:      networkID,
+		Name:           name,
+		AdminStateUp:   &adminStateUp,
+		Description:    "OSPA e2e test port - safe to delete",
+		SecurityGroups: &noSGs,
+	}
+
+	port, err := ports.Create(client, opts).Extract()
+	if err != nil {
+		netCleanup()
+		t.Fatalf("Failed to create test port: %v", err)
+	}
+	t.Logf("Created test port: %s (%s)", port.Name, port.ID)
+
+	cleanup = func() {
+		t.Logf("Cleaning up test port: %s", port.ID)
+		if err := ports.Delete(client, port.ID).ExtractErr(); err != nil {
+			t.Logf("Warning: failed to delete test port %s: %v", port.ID, err)
+		}
+		netCleanup()
+	}
+
+	return port.ID, cleanup
+}
+
 // CleanupOrphans deletes any leaked test resources (those with testPrefix).
 // Run this manually if tests fail and leave resources behind:
 //
@@ -397,6 +439,31 @@ func CleanupOrphans(t *testing.T, client *gophercloud.ServiceClient) {
 				}
 			}
 			t.Logf("Cleanup complete: deleted %d orphaned routers", rtrDeleted)
+		}
+	}
+
+	// Clean up orphaned ports (before networks/subnets, since ports block network deletion)
+	t.Log("Searching for orphaned test ports...")
+	portPages, err := ports.List(client, ports.ListOpts{}).AllPages()
+	if err != nil {
+		t.Logf("Warning: failed to list ports: %v", err)
+	} else {
+		allPorts, err := ports.ExtractPorts(portPages)
+		if err != nil {
+			t.Logf("Warning: failed to extract ports: %v", err)
+		} else {
+			var portDeleted int
+			for _, p := range allPorts {
+				if strings.HasPrefix(p.Name, testPrefix) {
+					t.Logf("Found orphaned port: %s (%s)", p.Name, p.ID)
+					if err := ports.Delete(client, p.ID).ExtractErr(); err != nil {
+						t.Logf("  Warning: failed to delete port %s: %v", p.ID, err)
+					} else {
+						portDeleted++
+					}
+				}
+			}
+			t.Logf("Cleanup complete: deleted %d orphaned ports", portDeleted)
 		}
 	}
 

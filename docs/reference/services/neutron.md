@@ -83,6 +83,20 @@ This guide explains how to write policies for Neutron resources in OSPA.
 **Allowed Checks:** status, age_gt, unused, exempt_names
 
 
+### Port
+
+**Resource Type:** `port`
+
+**Allowed Actions:** log, delete, tag
+**Allowed Checks:** status, age_gt, unused, exempt_names, no_security_group
+
+#### Security & Domain Checks
+
+| Check | Severity | Category | Type | Description |
+|-------|----------|----------|------|-------------|
+- **`no_security_group`** | high | security | bool | Port has no security groups attached
+
+
 
 ## OpenStack Security Guide Checklist
 
@@ -512,7 +526,6 @@ action_tag_name: "Display Name for Tag"
 ```
 
 
-
 ### Router Examples
 
 
@@ -551,6 +564,57 @@ action_tag_name: "Display Name for Tag"
   action: delete
 ```
 
+
+### Port Examples
+
+#### Security Check Example
+
+```yaml
+- name: security-check-port-no_security_group
+  description: "Port has no security groups attached"
+  resource: port
+  severity: high
+  category: security
+  check:
+    no_security_group: true
+  action: log
+```
+
+
+#### Find Inactive Port Resources
+
+```yaml
+- name: find-inactive-port
+  description: Find inactive port resources
+  resource: port
+  check:
+    status: inactive
+  action: log
+```
+
+#### Find Old Port Resources
+
+```yaml
+- name: find-old-port
+  description: Find port resources older than 30 days
+  resource: port
+  check:
+    age_gt: 30d
+  action: log
+```
+
+#### Cleanup Unused Port Resources
+
+```yaml
+- name: cleanup-unused-port
+  description: Delete unused port resources
+  resource: port
+  check:
+    unused: true
+    exempt_names:
+      - default
+  action: delete
+```
 
 
 
@@ -673,6 +737,24 @@ policies:
         exempt_names:
           - default
       action: log
+    - name: audit-port
+      description: Audit port resources
+      resource: port
+      severity: medium
+      category: hygiene
+      check:
+        status: active
+      action: log
+    - name: cleanup-old-port
+      description: Find port resources older than 90 days
+      resource: port
+      severity: low
+      category: cost
+      check:
+        age_gt: 90d
+        exempt_names:
+          - default
+      action: log
 ```
 
 ## OpenStack Documentation References
@@ -713,7 +795,7 @@ For more information about Neutron resources and their properties:
 
 **Policy validation fails:**
 - Ensure service name matches exactly: `neutron`
-- Verify resource type is supported: `network`, `security_group`, `security_group_rule`, `floating_ip`, `subnet`, `router`
+- Verify resource type is supported: `network`, `security_group`, `security_group_rule`, `floating_ip`, `subnet`, `router`, `port`
 - Check YAML syntax is correct
 
 **No resources found:**
